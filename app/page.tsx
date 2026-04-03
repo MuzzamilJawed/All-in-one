@@ -4,11 +4,12 @@ import StatCard from "./components/StatCard";
 import PriceCard from "./components/PriceCard";
 import StockCard from "./components/StockCard";
 import { useEffect, useState } from "react";
-import { fetchGoldPrice, fetchSilverPrice, fetchForexRates, fetchCryptoPrices } from "./lib/api";
+import { fetchGoldPrice, fetchSilverPrice, fetchForexRates, fetchCryptoPrices, fetchOilPrices } from "./lib/api";
 
 export default function Home() {
   const [goldData, setGoldData] = useState<any>({ tola: { isLoading: true } });
   const [silverData, setSilverData] = useState<any>({ ounce: { isLoading: true } });
+  const [oilData, setOilData] = useState<any>(null);
   const [forexData, setForexData] = useState<any[]>([]);
   const [cryptoData, setCryptoData] = useState<any[]>([]);
   const [watchlists, setWatchlists] = useState<any[]>([]);
@@ -19,7 +20,7 @@ export default function Home() {
     const loadAllData = async () => {
       try {
         setLoading(true);
-        const [gold, silver, forex, crypto, wlRes, psxRes] = await Promise.all([
+        const [gold, silver, forex, crypto, wlRes, psxRes, oil] = await Promise.all([
           fetchGoldPrice(),
           fetchSilverPrice(),
           fetchForexRates(),
@@ -28,13 +29,15 @@ export default function Home() {
           fetch('/api/psx-stocks').then(res => res.json()).catch(err => {
             console.error('PSX API Error:', err);
             return { data: [] };
-          })
+          }),
+          fetchOilPrices()
         ]);
 
         if (gold) setGoldData(gold);
         if (silver) setSilverData(silver);
         if (forex) setForexData(forex);
         if (crypto) setCryptoData(crypto);
+        if (oil) setOilData(oil);
         if (wlRes.success) setWatchlists(wlRes.data);
 
         console.log('PSX Response:', psxRes);
@@ -202,6 +205,18 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <PriceCard title="Gold (24K) - Tola" {...goldData.tola24k} lastUpdated={new Date().toLocaleTimeString()} isLoading={loading} />
                 <PriceCard title="Silver - per Ounce" {...silverData.ounce} lastUpdated={new Date().toLocaleTimeString()} isLoading={loading} />
+              </div>
+            </div>
+
+            {/* Oil & Energy Section */}
+            <div>
+              <div className="flex items-end justify-between mb-6">
+                <h2 className="text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">🛢️ Energy Intelligence</h2>
+                <a href="/oil" className="text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Refinery →</a>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <PriceCard title="Crude Oil (WTI)" {...oilData?.crudeOil} lastUpdated={new Date().toLocaleTimeString()} isLoading={loading} currency="USD" />
+                <PriceCard title="Brent Crude" {...oilData?.brentOil} lastUpdated={new Date().toLocaleTimeString()} isLoading={loading} currency="USD" />
               </div>
             </div>
 

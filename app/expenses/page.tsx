@@ -23,7 +23,7 @@ export default function ExpensesPage() {
     amount: "",
     category: "Food",
     date: new Date().toISOString().split("T")[0],
-    paymentMethod: "cash" as const,
+    paymentMethod: "cash" as "cash" | "card" | "transfer" | "other",
     notes: "",
   });
   const [filter, setFilter] = useState("all");
@@ -336,7 +336,7 @@ export default function ExpensesPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `PKR ${value.toFixed(2)}`} />
+                  <Tooltip formatter={(value: any) => `PKR ${Number(value).toFixed(2)}`} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -353,7 +353,7 @@ export default function ExpensesPage() {
                   <YAxis stroke="#94a3b8" />
                   <Tooltip
                     contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
-                    formatter={(value) => `PKR ${value.toFixed(2)}`}
+                    formatter={(value: any) => `PKR ${Number(value).toFixed(2)}`}
                   />
                   <Line type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6" }} />
                 </LineChart>
@@ -372,7 +372,7 @@ export default function ExpensesPage() {
                   <YAxis stroke="#94a3b8" />
                   <Tooltip
                     contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
-                    formatter={(value) => `PKR ${value.toFixed(2)}`}
+                    formatter={(value: any) => `PKR ${Number(value).toFixed(2)}`}
                   />
                   <Bar dataKey="value" fill="#10b981" />
                 </BarChart>

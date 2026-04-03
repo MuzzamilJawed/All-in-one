@@ -729,6 +729,62 @@ export async function fetchCommodities() {
 }
 
 /**
+ * Fetch real-time Oil and Energy prices
+ */
+export async function fetchOilPrices() {
+  try {
+    const commodities = await fetchCommodities();
+    if (!commodities || Object.keys(commodities).length === 0) {
+      return null;
+    }
+
+    const exchangeRate = await getLiveExchangeRate();
+
+    const energyKeys = [
+      'crudeOil', 'brentOil', 'murbanOil', 'naturalGas', 'gasoline', 
+      'heatingOil', 'coal', 'ethanol', 'naphtha', 'propane'
+    ];
+
+    const energyNames: Record<string, string> = {
+      crudeOil: "Crude Oil (WTI)",
+      brentOil: "Brent Crude",
+      murbanOil: "Murban Oil",
+      naturalGas: "Natural Gas",
+      gasoline: "Gasoline",
+      heatingOil: "Heating Oil",
+      coal: "Coal",
+      ethanol: "Ethanol",
+      naphtha: "Naphtha",
+      propane: "Propane"
+    };
+
+    const oilData: any = {};
+    const allEnergy: any[] = [];
+
+    energyKeys.forEach(key => {
+      if (commodities[key]) {
+        const item = {
+          ...commodities[key],
+          pkrPrice: commodities[key].price * exchangeRate,
+          name: energyNames[key] || key.charAt(0).toUpperCase() + key.slice(1),
+          key: key
+        };
+        oilData[key] = item;
+        allEnergy.push(item);
+      }
+    });
+
+    return {
+      ...oilData,
+      allEnergy // List of all energy items for table display
+    };
+  } catch (error) {
+    console.error("Error fetching oil prices:", error);
+    return null;
+  }
+}
+
+/**
  * Fetch real-time Forex rates (Global major pairs and PKR rates)
  */
 export async function fetchForexRates() {

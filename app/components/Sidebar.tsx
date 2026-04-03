@@ -5,16 +5,42 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 
-const navigation = [
-  { name: "Dashboard", href: "/", icon: "📊" },
-  { name: "PSX Stocks", href: "/stocks", icon: "📈" },
-  { name: "NASDAQ Stocks", href: "/nasdaq", icon: "🧭" },
-  { name: "Watchlist", href: "/watchlist", icon: "⭐" },
-  { name: "Gold & Silver", href: "/metals", icon: "💎" },
-  { name: "Expenses", href: "/expenses", icon: "💰" },
-  { name: "Forex", href: "/forex", icon: "💱" },
-  { name: "Crypto", href: "/crypto", icon: "₿" },
-  { name: "Settings", href: "/settings", icon: "⚙️" },
+const navigationGroups = [
+  {
+    title: "Overview",
+    items: [
+      { name: "Dashboard", href: "/", icon: "📊" },
+    ]
+  },
+  {
+    title: "Markets",
+    items: [
+      { name: "PSX Stocks", href: "/stocks", icon: "📈" },
+      { name: "NASDAQ Stocks", href: "/nasdaq", icon: "🧭" },
+      { name: "Forex", href: "/forex", icon: "💱" },
+      { name: "Crypto", href: "/crypto", icon: "₿" },
+    ]
+  },
+  {
+    title: "Commodities",
+    items: [
+      { name: "Gold & Silver", href: "/metals", icon: "💎" },
+      { name: "Oil & Energy", href: "/oil", icon: "🛢️" },
+    ]
+  },
+  {
+    title: "Tools & Personal",
+    items: [
+      { name: "Watchlist", href: "/watchlist", icon: "⭐" },
+      { name: "Expenses", href: "/expenses", icon: "💰" },
+    ]
+  },
+  {
+    title: "Configuration",
+    items: [
+      { name: "Settings", href: "/settings", icon: "⚙️" },
+    ]
+  },
 ];
 
 export default function Sidebar() {
@@ -41,23 +67,32 @@ export default function Sidebar() {
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Your All-in-One Hub</p>
       </div>
 
-      <nav className="p-4 space-y-2 flex-1">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                ? "bg-blue-600 text-white"
-                : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
-                }`}
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span className="font-medium">{item.name}</span>
-            </Link>
-          );
-        })}
+      <nav className="p-4 space-y-6 flex-1">
+        {navigationGroups.map((group) => (
+          <div key={group.title} className="space-y-2">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 px-4 mb-2">
+              {group.title}
+            </h2>
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${isActive
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
+                    }`}
+                  >
+                    <span className="text-xl">{item.icon}</span>
+                    <span className="font-bold text-sm tracking-tight">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">

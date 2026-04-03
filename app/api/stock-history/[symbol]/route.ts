@@ -3,9 +3,9 @@ interface HistoryPoint {
   price: number;
 }
 
-export async function GET(request: Request, { params }: { params: { symbol: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ symbol: string }> }) {
   try {
-    const { symbol } = params;
+    const { symbol } = await params;
     // Generate synthetic history for demo (real implementation should call a market API)
     const now = Date.now();
     const points = 30;
