@@ -1,10 +1,11 @@
 "use client";
 
 import StockCard from "../components/StockCard";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from 'next/navigation';
 import { useSettings } from "../context/SettingsContext";
-import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import dynamic from 'next/dynamic';
+const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
 
 export default function NasdaqPage() {
     interface Stock {
@@ -19,18 +20,35 @@ export default function NasdaqPage() {
         volume: string;
         targetPrice?: number;
         sector?: string;
+        pkrPrice?: number;
         history?: { time: string; price: number }[];
     }
 
+    interface Index {
+        name: string;
+        value: number;
+        change: number;
+        changePercent: number;
+    }
+
+    // Filter & View State
+    const [viewType, setViewType] = useState<'card' | 'table'>('card');
     const [filter, setFilter] = useState("all");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
-    const [stocks, setStocks] = useState<Stock[]>([]);
-    const router = useRouter();
-    const [sectors, setSectors] = useState<string[]>([]);
-    const [filteredStocks, setFilteredStocks] = useState<Stock[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [indexFilter, setIndexFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Stock; direction: 'asc' | 'desc' } | null>(null);
+    
+    // Data State
+    const [stocks, setStocks] = useState<Stock[]>([]);
+    const [sectors, setSectors] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [exchangeRate, setExchangeRate] = useState(280);
+    const [indices, setIndices] = useState<Index[]>([
+        { name: "NASDAQ 100", value: 18235.45, change: 124.5, changePercent: 0.68 },
+        { name: "S&P 500", value: 5243.20, change: 15.30, changePercent: 0.29 },
+        { name: "DOW JONES", value: 39475.90, change: -45.20, changePercent: -0.11 }
+    ]);
+    const [selectedIndex, setSelectedIndex] = useState<Index | null>(null);
 
     // Watchlist State
     const [watchlists, setWatchlists] = useState<any[]>([]);
@@ -38,46 +56,74 @@ export default function NasdaqPage() {
     const [newWatchlistName, setNewWatchlistName] = useState("");
     const [isCreatingWatchlist, setIsCreatingWatchlist] = useState(false);
 
-    // Table Pagination State
+    // Global Settings
+    const { settings } = useSettings();
+    const router = useRouter();
+    const displayCurrency = settings.currency as 'USD' | 'PKR';
+
+    // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
 
-    // Card Pagination State
-    const [currentCardPage, setCurrentCardPage] = useState(1);
-    const cardsPerPage = 10;
+    // Sorting
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Stock; direction: 'asc' | 'desc' } | null>(null);
 
-    const { settings } = useSettings();
+    const generateHistory = useCallback((price: number) => {
+        const count = 60;
+        const nowSec = Math.floor(Date.now() / 1000);
+        const interval = 86400;
+        const volatility = 0.015;
+        let lastClose = price;
+        const data = [];
+        for (let i = 0; i < count; i++) {
+            const time = nowSec - i * interval;
+            const change = (Math.random() - 0.5) * volatility;
+            const close = lastClose;
+            const open = close / (1 + change);
+            const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.3));
+            const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.3));
+            data.unshift({
+                time,
+                open: parseFloat(open.toFixed(2)),
+                high: parseFloat(high.toFixed(2)),
+                low: parseFloat(low.toFixed(2)),
+                close: parseFloat(close.toFixed(2)),
+                volume: Math.floor(Math.random() * 500000) + 50000
+            });
+            lastClose = open;
+        }
+        return data;
+    }, []);
 
     const load = async (isManual = true) => {
         try {
             if (isManual) setLoading(true);
+
+            // Fetch exchange rate
+            try {
+                const exRes = await fetch('https://open.er-api.com/v6/latest/USD');
+                const exData = await exRes.json();
+                if (exData?.rates?.PKR) setExchangeRate(Math.round(exData.rates.PKR));
+            } catch (e) {
+                console.warn("Failed to fetch exchange rate", e);
+            }
+
             const res = await fetch('/api/nasdaq-stocks');
             const json = await res.json();
             const rawData: Stock[] = json?.data || [];
 
-            const generateHistory = (currentPrice: number) => {
-                const history = [];
-                let lastPrice = currentPrice;
-                for (let i = 6; i >= 0; i--) {
-                    const change = (Math.random() - 0.5) * (currentPrice * 0.02);
-                    lastPrice = lastPrice - change;
-                    history.push({
-                        time: `${i}d ago`,
-                        price: parseFloat(lastPrice.toFixed(2))
-                    });
-                }
-                return history.reverse();
-            };
-
             const data = rawData
                 .filter(s => s && s.symbol)
-                .map(s => ({
-                    ...s,
-                    history: generateHistory(s.currentPrice || 0)
-                })).sort((a, b) => (a.symbol || "").localeCompare(b.symbol || ""));
+                .map(s => {
+                    const usdPrice = s.currentPrice || 0;
+                    return {
+                        ...s,
+                        currentPrice: usdPrice,
+                        pkrPrice: usdPrice * exchangeRate
+                    }
+                }).sort((a, b) => (a.symbol || "").localeCompare(b.symbol || ""));
 
             setStocks(data);
-
             const allSectorsArr = Array.from(new Set(data.map((s) => s.sector || 'Other'))).sort();
             setSectors(['All', ...allSectorsArr]);
         } catch (err) {
@@ -119,12 +165,9 @@ export default function NasdaqPage() {
     const handleAddToWatchlist = async (watchlistId: string, symbol: string) => {
         const watchlist = watchlists.find(wl => wl._id === watchlistId);
         if (!watchlist || !symbol) return;
-
         const currentSymbols = watchlist.symbols || [];
         if (currentSymbols.includes(symbol.toUpperCase())) return;
-
         const newSymbols = [...currentSymbols, symbol.toUpperCase()];
-
         try {
             const res = await fetch(`/api/watchlists/${watchlistId}`, {
                 method: 'PUT',
@@ -143,10 +186,8 @@ export default function NasdaqPage() {
     const handleRemoveFromWatchlist = async (watchlistId: string, symbol: string) => {
         const watchlist = watchlists.find(wl => wl._id === watchlistId);
         if (!watchlist || !symbol) return;
-
         const currentSymbols = watchlist.symbols || [];
         const newSymbols = currentSymbols.filter((s: string) => s !== symbol.toUpperCase());
-
         try {
             const res = await fetch(`/api/watchlists/${watchlistId}`, {
                 method: 'PUT',
@@ -167,24 +208,52 @@ export default function NasdaqPage() {
         fetchWatchlists();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="p-8 text-center">
-                <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p>Loading NASDAQ data...</p>
-            </div>
-        );
-    }
+    const filteredStocks = useMemo(() => {
+        let updated = [...stocks];
 
-    useEffect(() => {
-        if (!settings.refreshInterval || settings.refreshInterval <= 0) return;
+        // Watchlist Filtering
+        if (activeWatchlistId) {
+            const activeWL = watchlists.find(wl => wl._id === activeWatchlistId);
+            if (activeWL) {
+                updated = updated.filter(s => activeWL.symbols.includes(s.symbol.toUpperCase()));
+            }
+        }
 
-        const interval = setInterval(() => {
-            load(false);
-        }, settings.refreshInterval * 1000);
+        // Sector Filtering
+        if (filter !== 'all') {
+            updated = updated.filter((s) => (s.sector || 'Other').toLowerCase() === filter.toLowerCase());
+        }
 
-        return () => clearInterval(interval);
-    }, [settings.refreshInterval]);
+        // Category Filtering
+        if (categoryFilter !== 'all') {
+            if (categoryFilter === 'gainers') updated = updated.sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0)).slice(0, 50);
+            else if (categoryFilter === 'losers') updated = updated.sort((a, b) => (a.changePercent || 0) - (b.changePercent || 0)).slice(0, 50);
+            else if (categoryFilter === 'active') updated = updated.sort((a, b) => (parseInt(b.volume.replace(/,/g, '')) || 0) - (parseInt(a.volume.replace(/,/g, '')) || 0)).slice(0, 50);
+        }
+
+        // Search
+        if (searchTerm) {
+            const lowSearch = searchTerm.toLowerCase();
+            updated = updated.filter((s) => s.symbol.toLowerCase().includes(lowSearch) || s.name.toLowerCase().includes(lowSearch));
+        }
+
+        // Manual Sort for Table
+        if (sortConfig) {
+            updated.sort((a, b) => {
+                const aVal = a[sortConfig.key];
+                const bVal = b[sortConfig.key];
+                if (aVal === undefined || bVal === undefined) return 0;
+                if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return updated;
+    }, [stocks, filter, categoryFilter, searchTerm, activeWatchlistId, watchlists, sortConfig]);
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedStocks = filteredStocks.slice(startIndex, startIndex + itemsPerPage);
 
     const requestSort = (key: keyof Stock) => {
         let direction: 'asc' | 'desc' = 'asc';
@@ -194,402 +263,382 @@ export default function NasdaqPage() {
         setSortConfig({ key, direction });
     };
 
-    useEffect(() => {
-        let updated = stocks;
-
-        // 0. Watchlist Filtering
-        if (activeWatchlistId) {
-            const activeWL = watchlists.find(wl => wl._id === activeWatchlistId);
-            if (activeWL && activeWL.symbols) {
-                updated = updated.filter(s => activeWL.symbols.includes(s.symbol.toUpperCase()));
-            } else if (activeWL && activeWL.symbols.length === 0) {
-                updated = []; // Empty watchlist shows no stocks
+    const getVisiblePages = () => {
+        const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
+        const pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                pages.push(i);
+            } else if (pages[pages.length - 1] !== '...') {
+                pages.push('...');
             }
         }
-
-        // 1. Sector Filter
-        if (filter !== 'all') {
-            updated = updated.filter((s) => (s.sector || 'Other').toLowerCase() === filter.toLowerCase());
-        }
-
-        // 2.5 Category Filter
-        if (categoryFilter && categoryFilter !== 'all') {
-            if (categoryFilter === 'gainers') {
-                updated = [...updated]
-                    .sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0))
-                    .slice(0, 50);
-            } else if (categoryFilter === 'losers') {
-                updated = [...updated]
-                    .sort((a, b) => (a.changePercent || 0) - (b.changePercent || 0))
-                    .slice(0, 50);
-            } else if (categoryFilter === 'active') {
-                updated = [...updated]
-                    .sort((a, b) => {
-                        const va = parseInt(a.volume.replace(/,/g, '')) || 0;
-                        const vb = parseInt(b.volume.replace(/,/g, '')) || 0;
-                        return vb - va;
-                    })
-                    .slice(0, 50);
-            }
-        }
-
-        // 3. Search Filter
-        if (searchTerm) {
-            const lowSearch = searchTerm.toLowerCase();
-            updated = updated.filter((s) =>
-                s.symbol.toLowerCase().includes(lowSearch) ||
-                s.name.toLowerCase().includes(lowSearch)
-            );
-        }
-
-        // 4. Sorting
-        if (sortConfig) {
-            updated = [...updated].sort((a, b) => {
-                const aVal = a[sortConfig.key];
-                const bVal = b[sortConfig.key];
-
-                if (aVal === undefined || bVal === undefined) return 0;
-
-                if (aVal < bVal) {
-                    return sortConfig.direction === 'asc' ? -1 : 1;
-                }
-                if (aVal > bVal) {
-                    return sortConfig.direction === 'asc' ? 1 : -1;
-                }
-                return 0;
-            });
-        }
-
-        setFilteredStocks(updated);
-        setCurrentPage(1);
-        setCurrentCardPage(1);
-    }, [filter, stocks, searchTerm, sortConfig, activeWatchlistId, watchlists]);
-
-    // Table Pagination
-    const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedStocks = filteredStocks.slice(startIndex, startIndex + itemsPerPage);
-
-    // Card Pagination
-    const totalCardPages = Math.ceil(filteredStocks.length / cardsPerPage);
-    const cardStartIndex = (currentCardPage - 1) * cardsPerPage;
-    const paginatedCards = filteredStocks.slice(cardStartIndex, cardStartIndex + cardsPerPage);
-
-    const SortIcon = ({ column }: { column: keyof Stock }) => {
-        const isActive = sortConfig?.key === column;
-        const isAsc = sortConfig?.direction === 'asc';
-        return (
-            <span className="inline-flex flex-col ml-2 -space-y-1.5 align-middle">
-                <span className={`text-[7px] transition-colors ${isActive && isAsc ? 'text-blue-500' : 'text-zinc-300 dark:text-zinc-700'}`}>▲</span>
-                <span className={`text-[7px] transition-colors ${isActive && !isAsc ? 'text-blue-500' : 'text-zinc-300 dark:text-zinc-700'}`}>▼</span>
-            </span>
-        );
+        return pages;
     };
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto px-8 py-6">
-                    <h1 className="text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white">
-                        🧭 NASDAQ <span className="text-blue-500">Explorer</span>
-                    </h1>
-                    <p className="text-zinc-500 dark:text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">
-                        NASDAQ Real-Time Trading Terminal
-                    </p>
-                </div>
-            </header>
-
-            {/* Global Index Ticker - "Index data above" */}
-            {false && (
-                <div className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 py-2.5 w-full overflow-hidden shadow-sm sticky top-[73px] z-30">
-                    {/* not used for NASDAQ */}
+            {/* Real-time Loading Indicator */}
+            {loading && (
+                <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-blue-600/10">
+                    <div className="h-full bg-blue-600 animate-[loading_2s_infinite]"></div>
                 </div>
             )}
 
-            <div className="px-4 sm:px-8 py-6 max-w-7xl mx-auto w-full space-y-6">
-                {/* Market Control Center */}
-                <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden mb-6">
-                    <div className="px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="text-blue-600 text-xs">🛠️</span>
-                            <h3 className="text-[10px] font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-[0.2em]">Market Controls</h3>
-                        </div>
-                        <button
-                            onClick={() => { setFilter('all'); setCategoryFilter('all'); setSearchTerm(""); }}
-                            className="text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest transition-colors"
-                        >
-                            Reset All Filters
-                        </button>
+            <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+                <div className="max-w-[1600px] mx-auto px-8 py-6 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white">
+                            🇺🇸 NASDAQ <span className="text-blue-500">Terminal</span>
+                        </h1>
+                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">Global Tech Hub • High Fidelity Real-Time Hub</p>
+                    </div>
+                </div>
+            </header>
+
+            <main className="max-w-[1600px] mx-auto px-8 py-12 space-y-12">
+                
+                {/* Market Intelligence Ribbon */}
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-2xl p-8 space-y-8 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none group-hover:opacity-[0.05] transition-opacity">
+                        <span className="text-[10rem] font-black italic text-blue-600 uppercase">USA</span>
                     </div>
 
-                    <div className="p-4 space-y-6">
-                        {/* Primary Selection & Live Metric */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest pl-1">Index Selector</p>
-                                <div className="relative group">
-                                    <select
-                                        value={""}
-                                        onChange={() => { }}
-                                        className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 py-3 text-xs font-black text-zinc-900 dark:text-zinc-50 appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-                                    >
-                                        <option value="">All Market (Exchange Wide)</option>
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[10px] group-hover:text-blue-500 transition-colors">▼</div>
-                                </div>
-                            </div>
+                    <div className="flex flex-col lg:flex-row gap-8 items-center justify-between relative z-10">
+                        {/* Primary Search Container */}
+                        <div className="relative w-full lg:flex-1 group">
+                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl group-focus-within:scale-110 transition-transform">🔍</span>
+                            <input
+                                type="text"
+                                placeholder="Search Symbol or Company Name..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-[2rem] pl-16 pr-8 py-5 text-sm font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-inner placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+                            />
                         </div>
 
-                        {/* Watchlist Management */}
-                        <div className="space-y-3 pt-2">
-                            <div className="flex justify-between items-center px-1">
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Watchlist Hub</p>
-                                <button
-                                    onClick={() => setIsCreatingWatchlist(!isCreatingWatchlist)}
-                                    className="text-[9px] font-bold text-blue-600 hover:underline"
-                                >
-                                    {isCreatingWatchlist ? "Cancel" : "+ New Watchlist"}
-                                </button>
-                            </div>
-
-                            {isCreatingWatchlist && (
-                                <div className="flex gap-2 p-2 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100/50 dark:border-blue-800/30 animate-in fade-in zoom-in-95">
-                                    <input
-                                        type="text"
-                                        placeholder="Enter name (e.g. My Favorites)"
-                                        value={newWatchlistName}
-                                        onChange={(e) => setNewWatchlistName(e.target.value)}
-                                        className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                                        onKeyPress={(e) => e.key === 'Enter' && handleCreateWatchlist()}
-                                    />
-                                    <button
-                                        onClick={handleCreateWatchlist}
-                                        className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
-                                    >
-                                        Create
-                                    </button>
-                                </div>
-                            )}
-
-                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 scroll-smooth">
-                                <button
-                                    onClick={() => setActiveWatchlistId(null)}
-                                    className={`px-4 py-2 rounded-xl text-[10px] font-black whitespace-nowrap transition-all border ${!activeWatchlistId
-                                        ? "bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900"
-                                        : "text-zinc-500 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-100 dark:border-zinc-800"
-                                        }`}
-                                >
-                                    Global Market
-                                </button>
-                                {watchlists.map((wl) => (
-                                    <button
-                                        key={wl._id}
-                                        onClick={() => setActiveWatchlistId(wl._id)}
-                                        className={`px-4 py-2 rounded-xl text-[10px] font-black whitespace-nowrap transition-all border flex items-center gap-2 ${activeWatchlistId === wl._id
-                                            ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/10"
-                                            : "text-zinc-500 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-100 dark:border-zinc-800 hover:border-zinc-200"
-                                            }`}
-                                    >
-                                        <span>📂</span> {wl.name}
-                                        <span className={`px-1.5 py-0.5 rounded-md text-[8px] ${activeWatchlistId === wl._id ? 'bg-white/20' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
-                                            {wl.symbols?.length || 0}
-                                        </span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* High-Level Benchmarks Grid */}
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between px-1">
-                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Market Benchmarks</p>
-                                <span className="text-[9px] font-bold text-zinc-400 italic">Click to focus and filter market data</span>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                <button
-                                    onClick={() => { /* no-op */ }}
-                                    className={`p-3 rounded-2xl border transition-all text-left group bg-zinc-900 border-transparent shadow-lg shadow-zinc-500/10 text-white`}
-                                >
-                                    <p className={`text-[8px] font-black uppercase tracking-widest mb-1 text-zinc-400`}>Total Market</p>
-                                    <p className="text-sm font-black uppercase tracking-tighter">All Scripts</p>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Secondary Filters: Sectors */}
-                        <div className="space-y-3 pt-2">
-                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest pl-1">Sector Depth</p>
-                            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 scroll-smooth">
-                                {sectors.map((sector) => (
-                                    <button
-                                        key={sector}
-                                        onClick={() => setFilter(sector === 'All' ? 'all' : sector)}
-                                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black whitespace-nowrap transition-all border ${filter === (sector === 'All' ? 'all' : sector)
-                                            ? "bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 shadow-md"
-                                            : "text-zinc-500 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-100 dark:border-zinc-800 hover:border-zinc-200"
-                                            }`}
-                                    >
-                                        {sector}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        {/* New category dropdown */}
-                        <div className="space-y-3 pt-2">
-                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest pl-1">Market Filter</p>
-                            <div className="relative group max-w-xs">
+                        {/* Analysis Filters */}
+                        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+                            <div className="relative group/select">
                                 <select
                                     value={categoryFilter}
                                     onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="w-full bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-xl px-4 py-3 text-xs font-black text-zinc-900 dark:text-zinc-50 appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                                    className="bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer min-w-[200px]"
                                 >
-                                    <option value="all">All Scripts</option>
-                                    <option value="gainers">Top Gainers</option>
-                                    <option value="active">Most Active</option>
-                                    <option value="losers">Top Losers</option>
+                                    <option value="all">Pipeline: General</option>
+                                    <option value="gainers">Top Velocity</option>
+                                    <option value="active">High Liquidity</option>
+                                    <option value="losers">Market Decliners</option>
                                 </select>
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[10px] group-hover:text-blue-500 transition-colors">▼</div>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 group-hover/select:translate-y-[2px] transition-transform text-[10px]">▼</div>
+                            </div>
+
+                            <div className="relative group/select">
+                                <select
+                                    value={filter}
+                                    onChange={(e) => setFilter(e.target.value)}
+                                    className="bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer min-w-[200px]"
+                                >
+                                    <option value="all">Sector: Total</option>
+                                    {sectors.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 group-hover/select:translate-y-[2px] transition-transform text-[10px]">▼</div>
+                            </div>
+
+                            {/* View Switcher Toggle */}
+                            <div className="flex bg-zinc-100 dark:bg-white/10 p-1.5 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-inner">
+                                <button
+                                    onClick={() => setViewType('card')}
+                                    className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'card' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    Cards
+                                </button>
+                                <button
+                                    onClick={() => setViewType('table')}
+                                    className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'table' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    Table
+                                </button>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Stock Explorer Cards */}
-                <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-1 gap-4">
-                        <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight flex items-center gap-2">
-                            <span className="bg-blue-100 dark:bg-blue-900/30 p-1 rounded-md text-blue-600 dark:text-blue-400">🗂️</span> Market Scripts
-                        </h2>
-
-                        <div className="w-full md:flex-1 md:max-w-md md:mx-4 order-2 md:order-none">
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
-                                <input
-                                    type="text"
-                                    placeholder="Search Scripts..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-9 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-bold shadow-sm"
-                                />
-                            </div>
+                    {/* Integrated Watchlist Bar */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-zinc-100 dark:border-white/5">
+                        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2 w-full lg:w-auto">
+                            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em] whitespace-nowrap">Watchlist Monitor:</span>
+                            <button
+                                onClick={() => setActiveWatchlistId(null)}
+                                className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${!activeWatchlistId ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:text-blue-500'}`}
+                            >
+                                US Total Market
+                            </button>
+                            {watchlists.map(wl => (
+                                <button
+                                    key={wl._id}
+                                    onClick={() => setActiveWatchlistId(wl._id)}
+                                    className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${activeWatchlistId === wl._id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:text-blue-500'}`}
+                                >
+                                    <span>📂</span> {wl.name}
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => setIsCreatingWatchlist(!isCreatingWatchlist)}
+                                className="px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-dashed border-zinc-300 dark:border-white/10 text-zinc-400 hover:border-blue-500 hover:text-blue-500 transition-all shrink-0"
+                            >
+                                + New List
+                            </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 shrink-0">
+                            <button
+                                onClick={() => { setFilter('all'); setCategoryFilter('all'); setSelectedIndex(null); setSearchTerm(""); setActiveWatchlistId(null); }}
+                                className="text-[9px] font-black text-blue-600 hover:text-red-500 uppercase tracking-widest transition-colors flex items-center gap-2"
+                            >
+                                ↺ Reset Analytics
+                            </button>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {paginatedCards.length > 0 ? paginatedCards.map((stock) => (
-                            <div key={stock.symbol} className="min-w-0">
-                                <StockCard
-                                    {...stock}
-                                    exchange="NASDAQ"
-                                    onClick={() => router.push(`/nasdaq/${stock.symbol.toLowerCase()}`)}
-                                    watchlists={watchlists}
-                                    activeWatchlistId={activeWatchlistId}
-                                    onAddToWatchlist={handleAddToWatchlist}
-                                    onRemoveFromWatchlist={handleRemoveFromWatchlist}
-                                    onWatchlistCreated={(newList) => setWatchlists([newList, ...watchlists])}
-                                />
-                            </div>
-                        )) : (
-                            <div className="col-span-full py-12 text-center text-zinc-400 font-bold italic">No scripts found matching search/filter</div>
-                        )}
-                    </div>
 
-                    {totalCardPages > 1 && (
-                        <div className="flex justify-center pt-4">
-                            <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                                <button
-                                    onClick={() => setCurrentCardPage(p => Math.max(1, p - 1))}
-                                    disabled={currentCardPage === 1}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 disabled:opacity-20 transition-all font-bold text-[10px] uppercase tracking-wider"
-                                >
-                                    <span>←</span> Prev
-                                </button>
-                                <div className="h-4 w-[1px] bg-zinc-100 dark:bg-zinc-800 mx-1"></div>
-                                <span className="text-[10px] font-black text-zinc-900 dark:text-zinc-50 min-w-[60px] text-center">
-                                    {currentCardPage} <span className="text-zinc-400 font-bold mx-1">/</span> {totalCardPages}
-                                </span>
-                                <div className="h-4 w-[1px] bg-zinc-100 dark:bg-zinc-800 mx-1"></div>
-                                <button
-                                    onClick={() => setCurrentCardPage(p => Math.min(totalCardPages, p + 1))}
-                                    disabled={currentCardPage === totalCardPages}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 disabled:opacity-20 transition-all font-bold text-[10px] uppercase tracking-wider"
-                                >
-                                    Next <span>→</span>
-                                </button>
+                    {isCreatingWatchlist && (
+                        <div className="flex flex-col sm:flex-row gap-4 p-4 bg-blue-600 text-white rounded-[2rem] animate-in zoom-in-95 duration-200">
+                            <input
+                                type="text"
+                                placeholder="Snapshot Name (e.g. AI Giants)..."
+                                value={newWatchlistName}
+                                onChange={(e) => setNewWatchlistName(e.target.value)}
+                                className="flex-1 bg-white/20 border-none rounded-2xl px-6 py-3 text-xs font-black placeholder:text-white/50 focus:ring-0 outline-none"
+                                onKeyPress={(e) => e.key === 'Enter' && handleCreateWatchlist()}
+                            />
+                            <div className="flex gap-2">
+                                <button onClick={handleCreateWatchlist} className="flex-1 sm:flex-none bg-white text-blue-600 px-8 py-3 rounded-2xl text-xs font-black hover:bg-zinc-100 transition-all uppercase tracking-widest">Execute</button>
+                                <button onClick={() => setIsCreatingWatchlist(false)} className="px-6 py-3 text-white/80 hover:text-white border border-white/20 rounded-2xl uppercase text-[10px] font-black">Cancel</button>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Table continues unchanged from stocks page but using filteredStocks */}
-                <div className="max-w-7xl mx-auto">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50/50 dark:bg-zinc-800/20">
-                            <div>
-                                <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">Market Analytics Table</h2>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <span className="text-[10px] font-black text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-800">
-                                    {filteredStocks.length} Companies Listed
-                                </span>
-                            </div>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs border-collapse">
-                                <thead className="bg-zinc-50 dark:bg-zinc-950">
-                                    <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400">
-                                        <th onClick={() => requestSort('symbol')} className="p-4 font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">Symbol <SortIcon column="symbol" /></th>
-                                        <th onClick={() => requestSort('name')} className="p-4 font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">Company <SortIcon column="name" /></th>
-                                        <th onClick={() => requestSort('currentPrice')} className="p-4 font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">Price <SortIcon column="currentPrice" /></th>
-                                        <th onClick={() => requestSort('changePercent')} className="p-4 font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">% <SortIcon column="changePercent" /></th>
-                                        <th onClick={() => requestSort('volume')} className="p-4 font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">Volume <SortIcon column="volume" /></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {paginatedStocks.map((s) => {
-                                        const isPos = s.change >= 0;
-                                        return (
-                                            <tr key={s.symbol} className="border-b border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer" onClick={() => router.push(`/nasdaq/${s.symbol.toLowerCase()}`)}>
-                                                <td className="p-4 font-bold uppercase">{s.symbol}</td>
-                                                <td className="p-4 font-semibold truncate max-w-[200px]">{s.name}</td>
-                                                <td className="p-4 font-mono">{s.currentPrice.toLocaleString()}</td>
-                                                <td className={`p-4 font-bold ${isPos ? 'text-green-600' : 'text-red-600'}`}>{s.changePercent.toFixed(2)}%</td>
-                                                <td className="p-4">{s.volume}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                {/* Index Quick Scroll Ticker */}
+                <div className="flex gap-6 overflow-x-auto no-scrollbar py-2">
+                    {indices.map(idx => {
+                        const isSelected = selectedIndex?.name === idx.name;
+                        const isPos = idx.change >= 0;
+                        return (
+                            <button
+                                key={idx.name}
+                                onClick={() => setSelectedIndex(isSelected ? null : idx)}
+                                className={`flex-1 min-w-[280px] p-6 rounded-[2rem] border transition-all relative overflow-hidden group/card ${isSelected ? 'bg-blue-600 border-transparent text-white shadow-2xl scale-[1.02]' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/5 hover:border-blue-500/50 hover:bg-zinc-50 dark:hover:bg-white/[0.08]'}`}
+                            >
+                                <div className="flex justify-between items-start mb-4 relative z-10">
+                                    <div>
+                                        <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isSelected ? 'text-white/70' : 'text-zinc-500'}`}>{idx.name}</p>
+                                        <h3 className="text-2xl font-black font-mono tracking-tighter">{idx.value.toLocaleString()}</h3>
+                                    </div>
+                                    <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black ${isSelected ? 'bg-white/20 text-white' : (isPos ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500')}`}>
+                                        {isPos ? '▲' : '▼'}{Math.abs(idx.changePercent).toFixed(1)}%
+                                    </div>
+                                </div>
+                                <div className={`text-[10px] font-black uppercase tracking-widest relative z-10 ${isSelected ? 'text-white/50' : 'text-zinc-400'}`}>
+                                    {isPos ? 'BULLISH SENTIMENT' : 'BEARISH PRESSURE'}
+                                </div>
+                                {isSelected && (
+                                    <div className="absolute bottom-0 right-0 p-4 opacity-20 transform translate-x-1/4 translate-y-1/4">
+                                        <span className="text-6xl font-black italic uppercase">ACTV</span>
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
 
-                        {totalPages > 1 && (
-                            <div className="flex justify-center py-4">
-                                <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 disabled:opacity-20 transition-all font-bold text-[10px] uppercase tracking-wider"
-                                    >
-                                        <span>←</span> Prev
-                                    </button>
-                                    <div className="h-4 w-[1px] bg-zinc-100 dark:bg-zinc-800 mx-1"></div>
-                                    <span className="text-[10px] font-black text-zinc-900 dark:text-zinc-50 min-w-[60px] text-center">
-                                        {currentPage} <span className="text-zinc-400 font-bold mx-1">/</span> {totalPages}
+                {/* Index Detail View (Dynamic Chart) */}
+                {selectedIndex && (
+                    <div className="animate-in slide-in-from-top-4 duration-500">
+                        <div className="bg-white dark:bg-[#080808] rounded-[3.5rem] p-10 border border-zinc-200 dark:border-white/5 shadow-2xl relative overflow-hidden group">
+                           <div className="absolute top-0 right-0 p-16 opacity-[0.03] select-none pointer-events-none">
+                               <span className="text-[12rem] font-black italic text-blue-600 uppercase">INDEX</span>
+                           </div>
+                           
+                           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 relative z-10">
+                               <div>
+                                   <div className="flex items-center gap-4 mb-2">
+                                       <h2 className="text-4xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">{selectedIndex.name}</h2>
+                                       <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${selectedIndex.change >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                           Live Analysis
+                                       </span>
+                                   </div>
+                                   <p className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.3em]">Master Market Benchmark • US Execution Profile</p>
+                               </div>
+                               <button onClick={() => setSelectedIndex(null)} className="text-zinc-400 hover:text-white transition-colors text-3xl">✕</button>
+                           </div>
+
+                           <div className="h-[600px] w-full relative z-10 overflow-hidden">
+                               <TradingChart 
+                                   title={`${selectedIndex.name} Performance Roadmap`} 
+                                   data={generateHistory(selectedIndex.value)} 
+                                   currentTimeframe="1D"
+                                   currencySymbol="" seamless={true} 
+                               />
+                           </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Explorer Results Area */}
+                <div className="space-y-12 min-h-[800px]">
+                    {viewType === 'card' ? (
+                        <div className="space-y-12 animate-in fade-in duration-500">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 px-1">
+                                {paginatedStocks.map((stock) => (
+                                    <StockCard
+                                        key={stock.symbol}
+                                        {...stock}
+                                        currentPrice={displayCurrency === 'USD' ? stock.currentPrice : (stock.pkrPrice || stock.currentPrice * exchangeRate)}
+                                        change={displayCurrency === 'USD' ? stock.change : (stock.change * exchangeRate)}
+                                        open={displayCurrency === 'USD' ? stock.open : (stock.open * exchangeRate)}
+                                        high={displayCurrency === 'USD' ? stock.high : (stock.high * exchangeRate)}
+                                        low={displayCurrency === 'USD' ? stock.low : (stock.low * exchangeRate)}
+                                        currencySymbol={displayCurrency === 'USD' ? '$' : 'Rs.'}
+                                        exchange="NASDAQ"
+                                        onClick={() => router.push(`/nasdaq/${stock.symbol.toLowerCase()}`)}
+                                        watchlists={watchlists}
+                                        activeWatchlistId={activeWatchlistId}
+                                        onAddToWatchlist={handleAddToWatchlist}
+                                        onRemoveFromWatchlist={handleRemoveFromWatchlist}
+                                        onWatchlistCreated={(newList) => setWatchlists([newList, ...watchlists])}
+                                    />
+                                ))}
+                                {filteredStocks.length === 0 && (
+                                    <div className="col-span-full py-48 text-center bg-white dark:bg-white/5 rounded-[3.5rem] border border-dashed border-zinc-200 dark:border-white/10">
+                                        <span className="text-5xl block mb-6">🛰️</span>
+                                        <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-xs px-12">Universal market scan complete: No matching footprints detected</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Card Pagination */}
+                            {filteredStocks.length > itemsPerPage && (
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-8 pt-12 border-t border-zinc-200 dark:border-white/5">
+                                    <div className="text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em] italic">
+                                        Vault Entry {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredStocks.length)} of {filteredStocks.length} Global Assets
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {getVisiblePages().map((p, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => typeof p === 'number' && (setCurrentPage(p), window.scrollTo({ top: 800, behavior: 'smooth' }))}
+                                                disabled={p === '...' || p === currentPage}
+                                                className={`min-w-[45px] h-[45px] rounded-xl text-[10px] font-black transition-all ${p === currentPage ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20' : p === '...' ? 'cursor-default text-zinc-400' : 'bg-white dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/5'}`}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="bg-white dark:bg-zinc-900 rounded-[3.5rem] border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-2xl animate-in fade-in duration-500">
+                            <div className="px-10 py-8 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 flex flex-col md:flex-row justify-between items-center gap-6">
+                                <div>
+                                    <h2 className="text-sm font-black uppercase tracking-[0.3em]">Institutional Asset Analytics</h2>
+                                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">Multi-Vector Valuation Matrix</p>
+                                </div>
+                                <div className="flex items-center gap-6">
+                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-600/10 px-4 py-2 rounded-xl border border-blue-500/20">
+                                        Live Datastream: Active
                                     </span>
-                                    <div className="h-4 w-[1px] bg-zinc-100 dark:bg-zinc-800 mx-1"></div>
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 disabled:opacity-20 transition-all font-bold text-[10px] uppercase tracking-wider"
-                                    >
-                                        Next <span>→</span>
-                                    </button>
                                 </div>
                             </div>
-                        )}
-                    </div>
+                            <div className="overflow-x-auto custom-scrollbar">
+                                <table className="w-full text-left text-[11px] border-collapse min-w-[800px]">
+                                    <thead>
+                                        <tr className="bg-zinc-100/50 dark:bg-black uppercase tracking-widest text-zinc-400 font-black">
+                                            <th onClick={() => requestSort('symbol')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors">Ticker Symbol</th>
+                                            <th onClick={() => requestSort('name')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors">Organization Name</th>
+                                            <th onClick={() => requestSort('currentPrice')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Execution Price</th>
+                                            <th onClick={() => requestSort('changePercent')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Momentum Delta</th>
+                                            <th onClick={() => requestSort('volume')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Market Fluidity</th>
+                                            <th className="p-8 text-center">Strategic Analysis</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
+                                        {paginatedStocks.map((stock) => (
+                                            <tr key={stock.symbol} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-all group">
+                                                <td className="p-8">
+                                                    <span className="px-4 py-2 bg-zinc-100 dark:bg-white/5 rounded-xl font-black group-hover:text-blue-600 group-hover:scale-105 transition-all inline-block shadow-sm">
+                                                        {stock.symbol}
+                                                    </span>
+                                                </td>
+                                                <td className="p-8 font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-xs">{stock.name}</td>
+                                                <td className="p-8 font-mono font-black text-right text-sm">
+                                                    {displayCurrency === 'USD' ? '$' : 'Rs.'}
+                                                    {(displayCurrency === 'USD' ? stock.currentPrice : (stock.pkrPrice || stock.currentPrice * exchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="p-8 text-right">
+                                                    <span className={`px-4 py-1.5 rounded-xl font-black ${stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-600'}`}>
+                                                        {stock.changePercent >= 0 ? '▲' : '▼'}{Math.abs(stock.changePercent)?.toFixed(2)}%
+                                                    </span>
+                                                </td>
+                                                <td className="p-8 font-mono text-zinc-400 text-right font-black uppercase">{stock.volume}</td>
+                                                <td className="p-8 text-center">
+                                                    <button onClick={() => router.push(`/nasdaq/${stock.symbol.toLowerCase()}`)} className="text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white px-6 py-3 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-600/30">Detailed Audit</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Table Pagination */}
+                            {filteredStocks.length > itemsPerPage && (
+                                <div className="px-10 py-8 bg-zinc-50 dark:bg-black/40 border-t border-zinc-100 dark:border-white/5 flex flex-col sm:flex-row justify-between items-center gap-8">
+                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                                        Matrix Segment: {startIndex + 1} TO {Math.min(startIndex + itemsPerPage, filteredStocks.length)} | Total: {filteredStocks.length}
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            disabled={currentPage === 1}
+                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            className="px-6 py-3 rounded-[1.2rem] bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest disabled:opacity-30 hover:border-blue-500 transition-all"
+                                        >
+                                            Prev
+                                        </button>
+                                        <div className="flex items-center px-4 font-black text-xs text-blue-600 tracking-tighter">
+                                            {currentPage} / {Math.ceil(filteredStocks.length / itemsPerPage)}
+                                        </div>
+                                        <button 
+                                            disabled={currentPage === Math.ceil(filteredStocks.length / itemsPerPage)}
+                                            onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredStocks.length / itemsPerPage), prev + 1))}
+                                            className="px-6 py-3 rounded-[1.2rem] bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest disabled:opacity-30 hover:border-blue-500 transition-all"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
-            </div>
+            </main>
+
+            <style jsx global>{`
+                @keyframes loading {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(59, 130, 246, 0.1);
+                    border-radius: 10px;
+                }
+                .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(59, 130, 246, 0.2);
+                }
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+            `}</style>
         </div>
     );
 }

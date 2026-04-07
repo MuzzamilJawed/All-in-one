@@ -64,13 +64,20 @@ export default function PriceCard({
             <div>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-medium text-zinc-400">{currencySymbol}</span>
-                <span className="text-5xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono">
-                  {displayPrice?.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                <span className="text-3xl lg:text-5xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono break-all sm:break-normal">
+                  {(displayPrice || 0).toLocaleString(undefined, { 
+                    minimumFractionDigits: (displayPrice || 0) < 10 ? 4 : 2, 
+                    maximumFractionDigits: (displayPrice || 0) < 10 ? 4 : 2 
+                  })}
                 </span>
               </div>
               <div className="mt-2 flex items-center gap-3">
                 <p className={`text-sm font-black italic tracking-tight ${displayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {displayChange >= 0 ? '+' : ''}{displayChange.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  {displayChange >= 0 ? '+' : ''}
+                  {(displayChange || 0).toLocaleString(undefined, { 
+                    minimumFractionDigits: (displayPrice || 0) < 10 ? 4 : 2, 
+                    maximumFractionDigits: (displayPrice || 0) < 10 ? 4 : 2 
+                  })}
                 </p>
                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Since Open</span>
               </div>

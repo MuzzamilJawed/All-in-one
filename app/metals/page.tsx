@@ -6,20 +6,14 @@ const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSettings } from "../context/SettingsContext";
 // Use internal API routes to avoid CORS and run scraping/server code server-side
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
 
 export default function MetalsPage() {
+  const [showMore, setShowMore] = useState(false);
+  const [showPurity, setShowPurity] = useState(false);
+  const [calcMetal, setCalcMetal] = useState('gold');
+  const [calcPurity, setCalcPurity] = useState('24K');
+  const [calcUnit, setCalcUnit] = useState('Tola');
+  const [calcQuantity, setCalcQuantity] = useState(1);
   const [timeframe, setTimeframe] = useState("1d");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -43,12 +37,11 @@ export default function MetalsPage() {
   const [trendTimeframe, setTrendTimeframe] = useState("Daily");
   const [trendMetal, setTrendMetal] = useState("gold"); // 'gold' | 'silver'
   const [trendData, setTrendData] = useState<any[]>([]);
-  const [tableCurrency, setTableCurrency] = useState<'PKR' | 'USD'>('PKR');
+  const { settings, updateSettings } = useSettings();
+  const tableCurrency = settings.currency as 'USD' | 'PKR';
   const [detailedRates, setDetailedRates] = useState<any[]>([]);
   const [rawMarketData, setRawMarketData] = useState<any>(null);
   const [purityUnit, setPurityUnit] = useState('Tola'); // 'Tola' | 'Gram' | 'Ounce' | 'Kg'
-
-  const { settings } = useSettings();
 
   const loadPrices = useCallback(async (isManual = true) => {
     try {
@@ -473,34 +466,56 @@ export default function MetalsPage() {
     const generateCandles = (basePrice: number, tf: string, metal: string) => {
       const candleKey = `${metal}-${tf}-${tableCurrency}`;
 
-      let seconds = 3600, count = 48;
-      if (tf === "1D") { seconds = 86400; count = 30; }
-      if (tf === "1W") { seconds = 604800; count = 52; }
-      if (tf === "1M") { seconds = 2592000; count = 24; }
-
       // If already exists, just update last candle
       if (stableCandlesRef.current[candleKey] && stableCandlesRef.current[candleKey].length > 0) {
         const existing = [...stableCandlesRef.current[candleKey]];
-        const last = { ...existing[existing.length - 1] };
+        const lastIndex = existing.length - 1;
+        const last = { ...existing[lastIndex] };
+        
+        // Ensure the last candle's close is synced with the latest market price
         last.close = basePrice;
         last.high = Math.max(last.high, basePrice);
         last.low = Math.min(last.low, basePrice);
-        existing[existing.length - 1] = last;
+        
+        existing[lastIndex] = last;
         stableCandlesRef.current[candleKey] = existing;
         return existing;
       }
 
+      let count = 60;
+      let seconds = 3600; // 1H
+      if (tf === "1D") { seconds = 86400; count = 45; }
+      if (tf === "1W") { seconds = 604800; count = 52; }
+      if (tf === "1M") { seconds = 2592000; count = 24; }
+
       const candles = [];
       const now = Math.floor(Date.now() / 1000);
-      for (let i = count; i >= 0; i--) {
+      let currentPrice = basePrice;
+      const volatility = tf === "1M" ? 0.05 : tf === "1W" ? 0.03 : tf === "1D" ? 0.015 : 0.005;
+
+      // Generate candles from newest to oldest
+      for (let i = 0; i < count; i++) {
         const time = now - i * seconds;
-        const vol = tf === "1M" ? 0.08 : tf === "1W" ? 0.05 : tf === "1D" ? 0.02 : 0.005;
-        const open = basePrice * (1 + (Math.random() - 0.5) * vol);
-        const close = i === 0 ? basePrice : open * (1 + (Math.random() - 0.5) * (vol * 0.8));
-        const high = Math.max(open, close) * (1 + Math.random() * (vol * 0.4));
-        const low = Math.min(open, close) * (1 - Math.random() * (vol * 0.4));
-        candles.push({ time, open, high, low, close });
+        const change = (Math.random() - 0.5) * volatility;
+        
+        const close = currentPrice;
+        const open = close / (1 + change); // Walk backwards
+        
+        const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.3));
+        const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.3));
+        
+        candles.unshift({ 
+          time: time, 
+          open: parseFloat(open.toFixed(4)), 
+          high: parseFloat(high.toFixed(4)), 
+          low: parseFloat(low.toFixed(4)), 
+          close: parseFloat(close.toFixed(4)),
+          volume: Math.floor(Math.random() * 1000) + 500
+        });
+        
+        currentPrice = open;
       }
+
       stableCandlesRef.current[candleKey] = candles;
       return candles;
     };
@@ -511,7 +526,7 @@ export default function MetalsPage() {
   }, [rawMarketData, trendTimeframe, trendMetal, goldChartTF, silverChartTF, tableCurrency]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black overflow-x-hidden w-full">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       <div className="sticky top-0 z-40 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
         <div className="px-4 sm:px-8 py-4 max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -530,30 +545,203 @@ export default function MetalsPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 border border-zinc-200 dark:border-zinc-700">
-                <button onClick={() => setTableCurrency('PKR')} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600 dark:text-green-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>PKR</button>
-                <button onClick={() => setTableCurrency('USD')} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>USD</button>
+                <button onClick={() => updateSettings({ currency: 'PKR' })} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600 dark:text-green-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>PKR</button>
+                <button onClick={() => updateSettings({ currency: 'USD' })} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>USD</button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full overflow-x-hidden">
+      <div className="p-4 sm:p-8 max-w-[1600px] mx-auto w-full">
         {error && (
           <div className="mb-6 bg-amber-50 dark:bg-amber-900 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
             <p className="text-amber-800 dark:text-amber-200 text-sm">⚠️ {error}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {metalPrices.map((metal) => (
-            <PriceCard key={metal.title} {...metal} currency={tableCurrency} />
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch mb-6">
+          {metalPrices
+            .filter(m => !["Gold (24K) - Per Ounce", "Silver - Per Kilogram"].includes(m.title))
+            .map((metal) => (
+              <PriceCard key={metal.title} {...metal} currency={tableCurrency} />
+            ))}
         </div>
 
+        <div className="flex justify-center mb-12">
+          <button 
+            onClick={() => setShowMore(!showMore)}
+            className="group flex items-center gap-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-full px-8 py-3 shadow-sm hover:shadow-xl transition-all duration-300 hover:border-blue-500/50"
+          >
+            <div className={`w-8 h-8 ${showMore ? 'bg-zinc-100 dark:bg-zinc-800' : 'bg-blue-50 dark:bg-blue-900/20'} rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-500`}>
+              <svg className={`w-5 h-5 ${showMore ? 'text-zinc-600 dark:text-zinc-400' : 'text-blue-600 dark:text-blue-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={showMore ? "M20 12H4" : "M12 4v16m8-8H4"} />
+              </svg>
+            </div>
+            <span className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">
+              {showMore ? "Hide Price Calculator" : "Analyze Custom Weight"}
+            </span>
+          </button>
+        </div>
+
+        {showMore && (
+          <div className="mt-8 animate-in fade-in slide-in-from-top-6 duration-500">
+            <div className="bg-white dark:bg-zinc-900 rounded-[3rem] p-8 md:p-12 shadow-2xl border border-zinc-200 dark:border-zinc-800 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+                <span className="text-9xl font-black italic text-blue-500 uppercase select-none font-mono">CALC</span>
+              </div>
+              
+              <div className="relative z-10">
+                <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter mb-12 flex items-center gap-3">
+                  <span className="w-12 h-1.5 bg-blue-600 rounded-full"></span>
+                  Metal Price Calculator
+                </h2>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                  <div className="space-y-10">
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-2">Selection Logic</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button 
+                          onClick={() => setCalcMetal('gold')}
+                          className={`flex items-center justify-center gap-3 p-5 rounded-3xl border-2 transition-all duration-300 font-bold ${calcMetal === 'gold' ? 'bg-amber-500/10 border-amber-500 text-amber-600' : 'bg-zinc-50 dark:bg-zinc-800 border-transparent text-zinc-500'}`}
+                        >
+                          <span className="text-xl">🏆</span> Gold (24K)
+                        </button>
+                        <button 
+                          onClick={() => setCalcMetal('silver')}
+                          className={`flex items-center justify-center gap-3 p-5 rounded-3xl border-2 transition-all duration-300 font-bold ${calcMetal === 'silver' ? 'bg-zinc-500/10 border-zinc-500 text-zinc-600' : 'bg-zinc-50 dark:bg-zinc-800 border-transparent text-zinc-500'}`}
+                        >
+                          <span className="text-xl">🔘</span> Silver (999)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {calcMetal === 'gold' && (
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-2">Purity Grade</label>
+                          <select 
+                            value={calcPurity}
+                            onChange={(e) => setCalcPurity(e.target.value)}
+                            className="w-full bg-zinc-50 dark:bg-zinc-800 border-none rounded-3xl p-5 font-bold transition-all focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-zinc-50"
+                          >
+                            <option value="24K">24K (99.9%)</option>
+                            <option value="22K">22K (91.6%)</option>
+                            <option value="21K">21K (87.5%)</option>
+                            <option value="18K">18K (75.0%)</option>
+                          </select>
+                        </div>
+                      )}
+                      <div className="space-y-4 flex-1">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-2">Weight Metric</label>
+                        <select 
+                          value={calcUnit}
+                          onChange={(e) => setCalcUnit(e.target.value)}
+                          className="w-full bg-zinc-50 dark:bg-zinc-800 border-none rounded-3xl p-5 font-bold transition-all focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-zinc-50"
+                        >
+                          <option value="Tola">Tola</option>
+                          <option value="Gram">Gram</option>
+                          <option value="Ounce">Ounce (oz)</option>
+                          <option value="Kg">Kilogram (kg)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-2">Execution Quantity</label>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          value={calcQuantity}
+                          onChange={(e) => setCalcQuantity(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-zinc-50 dark:bg-zinc-800 border-none rounded-3xl p-6 text-2xl font-black transition-all focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-zinc-50 font-mono"
+                          placeholder="0.00"
+                        />
+                        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-400 font-black uppercase tracking-widest text-xs pointer-events-none">
+                          {calcUnit}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col justify-center items-center bg-blue-600 rounded-[2.5rem] p-12 text-white shadow-2xl shadow-blue-500/20 relative group overflow-hidden">
+                    {/* Animated background pulse */}
+                    <div className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors pointer-events-none" />
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                    
+                    <div className="relative z-10 text-center space-y-8 w-full">
+                      <p className="text-[12px] font-black uppercase tracking-[0.4em] text-blue-100/60">Estimated Market Value</p>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-4">
+                          <span className="text-4xl font-medium text-blue-200 lowercase">{tableCurrency === 'PKR' ? 'Rs.' : '$'}</span>
+                          <span className="text-7xl font-black tracking-tighter font-mono break-all line-clamp-1">
+                            {(() => {
+                              const isPkr = tableCurrency === 'PKR';
+                              let basePrice = 0;
+                              
+                              if (calcMetal === 'gold') {
+                                if (calcUnit === 'Tola') basePrice = isPkr ? (metalPrices[1].pkrPrice || 0) : (metalPrices[1].usdPrice || 0);
+                                else if (calcUnit === 'Gram') basePrice = isPkr ? (metalPrices[0].pkrPrice || 0) : (metalPrices[0].usdPrice || 0);
+                                else if (calcUnit === 'Ounce') basePrice = isPkr ? (metalPrices[2].pkrPrice || 0) : (metalPrices[2].usdPrice || 0);
+                                else if (calcUnit === 'Kg') basePrice = (isPkr ? (metalPrices[0].pkrPrice || 0) : (metalPrices[0].usdPrice || 0)) * 1000;
+                                
+                                const purityRatio = (parseInt(calcPurity) || 24) / 24;
+                                return (basePrice * purityRatio * calcQuantity).toLocaleString(undefined, { maximumFractionDigits: 0 });
+                              } else {
+                                if (calcUnit === 'Tola') basePrice = isPkr ? (metalPrices[3].pkrPrice || 0) : (metalPrices[3].usdPrice || 0);
+                                else if (calcUnit === 'Ounce') basePrice = isPkr ? (metalPrices[4].pkrPrice || 0) : (metalPrices[4].usdPrice || 0);
+                                else if (calcUnit === 'Kg') basePrice = isPkr ? (metalPrices[5].pkrPrice || 0) : (metalPrices[5].usdPrice || 0);
+                                else if (calcUnit === 'Gram') basePrice = (isPkr ? (metalPrices[3].pkrPrice || 0) : (metalPrices[3].usdPrice || 0)) / 11.6638;
+                                
+                                return (basePrice * calcQuantity).toLocaleString(undefined, { maximumFractionDigits: 0 });
+                              }
+                            })()}
+                          </span>
+                        </div>
+                        <p className="text-blue-100/40 text-[10px] font-black uppercase tracking-widest">
+                          Calculated at {new Date().toLocaleTimeString()}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-8 border-t border-white/10">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-blue-200/50 uppercase">Current Bid</p>
+                          <p className="font-bold text-lg">
+                            {tableCurrency === 'PKR' ? 'Rs.' : '$'}
+                            {(tableCurrency === 'PKR' 
+                              ? metalPrices[calcMetal === 'gold' ? 1 : 3].pkrPrice 
+                              : metalPrices[calcMetal === 'gold' ? 1 : 3].usdPrice || 0
+                            )?.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-blue-200/50 uppercase">Base Spread</p>
+                          <p className="font-bold text-lg">0.05% Fixed</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mt-8 bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-          <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">Live Metal Rates <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">{tableCurrency}</span></h2>
+          <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap justify-between items-center gap-4">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+              Live Metal Rates 
+              <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">{tableCurrency}</span>
+            </h2>
+            <button 
+              onClick={() => setShowPurity(!showPurity)}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl border transition-all duration-300 font-black uppercase text-[10px] tracking-widest ${showPurity ? 'bg-amber-500 border-amber-500 text-white' : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-amber-500/30 hover:text-amber-600'}`}
+            >
+              <span className={showPurity ? 'animate-bounce' : ''}>{showPurity ? '👑' : '💎'}</span>
+              {showPurity ? "Hide Carat Breakdown" : "Analyze Purity Levels"}
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
@@ -589,121 +777,121 @@ export default function MetalsPage() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-8">
-          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-md p-6 border border-zinc-200 dark:border-zinc-700">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Gold Purity Breakdown</h2>
-              <select
-                value={purityUnit}
-                onChange={(e) => setPurityUnit(e.target.value)}
-                className="text-xs bg-zinc-100 dark:bg-zinc-800 border-none rounded-md px-2 py-1 focus:ring-1 focus:ring-amber-500"
-              >
-                <option value="Tola">Per Tola</option>
-                <option value="Gram">Per Gram</option>
-                <option value="Ounce">Per Ounce</option>
-                <option value="Kg">Per Kg</option>
-              </select>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-200 dark:border-zinc-700 text-left">
-                    <th className="py-2 px-2">Last Updated</th>
-                    <th className="py-2 px-2">Carat</th>
-                    <th className="py-2 px-2">Purity</th>
-                    <th className="py-2 px-2">{tableCurrency} ({purityUnit})</th>
-                    <th className="py-2 px-2">Change</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {caratPrices.map((item) => {
-                    // Conversion factors from Tola
-                    let factor = 1;
-                    if (purityUnit === "Gram") factor = 1 / 11.6638;
-                    if (purityUnit === "Ounce") factor = 1 / 0.375;
-                    if (purityUnit === "Kg") factor = 1000 / 11.6638;
+        {/* showPurity Toggle moved to Table Header below for better UX */}
 
-                    const displayPrice = tableCurrency === 'PKR' ? item.pkr * factor : item.usd * factor;
-                    const displayChange = item.change * factor;
-
-                    return (
-                      <tr key={item.carat} className="border-b border-zinc-100 dark:border-zinc-800">
-                        <td className="py-3 px-2 text-[10px] text-zinc-500">{new Date().toLocaleString()}</td>
-                        <td className="py-3 px-2 font-bold">{item.carat}</td>
-                        <td className="py-3 px-2 text-zinc-500">{item.purity}%</td>
-                        <td className="py-3 px-2 font-semibold">
-                          {tableCurrency === 'PKR' ? 'Rs.' : '$'} {displayPrice.toLocaleString(undefined, { maximumFractionDigits: purityUnit === 'Tola' || purityUnit === 'Kg' ? 0 : 2 })}
-                        </td>
-                        <td className={`py-3 px-2 ${displayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {displayChange >= 0 ? '+' : ''}{displayChange.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-md p-6 border border-zinc-200 dark:border-zinc-700">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Price Trends</h2>
-              <div className="flex flex-wrap gap-2">
-                <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-md p-1 mr-2">
-                  {['Daily', 'Weekly', 'Monthly', 'Yearly'].map(tf => (
-                    <button
-                      key={tf}
-                      onClick={() => setTrendTimeframe(tf)}
-                      className={`px-2 py-1 text-[10px] font-bold rounded ${trendTimeframe === tf ? 'bg-white dark:bg-zinc-700 shadow text-zinc-900 dark:text-zinc-50' : 'text-zinc-500 hover:text-zinc-700'}`}
+        <div className="mt-12 space-y-12">
+          {/* Purity Breakdown Modal */}
+          {showPurity && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <div 
+                className="absolute inset-0 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300"
+                onClick={() => setShowPurity(false)}
+              ></div>
+              
+              <div className="relative bg-white dark:bg-[#050505] rounded-[3rem] p-8 md:p-12 shadow-2xl border border-zinc-200 dark:border-white/5 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
+                
+                <div className="flex justify-between items-center mb-10 shrink-0">
+                  <div>
+                    <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Gold Purity Breakdown</h2>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Institutional Valuation Reference Guide</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <select
+                      value={purityUnit}
+                      onChange={(e) => setPurityUnit(e.target.value)}
+                      className="bg-zinc-100 dark:bg-white/5 border-none rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-amber-500 transition-all cursor-pointer outline-none"
                     >
-                      {tf}
+                      <option value="Tola">Per Tola</option>
+                      <option value="Gram">Per Gram</option>
+                      <option value="Ounce">Per Ounce</option>
+                      <option value="Kg">Per Kg</option>
+                    </select>
+                    <button 
+                      onClick={() => setShowPurity(false)}
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors text-zinc-500 dark:text-zinc-400"
+                    >
+                      ✕
                     </button>
-                  ))}
+                  </div>
                 </div>
-                <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-md p-1">
-                  <button onClick={() => setTrendMetal('gold')} className={`px-3 py-1 text-[10px] font-bold rounded ${trendMetal === 'gold' ? 'bg-amber-500 text-white shadow' : 'text-zinc-500'}`}>Gold</button>
-                  <button onClick={() => setTrendMetal('silver')} className={`px-3 py-1 text-[10px] font-bold rounded ${trendMetal === 'silver' ? 'bg-slate-400 text-white shadow' : 'text-zinc-500'}`}>Silver</button>
+
+                <div className="overflow-y-auto pr-4 custom-scrollbar">
+                  <table className="w-full text-left text-sm border-separate border-spacing-y-3">
+                    <thead>
+                      <tr className="text-zinc-400">
+                        <th className="pb-4 px-4 font-black uppercase tracking-widest text-[10px]">Reference</th>
+                        <th className="pb-4 px-4 font-black uppercase tracking-widest text-[10px]">Grade</th>
+                        <th className="pb-4 px-4 font-black uppercase tracking-widest text-[10px]">Purity</th>
+                        <th className="pb-4 px-4 font-black uppercase tracking-widest text-[10px] text-right">{tableCurrency} Market Rate</th>
+                        <th className="pb-4 px-4 font-black uppercase tracking-widest text-[10px] text-right">Movement</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {caratPrices.map((item) => {
+                        let factor = 1;
+                        if (purityUnit === "Gram") factor = 1 / 11.6638;
+                        if (purityUnit === "Ounce") factor = 1 / 0.375;
+                        if (purityUnit === "Kg") factor = 1000 / 11.6638;
+                        const displayPrice = tableCurrency === 'PKR' ? item.pkr * factor : item.usd * factor;
+                        const displayChange = item.change * factor;
+                        return (
+                          <tr key={item.carat} className="bg-zinc-50 dark:bg-white/[0.02] hover:bg-zinc-100 dark:hover:bg-white/5 transition-all group">
+                            <td className="py-5 px-4 first:rounded-l-2xl text-[10px] font-mono text-zinc-500 border-y border-l border-transparent dark:border-white/5">{new Date().toLocaleTimeString()}</td>
+                            <td className="py-5 px-4 font-black text-amber-600 italic text-lg border-y border-transparent dark:border-white/5">{item.carat}</td>
+                            <td className="py-5 px-4 font-bold text-zinc-400 border-y border-transparent dark:border-white/5">{item.purity}% Pure</td>
+                            <td className="py-5 px-4 font-mono font-black text-zinc-900 dark:text-zinc-50 text-right text-lg border-y border-transparent dark:border-white/5">
+                              {tableCurrency === 'PKR' ? 'Rs.' : '$'} {displayPrice.toLocaleString(undefined, { maximumFractionDigits: purityUnit === 'Tola' || purityUnit === 'Kg' ? 0 : 2 })}
+                            </td>
+                            <td className={`py-5 px-4 last:rounded-r-2xl font-black text-right border-y border-r border-transparent dark:border-white/5 ${displayChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {displayChange >= 0 ? '+' : ''}{displayChange.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  
+                  <div className="mt-10 p-6 bg-amber-500/5 rounded-[2rem] border border-amber-500/10">
+                    <p className="text-[10px] text-amber-500/70 font-black uppercase tracking-widest text-center">Calculations based on 24K Gold Reference of {tableCurrency === 'PKR' ? 'Rs.' : '$'}{(tableCurrency === 'PKR' ? caratPrices[0]?.pkr : caratPrices[0]?.usd)?.toLocaleString()} per Tola</p>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
-                  <defs>
-                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={trendMetal === 'gold' ? "#fbbf24" : "#94a3b8"} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={trendMetal === 'gold' ? "#fbbf24" : "#0"} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis
-                    stroke="#888888"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                    domain={['auto', 'auto']}
-                    tickFormatter={(v) => {
-                      if (tableCurrency === 'PKR') {
-                        return v >= 1000 ? `Rs.${(v / 1000).toFixed(1)}k` : `Rs.${v}`;
-                      }
-                      return `$${v.toLocaleString()}`;
-                    }}
-                  />
-                  <Tooltip contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '8px', color: '#fff' }} formatter={(v: any) => [tableCurrency === 'PKR' ? `Rs. ${Number(v).toLocaleString()}` : `$${Number(v).toLocaleString()}`, 'Price']} />
-                  <Area type="monotone" dataKey="price" stroke={trendMetal === 'gold' ? "#fbbf24" : "#94a3b8"} fillOpacity={1} fill="url(#colorPrice)" strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
+          )}
+          
+          {/* Main Velocity Terminal */}
+          <div className="bg-white dark:bg-zinc-900 rounded-[3.5rem] p-10 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden relative group">
+            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                <span className="text-[12rem] font-black italic text-amber-500 uppercase select-none">{trendMetal}</span>
+            </div>
+            
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8 relative z-10">
+              <div>
+                <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Velocity Terminal</h2>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Global Sentiment Explorer: {trendMetal}</p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1 shadow-inner h-fit">
+                  <button onClick={() => setTrendMetal('gold')} className={`px-4 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${trendMetal === 'gold' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : 'text-zinc-500'}`}>Gold</button>
+                  <button onClick={() => setTrendMetal('silver')} className={`px-4 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${trendMetal === 'silver' ? 'bg-zinc-500 text-white shadow-lg shadow-zinc-500/20' : 'text-zinc-500'}`}>Silver</button>
+                </div>
+              </div>
+            </div>
+            <div className="w-full relative z-10">
+              <TradingChart 
+                title={`${trendMetal.toUpperCase()} Snapshot Analysis`} 
+                data={trendMetal === 'gold' ? goldCandles : silverCandles} 
+                currentTimeframe={trendMetal === 'gold' ? goldChartTF : silverChartTF} 
+                onTimeframeChange={trendMetal === 'gold' ? setGoldChartTF : setSilverChartTF} 
+                currencySymbol={tableCurrency === 'PKR' ? 'Rs.' : '$'} 
+                seamless={true}
+              />
             </div>
           </div>
         </div>
 
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-6">Market Analysis (Candlestick)</h2>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <TradingChart title={`Gold (${tableCurrency}/${tableCurrency === 'PKR' ? 'Tola' : 'Oz'})`} data={goldCandles} currentTimeframe={goldChartTF} onTimeframeChange={setGoldChartTF} />
-            <TradingChart title={`Silver (${tableCurrency}/Oz)`} data={silverCandles} currentTimeframe={silverChartTF} onTimeframeChange={setSilverChartTF} />
-          </div>
-        </div>
+        {/* Bottom charts removed in favor of integrated velocity terminal above */}
       </div>
     </div>
   );

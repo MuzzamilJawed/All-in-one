@@ -741,14 +741,13 @@ export async function fetchOilPrices() {
     const exchangeRate = await getLiveExchangeRate();
 
     const energyKeys = [
-      'crudeOil', 'brentOil', 'murbanOil', 'naturalGas', 'gasoline', 
+      'crudeOil', 'brentOil', 'naturalGas', 'gasoline', 
       'heatingOil', 'coal', 'ethanol', 'naphtha', 'propane'
     ];
 
     const energyNames: Record<string, string> = {
       crudeOil: "Crude Oil (WTI)",
       brentOil: "Brent Crude",
-      murbanOil: "Murban Oil",
       naturalGas: "Natural Gas",
       gasoline: "Gasoline",
       heatingOil: "Heating Oil",
@@ -765,6 +764,7 @@ export async function fetchOilPrices() {
       if (commodities[key]) {
         const item = {
           ...commodities[key],
+          usdPrice: commodities[key].price, // Map base price to usdPrice for compatibility
           pkrPrice: commodities[key].price * exchangeRate,
           name: energyNames[key] || key.charAt(0).toUpperCase() + key.slice(1),
           key: key

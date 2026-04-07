@@ -41,7 +41,7 @@ export default function RootLayout({
               <div className="hidden md:block">
                 <Sidebar />
               </div>
-              <main className="flex-1 ml-0 md:ml-64 w-full overflow-x-hidden">{children}</main>
+              <main className="flex-1 ml-0 md:ml-64 min-w-0 overflow-x-hidden">{children}</main>
             </div>
           </SettingsProvider>
         </ThemeProvider>

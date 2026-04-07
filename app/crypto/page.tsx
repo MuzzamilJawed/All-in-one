@@ -3,15 +3,8 @@
 import PriceCard from "../components/PriceCard";
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "../context/SettingsContext";
-import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-} from "recharts";
+import dynamic from 'next/dynamic';
+const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
 
 export default function CryptoPage() {
     const [loading, setLoading] = useState(true);
@@ -19,8 +12,9 @@ export default function CryptoPage() {
     const [cryptoData, setCryptoData] = useState<any[]>([]);
     const [selectedCoin, setSelectedCoin] = useState<any>(null);
     const [trendData, setTrendData] = useState<any[]>([]);
-    const [displayCurrency, setDisplayCurrency] = useState<'PKR' | 'USD'>('USD');
-    const { settings } = useSettings();
+    const [chartTF, setChartTF] = useState("1H");
+    const { settings, updateSettings } = useSettings();
+    const displayCurrency = settings.currency as 'USD' | 'PKR';
 
     const loadCrypto = useCallback(async (isManual = true) => {
         try {
@@ -49,20 +43,36 @@ export default function CryptoPage() {
 
     useEffect(() => {
         if (!selectedCoin) return;
-        const points = 30;
+        const count = 75;
         const basePrice = displayCurrency === 'PKR' ? selectedCoin.pkrPrice : selectedCoin.usdPrice;
         const data = [];
-        let current = basePrice;
-        for (let i = points; i >= 0; i--) {
-            const time = new Date(Date.now() - i * 1800000); // 30 min intervals
-            current = current * (1 + (Math.random() - 0.5) * 0.015); // Higher volatility for crypto
-            data.push({
-                time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                price: current
+        const nowSec = Math.floor(Date.now() / 1000);
+        const interval = chartTF === '1H' ? 3600 : chartTF === '1D' ? 86400 : 604800;
+
+        let lastClose = basePrice;
+        const volatility = chartTF === '1W' ? 0.08 : chartTF === '1D' ? 0.04 : 0.02;
+
+        for (let i = 0; i < count; i++) {
+            const time = nowSec - i * interval;
+            const change = (Math.random() - 0.5) * volatility;
+            
+            const close = lastClose;
+            const open = close / (1 + change);
+            const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.3));
+            const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.3));
+            
+            data.unshift({ 
+                time, 
+                open: parseFloat(open.toFixed(selectedCoin.symbol === 'BTC' ? 0 : 4)), 
+                high: parseFloat(high.toFixed(selectedCoin.symbol === 'BTC' ? 0 : 4)), 
+                low: parseFloat(low.toFixed(selectedCoin.symbol === 'BTC' ? 0 : 4)), 
+                close: parseFloat(close.toFixed(selectedCoin.symbol === 'BTC' ? 0 : 4)),
+                volume: Math.floor(Math.random() * 5000) + 1000
             });
+            lastClose = open;
         }
         setTrendData(data);
-    }, [selectedCoin, displayCurrency]);
+    }, [selectedCoin, displayCurrency, chartTF]);
 
     const getCoinColor = (symbol: string) => {
         const colors: any = {
@@ -86,8 +96,8 @@ export default function CryptoPage() {
                     </div>
 
                     <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 border border-zinc-200 dark:border-zinc-700">
-                        <button onClick={() => setDisplayCurrency('USD')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${displayCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-orange-500' : 'text-zinc-500'}`}>USD</button>
-                        <button onClick={() => setDisplayCurrency('PKR')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${displayCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600' : 'text-zinc-500'}`}>PKR</button>
+                        <button onClick={() => updateSettings({ currency: 'USD' })} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${displayCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-orange-500' : 'text-zinc-500'}`}>USD</button>
+                        <button onClick={() => updateSettings({ currency: 'PKR' })} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${displayCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600' : 'text-zinc-500'}`}>PKR</button>
                     </div>
                 </header>
 
@@ -132,29 +142,14 @@ export default function CryptoPage() {
                             </div>
                         </div>
 
-                        <div className="h-[400px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={trendData}>
-                                    <defs>
-                                        <linearGradient id="colorCrypto" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={getCoinColor(selectedCoin?.symbol)} stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor={getCoinColor(selectedCoin?.symbol)} stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '12px', color: '#fff' }}
-                                        formatter={(v: any) => [`${displayCurrency === 'USD' ? '$' : 'Rs.'}${Number(v).toLocaleString()}`, 'Price']}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="price"
-                                        stroke={getCoinColor(selectedCoin?.symbol)}
-                                        strokeWidth={4}
-                                        fill="url(#colorCrypto)"
-                                        animationDuration={2000}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                        <div className="h-[450px] w-full">
+                            <TradingChart 
+                                title={`${selectedCoin?.name} / ${displayCurrency}`} 
+                                data={trendData} 
+                                currentTimeframe={chartTF} 
+                                onTimeframeChange={setChartTF} 
+                                currencySymbol={displayCurrency === 'PKR' ? 'Rs.' : '$'} 
+                            />
                         </div>
                     </div>
 

@@ -4,7 +4,11 @@ import StatCard from "./components/StatCard";
 import PriceCard from "./components/PriceCard";
 import StockCard from "./components/StockCard";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { fetchGoldPrice, fetchSilverPrice, fetchForexRates, fetchCryptoPrices, fetchOilPrices } from "./lib/api";
+import dynamic from 'next/dynamic';
+const TradingChart = dynamic(() => import('./components/TradingChart'), { ssr: false });
+import { useSettings } from "./context/SettingsContext";
 
 export default function Home() {
   const [goldData, setGoldData] = useState<any>({ tola: { isLoading: true } });
@@ -15,6 +19,11 @@ export default function Home() {
   const [watchlists, setWatchlists] = useState<any[]>([]);
   const [psxStocks, setPsxStocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pulseData, setPulseData] = useState<any[]>([]);
+  const [pulseTF, setPulseTF] = useState("1H");
+  const { settings } = useSettings();
+  const displayCurrency = settings.currency as 'USD' | 'PKR';
+  const router = useRouter();
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -43,12 +52,12 @@ export default function Home() {
         console.log('PSX Response:', psxRes);
         // PSX API returns { data: stocks[], indices, stats, timestamp }
         if (psxRes && psxRes.data && Array.isArray(psxRes.data) && psxRes.data.length > 0) {
-          // Get top 4 stocks by absolute change percent
+          // Get top 4 stocks by volume (Most Active)
           const topStocks = psxRes.data
-            .filter((stock: any) => stock && stock.symbol && stock.changePercent !== undefined)
-            .sort((a: any, b: any) => Math.abs(b.changePercent) - Math.abs(a.changePercent))
+            .filter((stock: any) => stock && stock.symbol && stock.volume !== undefined)
+            .sort((a: any, b: any) => (Number(b.volume) || 0) - (Number(a.volume) || 0))
             .slice(0, 4);
-          console.log('Top PSX Stocks:', topStocks);
+          console.log('Most Active PSX Stocks:', topStocks);
           setPsxStocks(topStocks);
         } else {
           console.warn('No PSX data available or invalid format', psxRes);
@@ -66,6 +75,39 @@ export default function Home() {
     const interval = setInterval(loadAllData, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    // Generate pulse data based on Gold as proxy for market
+    const basePrice = displayCurrency === 'PKR' ? (goldData.tola24k?.pkrPrice || 250000) : (goldData.tola24k?.usdPrice || 2300);
+    const data = [];
+    const count = 60;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const interval = pulseTF === '1H' ? 3600 : 86400;
+
+    let lastClose = basePrice;
+    const volatility = pulseTF === '1H' ? 0.005 : 0.012;
+
+    for (let i = 0; i < count; i++) {
+        const time = nowSec - i * interval;
+        const change = (Math.random() - 0.5) * volatility;
+        
+        const close = lastClose;
+        const open = close / (1 + change);
+        const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.3));
+        const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.3));
+
+        data.unshift({ 
+          time, 
+          open: parseFloat(open.toFixed(2)), 
+          high: parseFloat(high.toFixed(2)), 
+          low: parseFloat(low.toFixed(2)), 
+          close: parseFloat(close.toFixed(2)),
+          volume: Math.floor(Math.random() * 20000) + 5000
+        });
+        lastClose = open;
+    }
+    setPulseData(data);
+  }, [goldData, displayCurrency, pulseTF]);
 
   const handleAddToWatchlist = async (watchlistId: string, symbol: string) => {
     const watchlist = watchlists.find(wl => wl._id === watchlistId);
@@ -141,22 +183,22 @@ export default function Home() {
       {/* Main Content */}
       <main className="max-w-[1600px] mx-auto p-8 relative z-10">
 
-        {/* Hero Section / Quick Stats */}
         <section className="mb-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <StatCard label="Bitcoin / USD" value={`$${cryptoData[0]?.usdPrice?.toLocaleString() || "---"}`} icon="₿" change={cryptoData[0]?.changePercent || 0} changeLabel="Market Volatility" />
             <StatCard label="USD / PKR" value={`Rs. ${forexData[0]?.pkrPrice?.toFixed(2) || "---"}`} icon="💵" change={forexData[0]?.changePercent || 0} changeLabel="Forex Exchange" />
             <StatCard label="Gold (Tola)" value={`Rs. ${goldData.tola24k?.pkrPrice?.toLocaleString() || "---"}`} icon="💎" change={goldData.tola24k?.changePercent || 0} changeLabel="Metal Spot Price" />
             <StatCard label="Silver (Oz)" value={`Rs. ${silverData.ounce?.pkrPrice?.toLocaleString() || "---"}`} icon="🪙" change={silverData.ounce?.changePercent || 0} changeLabel="Commodity Index" />
           </div>
+
         </section>
 
         {/* PSX Stocks Section - Full Width Priority */}
         <section className="mb-12">
           <div className="flex items-end justify-between mb-6">
             <div>
-              <h2 className="text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">📈 PSX Market Leaders</h2>
-              <p className="text-zinc-500 text-sm mt-1">Top performing stocks on Pakistan Stock Exchange</p>
+              <h2 className="text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">🔥 PSX Most Active</h2>
+              <p className="text-zinc-500 text-sm mt-1">Highest volume scrips on Pakistan Stock Exchange</p>
             </div>
             <a href="/stocks" className="text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">Full Scrip List →</a>
           </div>
@@ -182,6 +224,7 @@ export default function Home() {
                   <StockCard
                     key={stock.symbol}
                     {...stock}
+                    onClick={() => router.push(`/stocks/${stock.symbol.toLowerCase()}`)}
                     watchlists={watchlists}
                     onAddToWatchlist={handleAddToWatchlist}
                     onRemoveFromWatchlist={handleRemoveFromWatchlist}
@@ -193,9 +236,10 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
-          {/* Left Block: Metals & Crypto */}
-          <div className="space-y-12">
+        {/* Balanced Market Rows */}
+        <div className="space-y-12">
+          {/* Row 1: Metals & Forex */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
             {/* Precious Metals Section */}
             <div>
               <div className="flex items-end justify-between mb-6">
@@ -208,50 +252,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Oil & Energy Section */}
-            <div>
-              <div className="flex items-end justify-between mb-6">
-                <h2 className="text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">🛢️ Energy Intelligence</h2>
-                <a href="/oil" className="text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Refinery →</a>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <PriceCard title="Crude Oil (WTI)" {...oilData?.crudeOil} lastUpdated={new Date().toLocaleTimeString()} isLoading={loading} currency="USD" />
-                <PriceCard title="Brent Crude" {...oilData?.brentOil} lastUpdated={new Date().toLocaleTimeString()} isLoading={loading} currency="USD" />
-              </div>
-            </div>
-
-            {/* Crypto pulse */}
-            <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[3rem] p-8 border border-zinc-200 dark:border-white/5">
-              <div className="flex items-end justify-between mb-8">
-                <h2 className="text-xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">₿ Crypto Surveillance</h2>
-                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Top Cap Assets</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {cryptoData.slice(0, 2).map(coin => (
-                  <div key={coin.id} className="bg-white dark:bg-white/5 hover:bg-zinc-50 dark:hover:bg-white/[0.08] p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all group cursor-pointer">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center font-black text-orange-500">
-                          {coin.symbol[0]}
-                        </div>
-                        <div>
-                          <p className="font-black text-zinc-900 dark:text-white uppercase text-sm tracking-tight">{coin.name}</p>
-                          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{coin.symbol}</p>
-                        </div>
-                      </div>
-                      <div className={`px-2 py-1 rounded-lg text-[10px] font-black ${coin.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                        {coin.changePercent >= 0 ? '+' : ''}{coin.changePercent.toFixed(2)}%
-                      </div>
-                    </div>
-                    <div className="text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter group-hover:translate-x-1 transition-transform italic">${coin.usdPrice.toLocaleString()}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Block: Forex */}
-          <div className="space-y-12">
             {/* Forex Section */}
             <div>
               <div className="flex items-end justify-between mb-6">
@@ -279,6 +279,54 @@ export default function Home() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Energy & Crypto */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+            {/* Oil & Energy Section */}
+            <div>
+              <div className="flex items-end justify-between mb-6">
+                <h2 className="text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">🛢️ Energy Intelligence</h2>
+                <a href="/oil" className="text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Refinery →</a>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div onClick={() => router.push('/oil/crudeOil')} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95">
+                  <PriceCard title="Crude Oil (WTI)" {...oilData?.crudeOil} lastUpdated={new Date().toLocaleTimeString()} isLoading={loading} currency="USD" />
+                </div>
+                <div onClick={() => router.push('/oil/brentOil')} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95">
+                  <PriceCard title="Brent Crude" {...oilData?.brentOil} lastUpdated={new Date().toLocaleTimeString()} isLoading={loading} currency="USD" />
+                </div>
+              </div>
+            </div>
+
+            {/* Crypto pulse */}
+            <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[3rem] p-8 border border-zinc-200 dark:border-white/5">
+              <div className="flex items-end justify-between mb-8">
+                <h2 className="text-xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">₿ Crypto Surveillance</h2>
+                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Top Cap Assets</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {cryptoData.slice(0, 2).map(coin => (
+                  <div key={coin.id} className="bg-white dark:bg-white/5 hover:bg-zinc-50 dark:hover:bg-white/[0.08] p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all group cursor-pointer">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center font-black text-orange-500">
+                          {coin.symbol[0]}
+                        </div>
+                        <div>
+                          <p className="font-black text-zinc-900 dark:text-white uppercase text-sm tracking-tight">{coin.name}</p>
+                          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{coin.symbol}</p>
+                        </div>
+                      </div>
+                      <div className={`px-2 py-1 rounded-lg text-[10px] font-black ${coin.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                        {coin.changePercent >= 0 ? '+' : ''}{coin.changePercent.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div className="text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter group-hover:translate-x-1 transition-transform italic">${coin.usdPrice?.toLocaleString()}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

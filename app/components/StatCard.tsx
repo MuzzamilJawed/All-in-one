@@ -36,7 +36,7 @@ export default function StatCard({
         <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
           {label}
         </p>
-        <p className="text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono italic">
+        <p className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono italic break-words">
           {value}
         </p>
         {changeLabel && (

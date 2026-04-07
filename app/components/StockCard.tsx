@@ -12,6 +12,7 @@ interface StockCardProps {
     volume: string;
     targetPrice?: number;
     exchange?: string; // new prop to show exchange label (defaults to PSX)
+    currencySymbol?: string;
     onClick?: () => void;
     watchlists?: any[];
     activeWatchlistId?: string | null;
@@ -32,6 +33,7 @@ export default function StockCard({
     volume,
     targetPrice,
     exchange = 'PSX',
+    currencySymbol = 'Rs.',
     onClick,
     watchlists = [],
     onAddToWatchlist,
@@ -82,7 +84,7 @@ export default function StockCard({
                             {exchange || 'PSX'}
                         </span>
                     </div>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-bold truncate max-w-[140px] uppercase tracking-tighter">
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter line-clamp-2 leading-tight">
                         {name}
                     </p>
                 </div>
@@ -102,7 +104,7 @@ export default function StockCard({
                                 if (ttsLoading) return;
                                 setTtsLoading(true);
                                 try {
-                                    const text = `${symbol} ${name} is trading at ${currentPrice} ${exchange === 'NASDAQ' ? 'dollars' : 'rupees'}. Change ${change} (${changePercent} percent).`;
+                                    const text = `${symbol} ${name} is trading at ${currentPrice} ${currencySymbol === '$' ? 'dollars' : 'rupees'}. Change ${change} (${changePercent} percent).`;
                                     const res = await fetch('/api/tts', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -219,7 +221,7 @@ export default function StockCard({
                 <div>
                     <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Price</p>
                     <p className="text-xl font-black text-zinc-900 dark:text-zinc-50 font-mono">
-                        <span className="text-[10px] font-normal mr-0.5">Rs.</span>
+                        <span className="text-[10px] font-normal mr-0.5">{currencySymbol}</span>
                         {currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                     </p>
                 </div>

@@ -4,6 +4,7 @@ import PriceCard from "../components/PriceCard";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useSettings } from "../context/SettingsContext";
 import { fetchOilPrices } from "../lib/api";
 import {
@@ -23,11 +24,13 @@ export default function OilPage() {
   const [trendData, setTrendData] = useState<any[]>([]);
   const [trendEnergy, setTrendEnergy] = useState("crudeOil"); 
   const [trendTimeframe, setTrendTimeframe] = useState("Daily");
-  const [tableCurrency, setTableCurrency] = useState<'PKR' | 'USD'>('USD');
+  const { settings, updateSettings } = useSettings();
+  const tableCurrency = settings.currency as 'USD' | 'PKR';
   const [oilCandles, setOilCandles] = useState<any[]>([]);
   const [oilChartTF, setOilChartTF] = useState("1H");
+  const [selectedItem, setSelectedItem] = useState<any>(null); 
+  const router = useRouter();
 
-  const { settings } = useSettings();
   const stableTrendRef = useRef<Record<string, any[]>>({});
   const stableCandlesRef = useRef<Record<string, any[]>>({});
 
@@ -43,10 +46,11 @@ export default function OilPage() {
         return;
       }
 
-      const featuredKeys = ['crudeOil', 'brentOil', 'murbanOil', 'naturalGas'];
+      const featuredKeys = ['crudeOil', 'brentOil', 'naturalGas', 'heatingOil'];
       const updatedPrices = featuredKeys.map(key => {
         const item = data[key];
         return {
+          key,
           title: item?.name || key,
           usdPrice: item?.price,
           pkrPrice: item?.pkrPrice,
@@ -70,6 +74,17 @@ export default function OilPage() {
       if (isManual) setLoading(false);
     }
   }, [trendEnergy, trendTimeframe, tableCurrency, oilChartTF]);
+
+  const openDetail = (item: any) => {
+    router.push(`/oil/${item.key}`);
+  };
+
+  const formatPrice = (val: number) => {
+    return val.toLocaleString(undefined, { 
+      minimumFractionDigits: val < 10 ? 4 : 2, 
+      maximumFractionDigits: val < 10 ? 4 : 2 
+    });
+  };
 
   const updateMarketVisuals = (data: any) => {
     const isPkr = tableCurrency === 'PKR';
@@ -128,29 +143,44 @@ export default function OilPage() {
 
     // Generate Candles
     const candleKey = `${trendEnergy}-${oilChartTF}-${tableCurrency}`;
-    let seconds = 3600, count = 48;
-    if (oilChartTF === "1D") { seconds = 86400; count = 30; }
-    if (oilChartTF === "1W") { seconds = 604800; count = 52; }
     
-    if (stableCandlesRef.current[candleKey]) {
+    if (stableCandlesRef.current[candleKey] && stableCandlesRef.current[candleKey].length > 0) {
         const existing = [...stableCandlesRef.current[candleKey]];
-        const last = { ...existing[existing.length - 1] };
+        const lastIndex = existing.length - 1;
+        const last = { ...existing[lastIndex] };
         last.close = currentPrice;
         last.high = Math.max(last.high, currentPrice);
         last.low = Math.min(last.low, currentPrice);
-        existing[existing.length - 1] = last;
+        existing[lastIndex] = last;
         setOilCandles(existing);
     } else {
+        let seconds = 3600, count = 100;
+        if (oilChartTF === "1D") { seconds = 86400; count = 60; }
+        if (oilChartTF === "1W") { seconds = 604800; count = 52; }
+
         const candles = [];
         const nowSec = Math.floor(Date.now() / 1000);
-        for (let i = count; i >= 0; i--) {
+        let currentIterPrice = currentPrice;
+        const volatility = oilChartTF === "1W" ? 0.05 : oilChartTF === "1D" ? 0.02 : 0.01;
+
+        for (let i = 0; i < count; i++) {
           const time = nowSec - i * seconds;
-          const vol = oilChartTF === "1W" ? 0.08 : oilChartTF === "1D" ? 0.04 : 0.01;
-          const open = currentPrice / (1 + (Math.random() - 0.5) * vol);
-          const close = i === 0 ? currentPrice : open * (1 + (Math.random() - 0.5) * (vol * 0.8));
-          const high = Math.max(open, close) * (1 + Math.random() * (vol * 0.4));
-          const low = Math.min(open, close) * (1 - Math.random() * (vol * 0.4));
-          candles.push({ time, open, high, low, close });
+          const change = (Math.random() - 0.5) * volatility;
+          
+          const close = currentIterPrice;
+          const open = close / (1 + change);
+          const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.2));
+          const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.2));
+
+          candles.unshift({ 
+            time, 
+            open: parseFloat(open.toFixed(4)), 
+            high: parseFloat(high.toFixed(4)), 
+            low: parseFloat(low.toFixed(4)), 
+            close: parseFloat(close.toFixed(4)),
+            volume: Math.floor(Math.random() * 50000) + 10000 
+          });
+          currentIterPrice = open;
         }
         stableCandlesRef.current[candleKey] = candles;
         setOilCandles(candles);
@@ -168,7 +198,7 @@ export default function OilPage() {
   }, [settings.refreshInterval, loadPrices]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black overflow-x-hidden w-full selection:bg-blue-500/30">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
         <div className="px-8 py-6 max-w-7xl mx-auto">
@@ -188,15 +218,15 @@ export default function OilPage() {
 
             <div className="flex items-center gap-4">
               <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-2xl p-1 border border-zinc-200 dark:border-zinc-700">
-                <button onClick={() => setTableCurrency('PKR')} className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>PKR</button>
-                <button onClick={() => setTableCurrency('USD')} className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>USD</button>
+                <button onClick={() => updateSettings({ currency: 'PKR' })} className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>PKR</button>
+                <button onClick={() => updateSettings({ currency: 'USD' })} className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>USD</button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-8 max-w-7xl mx-auto w-full space-y-12">
+      <div className="p-8 pb-32 max-w-7xl mx-auto w-full space-y-12">
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-6 flex items-center gap-4">
             <span className="text-2xl">⚠️</span>
@@ -207,7 +237,12 @@ export default function OilPage() {
         {/* Price Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {oilPrices.map((oil) => (
-            <PriceCard key={oil.title} {...oil} currency={tableCurrency} />
+            <div key={oil.title} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95" onClick={() => {
+                const fullItem = allEnergy.find(i => i.name === oil.title);
+                if (fullItem) openDetail(fullItem);
+            }}>
+                <PriceCard {...oil} currency={tableCurrency} />
+            </div>
           ))}
         </div>
 
@@ -236,7 +271,7 @@ export default function OilPage() {
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
                 {allEnergy.map((item) => (
-                  <tr key={item.key} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => setTrendEnergy(item.key)}>
+                  <tr key={item.key} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => openDetail(item)}>
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
                         <div className={`w-2 h-2 rounded-full ${item.change >= 0 ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
@@ -245,7 +280,7 @@ export default function OilPage() {
                     </td>
                     <td className="px-8 py-5 text-right font-mono font-black text-zinc-900 dark:text-zinc-400 group-hover:text-blue-500">
                       {tableCurrency === 'PKR' ? 'Rs. ' : '$'}
-                      {(tableCurrency === 'PKR' ? item.pkrPrice : item.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      {formatPrice(tableCurrency === 'PKR' ? item.pkrPrice : item.price)}
                     </td>
                     <td className={`px-8 py-5 text-right text-[10px] font-black ${item.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                       {item.changePercent >= 0 ? '▲' : '▼'} {Math.abs(item.changePercent).toFixed(2)}%
@@ -395,10 +430,12 @@ export default function OilPage() {
                   ))}
                 </div>
             </div>
-            <div className="h-[600px] w-full">
-                <TradingChart title={`${(allEnergy.find(i => i.key === trendEnergy)?.name || 'Oil').toUpperCase()} / ${tableCurrency}`} data={oilCandles} currentTimeframe={oilChartTF} onTimeframeChange={setOilChartTF} />
+            <div className="h-[600px] w-full mb-12">
+                <TradingChart title={`${(allEnergy.find(i => i.key === trendEnergy)?.name || 'Oil').toUpperCase()} / ${tableCurrency}`} data={oilCandles} currentTimeframe={oilChartTF} onTimeframeChange={setOilChartTF} currencySymbol={tableCurrency === 'PKR' ? 'Rs.' : '$'} />
             </div>
         </div>
+
+        {/* Legacy modal removed in favor of dedicated screen */}
       </div>
     </div>
   );

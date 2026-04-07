@@ -63,7 +63,7 @@ export async function GET() {
       // Normalize name by matching known commodity keywords (handles units like "USD/Lbs" etc.)
       let matchedKey: string | undefined;
       for (const k of Object.keys(nameMap)) {
-        if (name.indexOf(k) !== -1) {
+        if (name.toLowerCase().includes(k.toLowerCase())) {
           matchedKey = k;
           break;
         }
