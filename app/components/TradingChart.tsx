@@ -263,12 +263,16 @@ export default function TradingViewChart({
     }, [data, colors]);
 
     return (
-        <div className={`w-full flex flex-col transition-all 
-            ${isFullscreen ? 'fixed inset-0 z-[110] p-10 bg-white dark:bg-zinc-950 rounded-none h-screen w-screen border-none' : 
+        <div 
+            data-testid="trading-chart"
+            className={`w-full flex flex-col transition-all 
+            ${isFullscreen ? 'fixed inset-0 z-[1000] p-10 bg-white dark:bg-zinc-950 rounded-none h-screen w-screen border-none' : 
             (seamless ? 'bg-transparent border-none shadow-none p-6 h-full' : 'bg-white dark:bg-zinc-950 rounded-[2.5rem] p-8 border border-zinc-200 dark:border-zinc-800 shadow-2xl h-full')}`}>
             {/* Header / Info Display */}
             {!isFullscreen && (
-                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-8 shrink-0">
+                <div 
+                    data-testid="chart-header"
+                    className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-8 shrink-0">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-8 flex-1 min-w-0">
                         <div className="flex flex-col shrink-0">
                             <div className="flex items-center gap-2">
@@ -342,7 +346,7 @@ export default function TradingViewChart({
             {isFullscreen && (
                 <button 
                     onClick={() => setIsFullscreen(false)}
-                    className="fixed top-8 right-8 z-[110] bg-red-600 hover:bg-red-700 text-white p-4 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
+                    className="fixed top-8 right-8 z-[1000] bg-red-600 hover:bg-red-700 text-white p-4 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
                 >
                     ✕ Close Fullscreen
                 </button>

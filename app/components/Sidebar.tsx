@@ -100,6 +100,7 @@ export default function Sidebar() {
           <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2">Theme</p>
           <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1">
             <button
+              data-testid="theme-toggle-light"
               onClick={() => setTheme('light')}
               className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'light' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
               title="Light Mode"
@@ -107,6 +108,7 @@ export default function Sidebar() {
               ☀️
             </button>
             <button
+              data-testid="theme-toggle-dark"
               onClick={() => setTheme('dark')}
               className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'dark' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
               title="Dark Mode"
