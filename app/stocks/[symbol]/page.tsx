@@ -171,7 +171,7 @@ export default function StockDetailPage() {
                                 if (lastTime === liveTime || lastTime === todayStr) {
                                     history[lastIndex] = { ...history[lastIndex], ...liveCandle };
                                 } else if ((!useTimestamp && todayStr > (lastTime as string)) || 
-                                           (useTimestamp && liveTime > (lastTime as number))) {
+                                           (useTimestamp && (liveTime as number) > (lastTime as number))) {
                                     history.push(liveCandle);
                                 }
                             } else {
