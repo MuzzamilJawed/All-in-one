@@ -527,26 +527,26 @@ export default function MetalsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
-      <div className="sticky top-0 z-40 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
-        <div className="px-4 sm:px-8 py-4 max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
+        <div className="px-4 sm:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-                💎 Metal Prices
-                <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
+              <h1 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase italic tracking-tighter">
+                💎 Precious Metals
+                <span className="bg-blue-500 text-white text-[8px] sm:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
                   Live
                 </span>
               </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1 flex items-center gap-2">
+              <p className="hidden sm:flex text-zinc-500 dark:text-zinc-400 text-[10px] mt-1 items-center gap-2 uppercase font-black tracking-widest">
                 <span className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500' : 'bg-green-500'} animate-pulse`}></span>
                 {loading ? "Fetching latest market data..." : `Last updated: ${new Date().toLocaleString()}`}
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 border border-zinc-200 dark:border-zinc-700">
-                <button onClick={() => updateSettings({ currency: 'PKR' })} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600 dark:text-green-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>PKR</button>
-                <button onClick={() => updateSettings({ currency: 'USD' })} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>USD</button>
+            <div className="flex w-full sm:w-auto items-center gap-3">
+              <div className="flex flex-1 sm:flex-none bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700">
+                <button onClick={() => updateSettings({ currency: 'PKR' })} className={`flex-1 sm:flex-none px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600 dark:text-green-400' : 'text-zinc-500 hover:text-zinc-900'}`}>PKR</button>
+                <button onClick={() => updateSettings({ currency: 'USD' })} className={`flex-1 sm:flex-none px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}>USD</button>
               </div>
             </div>
           </div>
@@ -560,7 +560,7 @@ export default function MetalsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 items-stretch mb-6">
           {metalPrices
             .filter(m => !["Gold (24K) - Per Ounce", "Silver - Per Kilogram"].includes(m.title))
             .map((metal) => (
@@ -729,21 +729,23 @@ export default function MetalsPage() {
           </div>
         )}
 
-        <div className="mt-8 bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-          <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap justify-between items-center gap-4">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-              Live Metal Rates 
-              <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">{tableCurrency}</span>
-            </h2>
+        <div className="mt-8 bg-white dark:bg-zinc-900 rounded-[1.5rem] sm:rounded-[2.5rem] shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="p-4 sm:p-8 border-b border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase italic tracking-tighter">
+                Spot Market Rates 
+                <span className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full">{tableCurrency}</span>
+              </h2>
+            </div>
             <button 
               onClick={() => setShowPurity(!showPurity)}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl border transition-all duration-300 font-black uppercase text-[10px] tracking-widest ${showPurity ? 'bg-amber-500 border-amber-500 text-white' : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-amber-500/30 hover:text-amber-600'}`}
+              className={`w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl border transition-all duration-300 font-black uppercase text-[10px] tracking-widest ${showPurity ? 'bg-amber-500 border-amber-500 text-white' : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-amber-600'}`}
             >
-              <span className={showPurity ? 'animate-bounce' : ''}>{showPurity ? '👑' : '💎'}</span>
-              {showPurity ? "Hide Carat Breakdown" : "Analyze Purity Levels"}
+              <span>{showPurity ? '👑' : '💎'}</span>
+              {showPurity ? "Hide Purity Guide" : "Analyze Purity"}
             </button>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto no-scrollbar">
             <table className="w-full text-left text-sm border-collapse">
               <thead className="bg-white dark:bg-zinc-900">
                 <tr className="border-b border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400">
@@ -878,7 +880,7 @@ export default function MetalsPage() {
                 </div>
               </div>
             </div>
-            <div className="w-full relative z-10">
+            <div className="h-[400px] sm:h-[600px] w-full relative z-10">
               <TradingChart 
                 title={`${trendMetal.toUpperCase()} Snapshot Analysis`} 
                 data={trendMetal === 'gold' ? goldCandles : silverCandles} 

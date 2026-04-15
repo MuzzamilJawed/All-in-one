@@ -1,0 +1,175 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+
+export default function CommandPalette() {
+    const [isOpen, setIsOpen] = useState(false);
+    const [query, setQuery] = useState("");
+    const [stocks, setStocks] = useState<any[]>([]);
+    const [filteredResults, setFilteredResults] = useState<any[]>([]);
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const router = useRouter();
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+                e.preventDefault();
+                setIsOpen(prev => !prev);
+            }
+            if (e.key === "Escape") setIsOpen(false);
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            inputRef.current?.focus();
+            fetchStocks();
+        } else {
+            setQuery("");
+            setFilteredResults([]);
+        }
+    }, [isOpen]);
+
+    const fetchStocks = async () => {
+        try {
+            const res = await fetch('/api/psx-stocks');
+            const json = await res.json();
+            if (json.success) setStocks(json.data);
+        } catch (err) {
+            console.error('Failed to load stocks for search', err);
+        }
+    };
+
+    useEffect(() => {
+        if (query.trim() === "") {
+            setFilteredResults([]);
+            return;
+        }
+        const filtered = stocks
+            .filter(s => 
+                s.symbol.toLowerCase().includes(query.toLowerCase()) || 
+                s.name.toLowerCase().includes(query.toLowerCase())
+            )
+            .slice(0, 8);
+        setFilteredResults(filtered);
+        setSelectedIndex(0);
+    }, [query, stocks]);
+
+    const handleSelect = (symbol: string) => {
+        setIsOpen(false);
+        router.push(`/stocks/${symbol.toLowerCase()}`);
+    };
+
+    const onKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "ArrowDown") {
+            setSelectedIndex(prev => (prev + 1) % filteredResults.length);
+        } else if (e.key === "ArrowUp") {
+            setSelectedIndex(prev => (prev - 1 + filteredResults.length) % filteredResults.length);
+        } else if (e.key === "Enter" && filteredResults[selectedIndex]) {
+            handleSelect(filteredResults[selectedIndex].symbol);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
+            
+            <div className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-4 px-8 py-6 border-b border-zinc-100 dark:border-white/5">
+                    <span className="text-xl">🔍</span>
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        placeholder="Search Scrips, Sectors, or Commodities... (e.g. HUBC, Oil)"
+                        className="flex-1 bg-transparent border-none outline-none text-lg font-black uppercase italic tracking-tighter text-zinc-900 dark:text-white placeholder:text-zinc-400"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={onKeyDown}
+                    />
+                    <div className="px-2 py-1 bg-zinc-100 dark:bg-white/5 rounded-md text-[8px] font-black uppercase tracking-widest text-zinc-500">ESC</div>
+                </div>
+
+                <div className="max-h-[60vh] overflow-y-auto p-4 scroller-thin">
+                    {filteredResults.length > 0 ? (
+                        <div className="space-y-1">
+                            {filteredResults.map((stock, i) => (
+                                <button
+                                    key={stock.symbol}
+                                    onClick={() => handleSelect(stock.symbol)}
+                                    className={`w-full flex items-center justify-between p-6 rounded-3xl transition-all text-left ${
+                                        i === selectedIndex ? "bg-blue-600 text-white scale-[1.02] shadow-xl shadow-blue-600/20" : "hover:bg-zinc-50 dark:hover:bg-white/5"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black ${i === selectedIndex ? "bg-white/20" : "bg-zinc-100 dark:bg-white/5 text-blue-500"}`}>
+                                            {stock.symbol[0]}
+                                        </div>
+                                        <div>
+                                            <p className={`font-black uppercase italic tracking-tighter ${i === selectedIndex ? "text-white" : "text-zinc-900 dark:text-white"}`}>
+                                                {stock.symbol}
+                                            </p>
+                                            <p className={`text-[10px] font-bold uppercase tracking-widest ${i === selectedIndex ? "text-blue-100" : "text-zinc-500"}`}>
+                                                {stock.name}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <p className={`font-mono font-black ${i === selectedIndex ? "text-white" : "text-zinc-900 dark:text-white"}`}>
+                                            Rs.{stock.currentPrice}
+                                        </p>
+                                        <p className={`text-[10px] font-black ${stock.change >= 0 ? (i === selectedIndex ? 'text-green-200' : 'text-green-500') : (i === selectedIndex ? 'text-red-200' : 'text-red-500')}`}>
+                                            {stock.change >= 0 ? '▲' : '▼'}{Math.abs(stock.changePercent)}%
+                                        </p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    ) : query.trim() !== "" ? (
+                        <div className="p-12 text-center">
+                            <p className="text-zinc-500 font-black uppercase tracking-widest text-xs italic">No footprint found for "{query}"</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-4 p-4">
+                            {[
+                                { label: "Oil & Energy", path: "/oil", icon: "🛢️" },
+                                { label: "PSX Terminal", path: "/stocks/terminal", icon: "📊" },
+                                { label: "Precious Metals", path: "/metals", icon: "💎" },
+                                { label: "Global Forex", path: "/forex", icon: "💱" }
+                            ].map(quick => (
+                                <button
+                                    key={quick.path}
+                                    onClick={() => { setIsOpen(false); router.push(quick.path); }}
+                                    className="p-8 bg-zinc-50 dark:bg-white/[0.03] rounded-[2rem] border border-zinc-200 dark:border-white/5 hover:border-blue-500/50 transition-all text-left group"
+                                >
+                                    <span className="text-2xl mb-4 block">{quick.icon}</span>
+                                    <p className="font-black uppercase italic tracking-tighter text-zinc-900 dark:text-white group-hover:text-blue-500 transition-colors">{quick.label}</p>
+                                    <p className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Jump to sector</p>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="px-8 py-4 bg-zinc-50 dark:bg-black/40 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between">
+                    <div className="flex gap-4">
+                        <div className="flex items-center gap-2">
+                            <kbd className="px-2 py-1 bg-zinc-200 dark:bg-white/10 rounded text-[10px] font-black text-zinc-500">ENTER</kbd>
+                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Select</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <kbd className="px-2 py-1 bg-zinc-200 dark:bg-white/10 rounded text-[10px] font-black text-zinc-500">↑↓</kbd>
+                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Navigate</span>
+                        </div>
+                    </div>
+                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Terminal Intelligence v2.0</p>
+                </div>
+            </div>
+        </div>
+    );
+}

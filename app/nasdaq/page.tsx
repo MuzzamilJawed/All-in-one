@@ -286,20 +286,20 @@ export default function NasdaqPage() {
             )}
 
             <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto px-8 py-6 flex justify-between items-center">
+                <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-4 sm:py-6 flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white">
+                        <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white">
                             🇺🇸 NASDAQ <span className="text-blue-500">Terminal</span>
                         </h1>
-                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">Global Tech Hub • High Fidelity Real-Time Hub</p>
+                        <p className="hidden sm:block text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">Global Tech Hub • High Fidelity Real-Time Hub</p>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-[1600px] mx-auto px-8 py-12 space-y-12">
+            <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-8 sm:space-y-12">
                 
                 {/* Market Intelligence Ribbon */}
-                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-2xl p-8 space-y-8 relative overflow-hidden group">
+                <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-2xl p-5 sm:p-8 space-y-6 sm:space-y-8 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none group-hover:opacity-[0.05] transition-opacity">
                         <span className="text-[10rem] font-black italic text-blue-600 uppercase">USA</span>
                     </div>
@@ -307,23 +307,23 @@ export default function NasdaqPage() {
                     <div className="flex flex-col lg:flex-row gap-8 items-center justify-between relative z-10">
                         {/* Primary Search Container */}
                         <div className="relative w-full lg:flex-1 group">
-                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl group-focus-within:scale-110 transition-transform">🔍</span>
+                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-lg sm:text-xl group-focus-within:scale-110 transition-transform">🔍</span>
                             <input
                                 type="text"
-                                placeholder="Search Symbol or Company Name..."
+                                placeholder="Search Symbol..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-[2rem] pl-16 pr-8 py-5 text-sm font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-inner placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+                                className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl sm:rounded-[2rem] pl-14 sm:pl-16 pr-8 py-4 sm:py-5 text-xs sm:text-sm font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-inner placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                             />
                         </div>
 
                         {/* Analysis Filters */}
-                        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
-                            <div className="relative group/select">
+                        <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 sm:gap-4 w-full lg:w-auto">
+                            <div className="relative group/select w-full sm:w-auto">
                                 <select
                                     value={categoryFilter}
                                     onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer min-w-[200px]"
+                                    className="w-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-5 py-3.5 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer sm:min-w-[180px]"
                                 >
                                     <option value="all">Pipeline: General</option>
                                     <option value="gainers">Top Velocity</option>
@@ -333,11 +333,11 @@ export default function NasdaqPage() {
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 group-hover/select:translate-y-[2px] transition-transform text-[10px]">▼</div>
                             </div>
 
-                            <div className="relative group/select">
+                            <div className="relative group/select w-full sm:w-auto">
                                 <select
                                     value={filter}
                                     onChange={(e) => setFilter(e.target.value)}
-                                    className="bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer min-w-[200px]"
+                                    className="w-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-5 py-3.5 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer sm:min-w-[180px]"
                                 >
                                     <option value="all">Sector: Total</option>
                                     {sectors.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
@@ -346,16 +346,16 @@ export default function NasdaqPage() {
                             </div>
 
                             {/* View Switcher Toggle */}
-                            <div className="flex bg-zinc-100 dark:bg-white/10 p-1.5 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-inner">
+                            <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-white/10 p-1 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-inner">
                                 <button
                                     onClick={() => setViewType('card')}
-                                    className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'card' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'card' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
                                 >
                                     Cards
                                 </button>
                                 <button
                                     onClick={() => setViewType('table')}
-                                    className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'table' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'table' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
                                 >
                                     Table
                                 </button>
@@ -419,7 +419,7 @@ export default function NasdaqPage() {
                 </div>
 
                 {/* Index Quick Scroll Ticker */}
-                <div className="flex gap-6 overflow-x-auto no-scrollbar py-2">
+                <div className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar py-2">
                     {indices.map(idx => {
                         const isSelected = selectedIndex?.name === idx.name;
                         const isPos = idx.change >= 0;
@@ -427,25 +427,20 @@ export default function NasdaqPage() {
                             <button
                                 key={idx.name}
                                 onClick={() => setSelectedIndex(isSelected ? null : idx)}
-                                className={`flex-1 min-w-[280px] p-6 rounded-[2rem] border transition-all relative overflow-hidden group/card ${isSelected ? 'bg-blue-600 border-transparent text-white shadow-2xl scale-[1.02]' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/5 hover:border-blue-500/50 hover:bg-zinc-50 dark:hover:bg-white/[0.08]'}`}
+                                className={`flex-1 min-w-[240px] sm:min-w-[280px] p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border transition-all relative overflow-hidden group/card ${isSelected ? 'bg-blue-600 border-transparent text-white shadow-2xl scale-[1.02]' : 'bg-white dark:bg-white/5 border-zinc-200 dark:border-white/5 hover:border-blue-500/50'}`}
                             >
                                 <div className="flex justify-between items-start mb-4 relative z-10">
-                                    <div>
-                                        <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isSelected ? 'text-white/70' : 'text-zinc-500'}`}>{idx.name}</p>
-                                        <h3 className="text-2xl font-black font-mono tracking-tighter">{idx.value.toLocaleString()}</h3>
+                                    <div className="text-left">
+                                        <p className={`text-[8px] sm:text-[10px] font-black uppercase tracking-widest mb-1 ${isSelected ? 'text-white/70' : 'text-zinc-500'}`}>{idx.name}</p>
+                                        <h3 className="text-xl sm:text-2xl font-black font-mono tracking-tighter">{idx.value.toLocaleString()}</h3>
                                     </div>
-                                    <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black ${isSelected ? 'bg-white/20 text-white' : (isPos ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500')}`}>
+                                    <div className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-[8px] sm:text-[10px] font-black ${isSelected ? 'bg-white/20 text-white' : (isPos ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500')}`}>
                                         {isPos ? '▲' : '▼'}{Math.abs(idx.changePercent).toFixed(1)}%
                                     </div>
                                 </div>
-                                <div className={`text-[10px] font-black uppercase tracking-widest relative z-10 ${isSelected ? 'text-white/50' : 'text-zinc-400'}`}>
+                                <div className={`text-[8px] sm:text-[10px] font-black uppercase tracking-widest relative z-10 text-left ${isSelected ? 'text-white/50' : 'text-zinc-400'}`}>
                                     {isPos ? 'BULLISH SENTIMENT' : 'BEARISH PRESSURE'}
                                 </div>
-                                {isSelected && (
-                                    <div className="absolute bottom-0 right-0 p-4 opacity-20 transform translate-x-1/4 translate-y-1/4">
-                                        <span className="text-6xl font-black italic uppercase">ACTV</span>
-                                    </div>
-                                )}
                             </button>
                         );
                     })}
@@ -454,25 +449,21 @@ export default function NasdaqPage() {
                 {/* Index Detail View (Dynamic Chart) */}
                 {selectedIndex && (
                     <div className="animate-in slide-in-from-top-4 duration-500">
-                        <div className="bg-white dark:bg-[#080808] rounded-[3.5rem] p-10 border border-zinc-200 dark:border-white/5 shadow-2xl relative overflow-hidden group">
-                           <div className="absolute top-0 right-0 p-16 opacity-[0.03] select-none pointer-events-none">
-                               <span className="text-[12rem] font-black italic text-blue-600 uppercase">INDEX</span>
-                           </div>
-                           
-                           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 relative z-10">
+                        <div className="bg-white dark:bg-[#080808] rounded-[2rem] sm:rounded-[3.5rem] p-6 sm:p-10 border border-zinc-200 dark:border-white/5 shadow-2xl relative overflow-hidden group">
+                           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8 mb-8 sm:mb-12 relative z-10">
                                <div>
-                                   <div className="flex items-center gap-4 mb-2">
-                                       <h2 className="text-4xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">{selectedIndex.name}</h2>
-                                       <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${selectedIndex.change >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                                           Live Analysis
+                                   <div className="flex items-center gap-3 sm:gap-4 mb-2">
+                                       <h2 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-none">{selectedIndex.name}</h2>
+                                       <span className={`px-3 py-0.5 sm:px-4 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-widest ${selectedIndex.change >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                           Live
                                        </span>
                                    </div>
-                                   <p className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.3em]">Master Market Benchmark • US Execution Profile</p>
+                                   <p className="text-zinc-500 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.3em]">Master Market Benchmark • US Execution Profile</p>
                                </div>
-                               <button onClick={() => setSelectedIndex(null)} className="text-zinc-400 hover:text-white transition-colors text-3xl">✕</button>
+                               <button onClick={() => setSelectedIndex(null)} className="absolute top-0 right-0 sm:relative text-zinc-400 hover:text-white transition-colors text-2xl sm:text-3xl">✕</button>
                            </div>
 
-                           <div className="h-[600px] w-full relative z-10 overflow-hidden">
+                           <div className="h-[350px] sm:h-[600px] w-full relative z-10 overflow-hidden">
                                <TradingChart 
                                    title={`${selectedIndex.name} Performance Roadmap`} 
                                    data={generateHistory(selectedIndex.value)} 
@@ -485,10 +476,10 @@ export default function NasdaqPage() {
                 )}
 
                 {/* Explorer Results Area */}
-                <div className="space-y-12 min-h-[800px]">
+                <div className="space-y-8 sm:space-y-12 min-h-[800px]">
                     {viewType === 'card' ? (
-                        <div className="space-y-12 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 px-1">
+                        <div className="space-y-8 sm:space-y-12 animate-in fade-in duration-500">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-8 px-1">
                                 {paginatedStocks.map((stock) => (
                                     <StockCard
                                         key={stock.symbol}
@@ -538,19 +529,19 @@ export default function NasdaqPage() {
                             )}
                         </div>
                     ) : (
-                        <div className="bg-white dark:bg-zinc-900 rounded-[3.5rem] border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-2xl animate-in fade-in duration-500">
-                            <div className="px-10 py-8 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] sm:rounded-[3.5rem] border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-2xl animate-in fade-in duration-500">
+                            <div className="px-6 sm:px-10 py-6 sm:py-8 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
                                 <div>
-                                    <h2 className="text-sm font-black uppercase tracking-[0.3em]">Institutional Asset Analytics</h2>
-                                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">Multi-Vector Valuation Matrix</p>
+                                    <h2 className="text-xs sm:text-sm font-black uppercase tracking-[0.3em]">Institutional Asset Analytics</h2>
+                                    <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">Multi-Vector Valuation Matrix</p>
                                 </div>
                                 <div className="flex items-center gap-6">
-                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-600/10 px-4 py-2 rounded-xl border border-blue-500/20">
-                                        Live Datastream: Active
+                                    <span className="text-[8px] sm:text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-600/10 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-blue-500/20">
+                                        Live Feed
                                     </span>
                                 </div>
                             </div>
-                            <div className="overflow-x-auto custom-scrollbar">
+                            <div className="overflow-x-auto no-scrollbar">
                                 <table className="w-full text-left text-[11px] border-collapse min-w-[800px]">
                                     <thead>
                                         <tr className="bg-zinc-100/50 dark:bg-black uppercase tracking-widest text-zinc-400 font-black">

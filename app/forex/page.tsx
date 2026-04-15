@@ -83,20 +83,20 @@ export default function ForexPage() {
             </div>
 
             <div className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
-                <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                <header className="mb-8 sm:mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-4xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">💱 Forex Terminal</h1>
-                            <div className="px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
-                                <span className="text-[10px] text-green-500 font-black uppercase tracking-widest animate-pulse">Syncing Live</span>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                            <h1 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">💱 Forex Terminal</h1>
+                            <div className="px-2 py-0.5 sm:px-3 sm:py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+                                <span className="text-[8px] sm:text-[10px] text-green-500 font-black uppercase tracking-widest animate-pulse">Syncing</span>
                             </div>
                         </div>
-                        <p className="text-zinc-500 dark:text-zinc-500 text-sm font-bold tracking-tight">Real-time cross-currency velocity & volatility synthesis</p>
+                        <p className="text-zinc-500 dark:text-zinc-500 text-[10px] sm:text-sm font-bold tracking-tight">Real-time cross-currency velocity & volatility synthesis</p>
                     </div>
 
-                    <div className="flex bg-zinc-100 dark:bg-zinc-900/50 backdrop-blur-md rounded-2xl p-1.5 border border-zinc-200 dark:border-white/5 shadow-xl">
-                        <button onClick={() => updateSettings({ currency: 'PKR' })} className={`px-8 py-2.5 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest ${currency === 'PKR' ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-300'}`}>PKR View</button>
-                        <button onClick={() => updateSettings({ currency: 'USD' })} className={`px-8 py-2.5 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest ${currency === 'USD' ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-300'}`}>USD View</button>
+                    <div className="flex w-full md:w-auto bg-zinc-100 dark:bg-zinc-900/50 backdrop-blur-md rounded-xl sm:rounded-2xl p-1 sm:p-1.5 border border-zinc-200 dark:border-white/5 shadow-xl">
+                        <button onClick={() => updateSettings({ currency: 'PKR' })} className={`flex-1 md:flex-none px-4 sm:px-8 py-2 sm:py-2.5 text-[8px] sm:text-[10px] font-black rounded-lg sm:rounded-xl transition-all uppercase tracking-widest ${currency === 'PKR' ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-300'}`}>PKR View</button>
+                        <button onClick={() => updateSettings({ currency: 'USD' })} className={`flex-1 md:flex-none px-4 sm:px-8 py-2 sm:py-2.5 text-[8px] sm:text-[10px] font-black rounded-lg sm:rounded-xl transition-all uppercase tracking-widest ${currency === 'USD' ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-300'}`}>USD View</button>
                     </div>
                 </header>
 
@@ -108,11 +108,11 @@ export default function ForexPage() {
                 )}
 
                 {/* Primary Intelligence Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8 mb-12">
                     {/* Market Watch Table Sidebar */}
-                    <div className="lg:col-span-1 min-h-[800px] bg-white dark:bg-zinc-900/40 rounded-[2.5rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col shadow-2xl">
-                        <div className="p-6 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900/50">
-                            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Market Watch</h2>
+                    <div className="lg:col-span-1 h-fit max-h-[400px] lg:max-h-none lg:min-h-[800px] bg-white dark:bg-zinc-900/40 rounded-[1.5rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col shadow-2xl">
+                        <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900/50">
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Market Watch</h2>
                         </div>
                         <div className="flex-1 overflow-y-auto no-scrollbar">
                             <table className="w-full text-left border-collapse">
@@ -134,12 +134,12 @@ export default function ForexPage() {
                                                 : 'hover:bg-zinc-50 dark:hover:bg-white/5'
                                             }`}
                                         >
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${selectedPair?.code === rate.code ? 'bg-blue-500 animate-pulse' : 'bg-transparent'}`}></div>
+                                            <td className="px-4 sm:px-6 py-4 sm:py-5">
+                                                <div className="flex items-center gap-2 sm:gap-3">
+                                                    <div className={`w-1 sm:w-1.5 h-1 sm:h-1.5 rounded-full ${selectedPair?.code === rate.code ? 'bg-blue-500 animate-pulse' : 'bg-transparent'}`}></div>
                                                     <div>
-                                                        <div className={`text-sm font-black tracking-tighter uppercase italic ${selectedPair?.code === rate.code ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-white'}`}>{rate.code}</div>
-                                                        <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest truncate max-w-[60px]">{rate.name}</div>
+                                                        <div className={`text-xs sm:text-sm font-black tracking-tighter uppercase italic ${selectedPair?.code === rate.code ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-white'}`}>{rate.code}</div>
+                                                        <div className="text-[8px] sm:text-[9px] font-bold text-zinc-500 uppercase tracking-widest truncate max-w-[50px] sm:max-w-[60px]">{rate.name}</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -172,17 +172,17 @@ export default function ForexPage() {
                         </div>
 
                         {/* Tactical Stats Overlay */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6">
                             {[
-                                { label: 'Execution Volatility', val: (Math.random() * 0.5 + 0.1).toFixed(2) + '%', color: 'text-blue-500', icon: '⚡' },
-                                { label: 'Spread Velocity', val: '0.0001 pts', color: 'text-indigo-500', icon: '📊' },
-                                { label: 'Network Liquidity', val: '99.9% Depth', color: 'text-purple-500', icon: '⚪' },
+                                { label: 'Volatility', val: (Math.random() * 0.5 + 0.1).toFixed(2) + '%', color: 'text-blue-500', icon: '⚡' },
+                                { label: 'Spread', val: '0.0001 pts', color: 'text-indigo-500', icon: '📊' },
+                                { label: 'Liquidity', val: '99.9% Depth', color: 'text-purple-500', icon: '⚪' },
                             ].map(item => (
-                                <div key={item.label} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 p-6 rounded-[2rem] flex items-center gap-4 hover:shadow-xl transition-all duration-500">
-                                    <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-white/5 flex items-center justify-center text-xl">{item.icon}</div>
-                                    <div>
-                                        <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">{item.label}</p>
-                                        <p className={`text-sm font-black uppercase tracking-tighter ${item.color}`}>{item.val}</p>
+                                <div key={item.label} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] flex items-center gap-3 sm:gap-4 hover:shadow-xl transition-all duration-500">
+                                    <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-50 dark:bg-white/5 flex items-center justify-center text-xs sm:text-lg">{item.icon}</div>
+                                    <div className="min-w-0">
+                                        <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5 sm:mb-1 truncate">{item.label}</p>
+                                        <p className={`text-[10px] sm:text-xs font-black uppercase tracking-tighter ${item.color} truncate`}>{item.val}</p>
                                     </div>
                                 </div>
                             ))}

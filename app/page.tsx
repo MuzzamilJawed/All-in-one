@@ -164,45 +164,44 @@ export default function Home() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-        <div className="max-w-[1600px] mx-auto px-8 py-6 flex justify-between items-center">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-3 sm:py-6 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white">
-              Terminal <span className="text-blue-500">Live</span>
+            <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
+              Terminal <span className="text-blue-500 text-lg sm:text-2xl">Live</span>
             </h1>
-            <p className="text-zinc-500 dark:text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">Multi-Asset Intelligence Engine</p>
+            <p className="text-zinc-500 dark:text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2">Intelligence Engine</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/10">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/10">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">Systems Active</span>
+              <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">Active</span>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1600px] mx-auto p-8 relative z-10">
+      <main className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
 
-        <section className="mb-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <StatCard label="Bitcoin / USD" value={`$${cryptoData[0]?.usdPrice?.toLocaleString() || "---"}`} icon="₿" change={cryptoData[0]?.changePercent || 0} changeLabel="Market Volatility" />
-            <StatCard label="USD / PKR" value={`Rs. ${forexData[0]?.pkrPrice?.toFixed(2) || "---"}`} icon="💵" change={forexData[0]?.changePercent || 0} changeLabel="Forex Exchange" />
-            <StatCard label="Gold (Tola)" value={`Rs. ${goldData.tola24k?.pkrPrice?.toLocaleString() || "---"}`} icon="💎" change={goldData.tola24k?.changePercent || 0} changeLabel="Metal Spot Price" />
-            <StatCard label="Silver (Oz)" value={`Rs. ${silverData.ounce?.pkrPrice?.toLocaleString() || "---"}`} icon="🪙" change={silverData.ounce?.changePercent || 0} changeLabel="Commodity Index" />
+        <section className="mb-8 sm:mb-12">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
+            <StatCard label="Bitcoin / USD" value={`$${cryptoData[0]?.usdPrice?.toLocaleString() || "---"}`} icon="₿" change={cryptoData[0]?.changePercent || 0} changeLabel="Volatility" />
+            <StatCard label="USD / PKR" value={`Rs. ${forexData[0]?.pkrPrice?.toFixed(2) || "---"}`} icon="💵" change={forexData[0]?.changePercent || 0} changeLabel="Forex" />
+            <StatCard label="Gold (Tola)" value={`Rs. ${goldData.tola24k?.pkrPrice?.toLocaleString() || "---"}`} icon="💎" change={goldData.tola24k?.changePercent || 0} changeLabel="Metal" />
+            <StatCard label="Silver (Oz)" value={`Rs. ${silverData.ounce?.pkrPrice?.toLocaleString() || "---"}`} icon="🪙" change={silverData.ounce?.changePercent || 0} changeLabel="Commodity" />
           </div>
-
         </section>
 
         {/* PSX Stocks Section - Full Width Priority */}
-        <section className="mb-12">
-          <div className="flex items-end justify-between mb-6">
+        <section className="mb-8 sm:mb-12">
+          <div className="flex items-end justify-between mb-4 sm:mb-6">
             <div>
-              <h2 className="text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">🔥 PSX Most Active</h2>
-              <p className="text-zinc-500 text-sm mt-1">Highest volume scrips on Pakistan Stock Exchange</p>
+              <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">🔥 Most Active</h2>
+              <p className="text-zinc-500 text-[10px] sm:text-sm mt-1">High volume scrips on PSX</p>
             </div>
-            <a href="/stocks" className="text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">Full Scrip List →</a>
+            <a href="/stocks" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">All Scrips →</a>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {!psxStocks || psxStocks.length === 0 ? (
               // Skeleton loading cards only show when actually loading or no data
               Array.from({ length: 4 }).map((_, i) => (
@@ -254,26 +253,27 @@ export default function Home() {
 
             {/* Forex Section */}
             <div>
-              <div className="flex items-end justify-between mb-6">
-                <h2 className="text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">💱 Global Exchange</h2>
-                <a href="/forex" className="text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">Currency Hub →</a>
+              <div className="flex items-end justify-between mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">💱 Global Exchange</h2>
+                <a href="/forex" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">More →</a>
               </div>
-              <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[3rem] border border-zinc-200 dark:border-white/5 overflow-hidden">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-zinc-200 dark:border-white/5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">
-                      <th className="px-8 py-5">Currency</th>
-                      <th className="px-8 py-5 text-right">Execution Rate</th>
-                      <th className="px-8 py-5 text-center">Momentum</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
+              <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[3rem] border border-zinc-200 dark:border-white/5 overflow-hidden">
+                <div className="overflow-x-auto no-scrollbar">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-zinc-200 dark:border-white/5 text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                        <th className="px-4 sm:px-8 py-3 sm:py-5">Currency</th>
+                        <th className="px-4 sm:px-8 py-3 sm:py-5 text-right">Rate</th>
+                        <th className="px-4 sm:px-8 py-3 sm:py-5 text-center">∆%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
                     {forexData.slice(1, 5).map(rate => (
                       <tr key={rate.code} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group">
-                        <td className="px-8 py-4 font-black text-zinc-900 dark:text-white tracking-tight uppercase italic">{rate.code} / {rate.name}</td>
-                        <td className="px-8 py-4 text-right font-mono font-black text-blue-600 dark:text-blue-400">Rs. {rate.pkrPrice.toFixed(2)}</td>
-                        <td className={`px-8 py-4 text-center text-[10px] font-black ${rate.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {rate.changePercent >= 0 ? '▲' : '▼'} {Math.abs(rate.changePercent).toFixed(2)}%
+                        <td className="px-4 sm:px-8 py-3 sm:py-4 font-black text-zinc-900 dark:text-white tracking-tight uppercase italic text-[10px] sm:text-sm whitespace-nowrap">{rate.code} / {rate.name}</td>
+                        <td className="px-4 sm:px-8 py-3 sm:py-4 text-right font-mono font-black text-blue-600 dark:text-blue-400 text-[10px] sm:text-base">Rs.{rate.pkrPrice.toFixed(2)}</td>
+                        <td className={`px-4 sm:px-8 py-3 sm:py-4 text-center text-[8px] sm:text-[10px] font-black ${rate.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {rate.changePercent >= 0 ? '▲' : '▼'}{Math.abs(rate.changePercent).toFixed(1)}%
                         </td>
                       </tr>
                     ))}
@@ -282,6 +282,7 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
 
           {/* Row 2: Energy & Crypto */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
@@ -302,29 +303,28 @@ export default function Home() {
             </div>
 
             {/* Crypto pulse */}
-            <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[3rem] p-8 border border-zinc-200 dark:border-white/5">
-              <div className="flex items-end justify-between mb-8">
-                <h2 className="text-xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">₿ Crypto Surveillance</h2>
-                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Top Cap Assets</span>
+            <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[3rem] p-4 sm:p-8 border border-zinc-200 dark:border-white/5">
+              <div className="flex items-end justify-between mb-4 sm:mb-8">
+                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">₿ Crypto Hub</h2>
+                <span className="text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest italic hidden sm:block">Real-Time</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-3 sm:gap-6">
                 {cryptoData.slice(0, 2).map(coin => (
-                  <div key={coin.id} className="bg-white dark:bg-white/5 hover:bg-zinc-50 dark:hover:bg-white/[0.08] p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all group cursor-pointer">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center font-black text-orange-500">
+                  <div key={coin.id} className="bg-white dark:bg-white/5 hover:bg-zinc-50 dark:hover:bg-white/[0.08] p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all group cursor-pointer overflow-hidden">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 sm:mb-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-orange-500/10 flex items-center justify-center font-black text-orange-500 text-xs sm:text-base">
                           {coin.symbol[0]}
                         </div>
-                        <div>
-                          <p className="font-black text-zinc-900 dark:text-white uppercase text-sm tracking-tight">{coin.name}</p>
-                          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{coin.symbol}</p>
+                        <div className="min-w-0">
+                          <p className="font-black text-zinc-900 dark:text-white uppercase text-[10px] sm:text-sm tracking-tight truncate">{coin.name}</p>
                         </div>
                       </div>
-                      <div className={`px-2 py-1 rounded-lg text-[10px] font-black ${coin.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                        {coin.changePercent >= 0 ? '+' : ''}{coin.changePercent.toFixed(2)}%
+                      <div className={`px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-black ${coin.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                        {coin.changePercent >= 0 ? '+' : ''}{coin.changePercent.toFixed(1)}%
                       </div>
                     </div>
-                    <div className="text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter group-hover:translate-x-1 transition-transform italic">${coin.usdPrice?.toLocaleString()}</div>
+                    <div className="text-lg sm:text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter group-hover:translate-x-1 transition-transform italic">${coin.usdPrice?.toLocaleString()}</div>
                   </div>
                 ))}
               </div>
@@ -333,22 +333,20 @@ export default function Home() {
         </div>
 
         {/* Tactical Call to Action */}
-        <div className="mt-20 relative rounded-[4rem] p-12 overflow-hidden group">
+        <div className="mt-12 sm:mt-20 relative rounded-[2rem] sm:rounded-[4rem] p-8 sm:p-12 sm:p-20 overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-800 transition-transform duration-700 group-hover:scale-105"></div>
-          <div className="absolute top-0 right-0 w-[50%] h-full bg-black/20 skew-x-[30deg] translate-x-32"></div>
+          <div className="absolute top-0 right-0 w-[50%] h-full bg-black/20 skew-x-[30deg] translate-x-32 hidden lg:block"></div>
 
-          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
-            <div className="max-w-2xl text-center lg:text-left">
-              <h3 className="text-4xl lg:text-5xl font-black text-white tracking-tighter italic uppercase mb-4 leading-none">
-                Deep Market <br /> Intelligence
-              </h3>
-              <p className="text-blue-100 text-lg font-medium max-w-xl">
-                Leverage real-time technical analysis and personalized watchlists to stay ahead of market shifts. Your portal to precision trading starts here.
-              </p>
-            </div>
+          <div className="relative z-10 flex flex-col items-center text-center">
+            <h3 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tighter italic uppercase mb-6 leading-none">
+              Strategic Market <br /> Intelligence
+            </h3>
+            <p className="text-blue-100 text-sm sm:text-xl font-medium max-w-2xl mb-10">
+              Leverage real-time technical analysis and personalized watchlists to stay ahead of market shifts. Your portal to high-precision trading.
+            </p>
             <div className="flex flex-wrap items-center gap-4 justify-center">
-              <a href="/forex" className="bg-white text-blue-600 px-10 py-5 rounded-3xl font-black uppercase text-xs tracking-widest hover:bg-zinc-100 hover:scale-105 active:scale-95 transition-all shadow-2xl">Forex Terminal</a>
-              <a href="/crypto" className="bg-black/20 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-3xl font-black uppercase text-xs tracking-widest hover:bg-white/10 hover:scale-105 active:scale-95 transition-all">Crypto Pulse</a>
+              <a href="/stocks/terminal" className="bg-white text-blue-600 px-8 py-4 sm:px-12 sm:py-6 rounded-2xl sm:rounded-3xl font-black uppercase text-[10px] sm:text-xs tracking-[0.2em] hover:bg-zinc-100 hover:scale-105 active:scale-95 transition-all shadow-2xl">Terminal Access</a>
+              <a href="/stocks" className="bg-black/20 backdrop-blur-md text-white border border-white/20 px-8 py-4 sm:px-12 sm:py-6 rounded-2xl sm:rounded-3xl font-black uppercase text-[10px] sm:text-xs tracking-[0.2em] hover:bg-white/10 hover:scale-105 active:scale-95 transition-all">Market Explorer</a>
             </div>
           </div>
         </div>

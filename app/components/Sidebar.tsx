@@ -48,6 +48,7 @@ export default function Sidebar() {
   const [mounted, setMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
   const { theme, setTheme } = useTheme();
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -60,75 +61,103 @@ export default function Sidebar() {
     return () => clearInterval(interval);
   }, []);
 
+  // Handle closing on navigation for mobile
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
+
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-lg overflow-y-auto flex flex-col border-r border-zinc-200 dark:border-zinc-800">
-      <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Your All-in-One Hub</p>
-      </div>
+    <>
+      {/* Mobile Toggle Button */}
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="lg:hidden fixed bottom-6 right-6 z-[100] w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center text-2xl active:scale-90 transition-transform"
+      >
+        {isOpen ? "✕" : "☰"}
+      </button>
 
-      <nav className="p-4 space-y-6 flex-1">
-        {navigationGroups.map((group) => (
-          <div key={group.title} className="space-y-2">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 px-4 mb-2">
-              {group.title}
-            </h2>
-            <div className="space-y-1">
-              {group.items.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${isActive
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
-                    }`}
-                  >
-                    <span className="text-xl">{item.icon}</span>
-                    <span className="font-bold text-sm tracking-tight">{item.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
+      {/* Backdrop */}
+      {isOpen && (
+        <div 
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]"
+        />
+      )}
 
-      <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-        <div className="mb-4">
-          <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2">Theme</p>
-          <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1">
-            <button
-              data-testid="theme-toggle-light"
-              onClick={() => setTheme('light')}
-              className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'light' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
-              title="Light Mode"
-            >
-              ☀️
-            </button>
-            <button
-              data-testid="theme-toggle-dark"
-              onClick={() => setTheme('dark')}
-              className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'dark' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
-              title="Dark Mode"
-            >
-              🌙
-            </button>
-            <button
-              onClick={() => setTheme('system')}
-              className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'system' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
-              title="System Auto"
-            >
-              💻
-            </button>
+      <aside className={`fixed left-0 top-0 h-screen w-64 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-lg overflow-y-auto flex flex-col border-r border-zinc-200 dark:border-zinc-800 transition-transform duration-300 z-[95] 
+        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+        
+        <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Your All-in-One Hub</p>
           </div>
+          <button onClick={() => setIsOpen(false)} className="lg:hidden text-zinc-500">✕</button>
         </div>
 
-        <p className="text-xs text-zinc-500">
-          Last updated: {mounted ? currentTime : "--:--"}
-        </p>
-      </div>
-    </aside>
+        <nav className="p-4 space-y-6 flex-1">
+          {navigationGroups.map((group) => (
+            <div key={group.title} className="space-y-2">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 px-4 mb-2">
+                {group.title}
+              </h2>
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${isActive
+                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
+                      }`}
+                    >
+                      <span className="text-xl">{item.icon}</span>
+                      <span className="font-bold text-sm tracking-tight">{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+          <div className="mb-4">
+            <p className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2">Theme</p>
+            <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1">
+              <button
+                data-testid="theme-toggle-light"
+                onClick={() => setTheme('light')}
+                className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'light' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+                title="Light Mode"
+              >
+                ☀️
+              </button>
+              <button
+                data-testid="theme-toggle-dark"
+                onClick={() => setTheme('dark')}
+                className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'dark' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+                title="Dark Mode"
+              >
+                🌙
+              </button>
+              <button
+                onClick={() => setTheme('system')}
+                className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'system' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+                title="System Auto"
+              >
+                💻
+              </button>
+            </div>
+          </div>
+
+          <p className="text-xs text-zinc-500">
+            Last updated: {mounted ? currentTime : "--:--"}
+          </p>
+        </div>
+      </aside>
+    </>
   );
 }

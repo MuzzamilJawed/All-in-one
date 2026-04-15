@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "./components/Sidebar";
+import CommandPalette from "./components/CommandPalette";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SettingsProvider } from "./context/SettingsContext";
 
@@ -30,21 +31,22 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-50 dark:bg-black`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SettingsProvider>
-            <div className="flex w-full min-h-screen">
-              <div className="hidden md:block">
-                <Sidebar />
-              </div>
-              <main className="flex-1 ml-0 md:ml-64 min-w-0 overflow-x-hidden">{children}</main>
+        <SettingsProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <div className="flex bg-zinc-50 dark:bg-[#050505]">
+              <Sidebar />
+              <main className="flex-1 lg:ml-64 min-w-0">
+                {children}
+              </main>
             </div>
-          </SettingsProvider>
-        </ThemeProvider>
+            <CommandPalette />
+          </ThemeProvider>
+        </SettingsProvider>
       </body>
     </html>
   );

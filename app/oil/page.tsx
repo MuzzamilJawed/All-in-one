@@ -22,13 +22,13 @@ export default function OilPage() {
   const [oilPrices, setOilPrices] = useState<any[]>([]);
   const [allEnergy, setAllEnergy] = useState<any[]>([]);
   const [trendData, setTrendData] = useState<any[]>([]);
-  const [trendEnergy, setTrendEnergy] = useState("crudeOil"); 
+  const [trendEnergy, setTrendEnergy] = useState("crudeOil");
   const [trendTimeframe, setTrendTimeframe] = useState("Daily");
   const { settings, updateSettings } = useSettings();
   const tableCurrency = settings.currency as 'USD' | 'PKR';
   const [oilCandles, setOilCandles] = useState<any[]>([]);
-  const [oilChartTF, setOilChartTF] = useState("1H");
-  const [selectedItem, setSelectedItem] = useState<any>(null); 
+  const [oilChartTF, setOilChartTF] = useState("1D");
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   const router = useRouter();
 
   const stableTrendRef = useRef<Record<string, any[]>>({});
@@ -38,9 +38,9 @@ export default function OilPage() {
     try {
       if (isManual) setLoading(true);
       setError("");
-      
+
       const data = await fetchOilPrices();
-      
+
       if (!data) {
         if (isManual) setError("Could not fetch energy market data.");
         return;
@@ -63,7 +63,7 @@ export default function OilPage() {
 
       setOilPrices(updatedPrices);
       setAllEnergy(data.allEnergy || []);
-      
+
       // Update trend and candles based on new data
       updateMarketVisuals(data);
 
@@ -80,9 +80,9 @@ export default function OilPage() {
   };
 
   const formatPrice = (val: number) => {
-    return val.toLocaleString(undefined, { 
-      minimumFractionDigits: val < 10 ? 4 : 2, 
-      maximumFractionDigits: val < 10 ? 4 : 2 
+    return val.toLocaleString(undefined, {
+      minimumFractionDigits: val < 10 ? 4 : 2,
+      maximumFractionDigits: val < 10 ? 4 : 2
     });
   };
 
@@ -143,47 +143,51 @@ export default function OilPage() {
 
     // Generate Candles
     const candleKey = `${trendEnergy}-${oilChartTF}-${tableCurrency}`;
-    
+
     if (stableCandlesRef.current[candleKey] && stableCandlesRef.current[candleKey].length > 0) {
-        const existing = [...stableCandlesRef.current[candleKey]];
-        const lastIndex = existing.length - 1;
-        const last = { ...existing[lastIndex] };
-        last.close = currentPrice;
-        last.high = Math.max(last.high, currentPrice);
-        last.low = Math.min(last.low, currentPrice);
-        existing[lastIndex] = last;
-        setOilCandles(existing);
+      const existing = [...stableCandlesRef.current[candleKey]];
+      const lastIndex = existing.length - 1;
+      const last = { ...existing[lastIndex] };
+      last.close = currentPrice;
+      last.high = Math.max(last.high, currentPrice);
+      last.low = Math.min(last.low, currentPrice);
+      existing[lastIndex] = last;
+      setOilCandles(existing);
     } else {
-        let seconds = 3600, count = 100;
-        if (oilChartTF === "1D") { seconds = 86400; count = 60; }
-        if (oilChartTF === "1W") { seconds = 604800; count = 52; }
+      let seconds = 3600, count = 100;
+      if (oilChartTF === "1D") { seconds = 86400; count = 60; }
+      if (oilChartTF === "1W") { seconds = 604800; count = 52; }
 
-        const candles = [];
-        const nowSec = Math.floor(Date.now() / 1000);
-        let currentIterPrice = currentPrice;
-        const volatility = oilChartTF === "1W" ? 0.05 : oilChartTF === "1D" ? 0.02 : 0.01;
+      const candles = [];
+      const now = new Date();
+      if (oilChartTF === "1H") now.setMinutes(0, 0, 0);
+      else now.setHours(0, 0, 0, 0);
+      
+      const nowSec = Math.floor(now.getTime() / 1000);
+      let currentIterPrice = currentPrice;
+      const volatility = oilChartTF === "1W" ? 0.05 : oilChartTF === "1D" ? 0.02 : 0.01;
 
-        for (let i = 0; i < count; i++) {
-          const time = nowSec - i * seconds;
-          const change = (Math.random() - 0.5) * volatility;
-          
-          const close = currentIterPrice;
-          const open = close / (1 + change);
-          const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.2));
-          const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.2));
+      for (let i = 0; i < count; i++) {
+        const time = nowSec - i * seconds;
+        const change = (Math.random() - 0.5) * volatility;
 
-          candles.unshift({ 
-            time, 
-            open: parseFloat(open.toFixed(4)), 
-            high: parseFloat(high.toFixed(4)), 
-            low: parseFloat(low.toFixed(4)), 
-            close: parseFloat(close.toFixed(4)),
-            volume: Math.floor(Math.random() * 50000) + 10000 
-          });
-          currentIterPrice = open;
-        }
-        stableCandlesRef.current[candleKey] = candles;
-        setOilCandles(candles);
+        const close = currentIterPrice;
+        const open = close / (1 + change);
+        const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.2));
+        const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.2));
+
+        candles.unshift({
+          time,
+          open: parseFloat(open.toFixed(4)),
+          high: parseFloat(high.toFixed(4)),
+          low: parseFloat(low.toFixed(4)),
+          close: parseFloat(close.toFixed(4)),
+          volume: Math.floor(Math.random() * 50000) + 10000
+        });
+        currentIterPrice = open;
+      }
+      stableCandlesRef.current[candleKey] = candles;
+      setOilCandles(candles);
     }
   };
 
@@ -201,25 +205,25 @@ export default function OilPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
-        <div className="px-8 py-6 max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="px-4 sm:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
             <div>
-              <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-3 tracking-tighter uppercase italic">
+              <h1 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 tracking-tighter uppercase italic">
                 🛢️ Energy Markets
-                <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest animate-pulse">
+                <span className="bg-blue-600 text-white text-[8px] sm:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
                   Live
                 </span>
               </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500' : 'bg-green-500'} animate-pulse`}></span>
-                {loading ? "Synchronizing Satellite Feeds..." : `Terminal Active - ${new Date().toLocaleTimeString()}`}
+              <p className="text-zinc-500 dark:text-zinc-400 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1 sm:mt-2 flex items-center gap-2">
+                <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full ${loading ? 'bg-amber-500' : 'bg-green-500'} animate-pulse`}></span>
+                {loading ? "Synchronizing satellite Feeds..." : `Terminal Active - ${new Date().toLocaleTimeString()}`}
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-2xl p-1 border border-zinc-200 dark:border-zinc-700">
-                <button onClick={() => updateSettings({ currency: 'PKR' })} className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>PKR</button>
-                <button onClick={() => updateSettings({ currency: 'USD' })} className={`px-4 py-2 text-xs font-black rounded-xl transition-all ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}>USD</button>
+            <div className="flex w-full sm:w-auto items-center gap-4">
+              <div className="flex flex-1 sm:flex-none bg-zinc-100 dark:bg-zinc-800 rounded-xl sm:rounded-2xl p-1 border border-zinc-200 dark:border-zinc-700">
+                <button onClick={() => updateSettings({ currency: 'PKR' })} className={`flex-1 sm:flex-none px-4 py-2 text-[10px] font-black rounded-lg sm:rounded-xl transition-all ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}>PKR View</button>
+                <button onClick={() => updateSettings({ currency: 'USD' })} className={`flex-1 sm:flex-none px-4 py-2 text-[10px] font-black rounded-lg sm:rounded-xl transition-all ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}>USD View</button>
               </div>
             </div>
           </div>
@@ -235,64 +239,64 @@ export default function OilPage() {
         )}
 
         {/* Price Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8">
           {oilPrices.map((oil) => (
             <div key={oil.title} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95" onClick={() => {
-                const fullItem = allEnergy.find(i => i.name === oil.title);
-                if (fullItem) openDetail(fullItem);
+              const fullItem = allEnergy.find(i => i.name === oil.title);
+              if (fullItem) openDetail(fullItem);
             }}>
-                <PriceCard {...oil} currency={tableCurrency} />
+              <PriceCard {...oil} currency={tableCurrency} />
             </div>
           ))}
         </div>
 
         {/* Detailed Energy Table Section */}
-        <div className="bg-white dark:bg-zinc-900 rounded-[3rem] shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-          <div className="p-8 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+        <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] sm:rounded-[3rem] shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="p-5 sm:p-8 border-b border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Extended Energy Feed</h2>
-              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Satellite Comparison Analysis</p>
+              <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Energy Contracts Feed</h2>
+              <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-widest mt-1">Satellite Comparison Benchmark</p>
             </div>
             <div className="text-[10px] font-black text-blue-500 border border-blue-500/20 px-4 py-2 rounded-xl uppercase tracking-widest bg-blue-500/5">
-              {allEnergy.length} Active Contracts
+              {allEnergy.length} Active Feeds
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto no-scrollbar">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-zinc-200 dark:border-white/5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] bg-zinc-50/50 dark:bg-white/5">
-                  <th className="px-8 py-5">Commodity Scrip</th>
-                  <th className="px-8 py-5 text-right">Market Price</th>
-                  <th className="px-8 py-5 text-right">Momentum</th>
-                  <th className="px-8 py-5 text-center">Weekly</th>
-                  <th className="px-8 py-5 text-center">Monthly</th>
-                  <th className="px-8 py-5 text-right">Satellite Sync</th>
+                <tr className="border-b border-zinc-200 dark:border-white/5 text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] bg-zinc-50/50 dark:bg-white/5">
+                  <th className="px-4 sm:px-8 py-3 sm:py-5">Scrip</th>
+                  <th className="px-4 sm:px-8 py-3 sm:py-5 text-right">Price</th>
+                  <th className="px-4 sm:px-8 py-3 sm:py-5 text-right">24h%</th>
+                  <th className="px-4 sm:px-8 py-3 sm:py-5 text-center hidden sm:table-cell">Weekly</th>
+                  <th className="px-4 sm:px-8 py-3 sm:py-5 text-center hidden sm:table-cell">Monthly</th>
+                  <th className="px-4 sm:px-8 py-3 sm:py-5 text-right hidden md:table-cell">Sync</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
                 {allEnergy.map((item) => (
                   <tr key={item.key} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => openDetail(item)}>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${item.change >= 0 ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
-                        <span className="font-black text-zinc-900 dark:text-white tracking-tight uppercase italic">{item.name}</span>
+                    <td className="px-4 sm:px-8 py-3 sm:py-5">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${item.change >= 0 ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+                        <span className="font-black text-zinc-900 dark:text-white tracking-tight uppercase italic text-[10px] sm:text-sm">{item.name}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-right font-mono font-black text-zinc-900 dark:text-zinc-400 group-hover:text-blue-500">
+                    <td className="px-4 sm:px-8 py-3 sm:py-5 text-right font-mono font-black text-zinc-900 dark:text-zinc-400 group-hover:text-blue-500 text-[10px] sm:text-sm">
                       {tableCurrency === 'PKR' ? 'Rs. ' : '$'}
                       {formatPrice(tableCurrency === 'PKR' ? item.pkrPrice : item.price)}
                     </td>
-                    <td className={`px-8 py-5 text-right text-[10px] font-black ${item.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {item.changePercent >= 0 ? '▲' : '▼'} {Math.abs(item.changePercent).toFixed(2)}%
+                    <td className={`px-4 sm:px-8 py-3 sm:py-5 text-right text-[8px] sm:text-[10px] font-black ${item.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {item.changePercent >= 0 ? '▲' : '▼'}{Math.abs(item.changePercent).toFixed(1)}%
                     </td>
-                    <td className={`px-8 py-5 text-center text-[10px] font-bold ${item.weekly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`px-4 sm:px-8 py-3 sm:py-5 text-center text-[8px] sm:text-[10px] font-bold hidden sm:table-cell ${item.weekly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {item.weekly > 0 ? '+' : ''}{item.weekly}%
                     </td>
-                    <td className={`px-8 py-5 text-center text-[10px] font-bold ${item.monthly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`px-4 sm:px-8 py-3 sm:py-5 text-center text-[8px] sm:text-[10px] font-bold hidden sm:table-cell ${item.monthly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {item.monthly > 0 ? '+' : ''}{item.monthly}%
                     </td>
-                    <td className="px-8 py-5 text-right text-[9px] font-black text-zinc-500 uppercase tracking-widest">
-                      {item.date || 'Live Data'}
+                    <td className="px-4 sm:px-8 py-3 sm:py-5 text-right text-[8px] font-black text-zinc-500 uppercase tracking-widest hidden md:table-cell">
+                      {item.date || 'Live'}
                     </td>
                   </tr>
                 ))}
@@ -306,30 +310,30 @@ export default function OilPage() {
           {/* Trend Chart */}
           <div className="xl:col-span-2 bg-white dark:bg-zinc-900 rounded-[3rem] shadow-sm p-10 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
-            
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center mb-8 sm:mb-10 gap-6">
               <div>
-                <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Market Momentum</h2>
-                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Historical Price Velocity: <span className="text-blue-500">{allEnergy.find(i => i.key === trendEnergy)?.name}</span></p>
+                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Market Momentum</h2>
+                <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-widest mt-1">Velocity Trace: <span className="text-blue-500">{allEnergy.find(i => i.key === trendEnergy)?.name}</span></p>
               </div>
-              
-              <div className="flex flex-wrap gap-3">
-                <select 
-                  value={trendEnergy} 
+
+              <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
+                <select
+                  value={trendEnergy}
                   onChange={(e) => setTrendEnergy(e.target.value)}
-                  className="bg-zinc-100 dark:bg-zinc-800/50 rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest border-none outline-none focus:ring-1 focus:ring-blue-500 transition-all dark:text-zinc-300"
+                  className="flex-1 sm:flex-none bg-zinc-100 dark:bg-zinc-800/50 rounded-xl px-3 sm:px-4 py-2 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border-none outline-none focus:ring-1 focus:ring-blue-500 transition-all dark:text-zinc-300"
                 >
                   {allEnergy.map(item => (
                     <option key={item.key} value={item.key}>{item.name}</option>
                   ))}
                 </select>
-                
+
                 <div className="flex bg-zinc-100 dark:bg-zinc-800/50 rounded-xl p-1">
                   {['Daily', 'Weekly', 'Monthly'].map(tf => (
                     <button
                       key={tf}
                       onClick={() => setTrendTimeframe(tf)}
-                      className={`px-3 py-1.5 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest ${trendTimeframe === tf ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}
+                      className={`px-3 py-1.5 text-[8px] sm:text-[9px] font-black rounded-lg transition-all uppercase tracking-widest ${trendTimeframe === tf ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}
                     >
                       {tf}
                     </button>
@@ -354,14 +358,14 @@ export default function OilPage() {
                     tickLine={false}
                     axisLine={false}
                     domain={['auto', 'auto']}
-                    tickFormatter={(v) => tableCurrency === 'PKR' ? `Rs.${(v/1000).toFixed(1)}k` : `$${v}`}
+                    tickFormatter={(v) => tableCurrency === 'PKR' ? `Rs.${(v / 1000).toFixed(1)}k` : `$${v}`}
                     tick={{ fontWeight: 800 }}
                   />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '24px', color: '#fff', padding: '16px' }} 
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '24px', color: '#fff', padding: '16px' }}
                     itemStyle={{ fontWeight: 900, textTransform: 'uppercase', fontSize: '10px' }}
                     labelStyle={{ fontWeight: 900, marginBottom: '8px', color: '#71717a' }}
-                    formatter={(v: any) => [tableCurrency === 'PKR' ? `Rs. ${Number(v).toLocaleString()}` : `$${Number(v).toLocaleString()}`, 'Execution Price']} 
+                    formatter={(v: any) => [tableCurrency === 'PKR' ? `Rs. ${Number(v).toLocaleString()}` : `$${Number(v).toLocaleString()}`, 'Execution Price']}
                   />
                   <Area type="monotone" dataKey="price" stroke="#3b82f6" fillOpacity={1} fill="url(#colorOil)" strokeWidth={4} animationDuration={1500} />
                 </AreaChart>
@@ -372,67 +376,56 @@ export default function OilPage() {
           {/* Market Stats Sidebar */}
           <div className="space-y-8">
             <div className="bg-zinc-900 text-white rounded-[3rem] p-10 relative overflow-hidden border border-white/5">
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/20 to-transparent"></div>
-                <h3 className="relative z-10 text-xl font-black uppercase italic tracking-tighter mb-6">Terminal Summary</h3>
-                <div className="relative z-10 space-y-6">
-                    <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Active Contracts</span>
-                        <span className="font-mono font-black">{1000 + allEnergy.length * 50}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Global Supply</span>
-                        <span className="font-mono font-black text-green-500">+1.2%</span>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">OPEC Outlook</span>
-                        <span className="font-mono font-black text-amber-500">STABLE</span>
-                    </div>
-                    <div className="pt-4">
-                        <p className="text-[9px] leading-relaxed text-zinc-400 font-medium uppercase italic">Automated analysis suggests high volatility in {allEnergy.find(i => i.key === trendEnergy)?.name || 'Markets'} for the next 48 hours due to regional infrastructure reports.</p>
-                    </div>
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/20 to-transparent"></div>
+              <h3 className="relative z-10 text-xl font-black uppercase italic tracking-tighter mb-6">Terminal Summary</h3>
+              <div className="relative z-10 space-y-6">
+                <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Active Contracts</span>
+                  <span className="font-mono font-black">{1000 + allEnergy.length * 50}</span>
                 </div>
+                <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Global Supply</span>
+                  <span className="font-mono font-black text-green-500">+1.2%</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">OPEC Outlook</span>
+                  <span className="font-mono font-black text-amber-500">STABLE</span>
+                </div>
+                <div className="pt-4">
+                  <p className="text-[9px] leading-relaxed text-zinc-400 font-medium uppercase italic">Automated analysis suggests high volatility in {allEnergy.find(i => i.key === trendEnergy)?.name || 'Markets'} for the next 48 hours due to regional infrastructure reports.</p>
+                </div>
+              </div>
             </div>
 
             <div className="bg-white dark:bg-zinc-900 rounded-[3rem] p-10 border border-zinc-200 dark:border-zinc-800">
-                <h3 className="text-xl font-black uppercase italic tracking-tighter mb-6 dark:text-white">Price Alerts</h3>
-                <div className="space-y-4">
-                    {[
-                        { title: `${allEnergy[0]?.name || 'WTI'} Above $80`, status: "Active" },
-                        { title: `${allEnergy[1]?.name || 'Brent'} Drop 5%`, status: "Monitor" },
-                        { title: `${allEnergy[2]?.name || 'Natural Gas'} Spike 2%`, status: "Triggered" }
-                    ].map((alert, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-white/5">
-                            <span className="text-[10px] font-black uppercase dark:text-zinc-300 tracking-tight">{alert.title}</span>
-                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${alert.status === 'Triggered' ? 'bg-red-500 text-white' : 'bg-blue-500/10 text-blue-500'}`}>{alert.status}</span>
-                        </div>
-                    ))}
-                </div>
+              <h3 className="text-xl font-black uppercase italic tracking-tighter mb-6 dark:text-white">Price Alerts</h3>
+              <div className="space-y-4">
+                {[
+                  { title: `${allEnergy[0]?.name || 'WTI'} Above $80`, status: "Active" },
+                  { title: `${allEnergy[1]?.name || 'Brent'} Drop 5%`, status: "Monitor" },
+                  { title: `${allEnergy[2]?.name || 'Natural Gas'} Spike 2%`, status: "Triggered" }
+                ].map((alert, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-white/5">
+                    <span className="text-[10px] font-black uppercase dark:text-zinc-300 tracking-tight">{alert.title}</span>
+                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${alert.status === 'Triggered' ? 'bg-red-500 text-white' : 'bg-blue-500/10 text-blue-500'}`}>{alert.status}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Candlestick Analysis */}
         <div className="mt-12">
-            <div className="flex items-end justify-between mb-8">
-                <div>
-                   <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Technical Analysis</h2>
-                   <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">High Precision Candlestick Feed: <span className="text-blue-500">{allEnergy.find(i => i.key === trendEnergy)?.name}</span></p>
-                </div>
-                <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1 h-fit">
-                  {['1H', '1D', '1W'].map(tf => (
-                    <button
-                      key={tf}
-                      onClick={() => setOilChartTF(tf)}
-                      className={`px-4 py-2 text-[10px] font-black rounded-lg transition-all uppercase ${oilChartTF === tf ? 'bg-white dark:bg-zinc-700 shadow-md text-blue-600' : 'text-zinc-500 hover:text-zinc-900'}`}
-                    >
-                      {tf}
-                    </button>
-                  ))}
-                </div>
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Technical Analysis</h2>
+              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">High Precision Candlestick Feed: <span className="text-blue-500">{allEnergy.find(i => i.key === trendEnergy)?.name}</span></p>
             </div>
-            <div className="h-[600px] w-full mb-12">
-                <TradingChart title={`${(allEnergy.find(i => i.key === trendEnergy)?.name || 'Oil').toUpperCase()} / ${tableCurrency}`} data={oilCandles} currentTimeframe={oilChartTF} onTimeframeChange={setOilChartTF} currencySymbol={tableCurrency === 'PKR' ? 'Rs.' : '$'} />
-            </div>
+          </div>
+          <div className="h-[600px] w-full mb-12">
+            <TradingChart title={`${(allEnergy.find(i => i.key === trendEnergy)?.name || 'Oil').toUpperCase()} / ${tableCurrency}`} data={oilCandles} currentTimeframe={oilChartTF} onTimeframeChange={setOilChartTF} currencySymbol={tableCurrency === 'PKR' ? 'Rs.' : '$'} />
+          </div>
         </div>
 
         {/* Legacy modal removed in favor of dedicated screen */}

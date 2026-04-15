@@ -2,6 +2,7 @@
 
 import { createChart, ColorType, CandlestickSeries, CrosshairMode, HistogramSeries, LineSeries } from 'lightweight-charts';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useTheme } from 'next-themes';
 
 interface CandleData {
@@ -22,19 +23,21 @@ interface TradingChartProps {
     seamless?: boolean;
 }
 
-export default function TradingViewChart({
+export default function TradingChart({
     data,
     title,
     onTimeframeChange,
-    currentTimeframe = "1H",
+    currentTimeframe = "1D",
     currencySymbol = "$",
     seamless = false
 }: TradingChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<any>(null);
     const seriesRef = useRef<any>(null);
-    const volumeSeriesRef = useRef<any>(null);
     const smaSeriesRef = useRef<any>(null);
+    const sma50SeriesRef = useRef<any>(null);
+    const sma200SeriesRef = useRef<any>(null);
+    const volumeSeriesRef = useRef<any>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [hoverData, setHoverData] = useState<CandleData | null>(null);
     const { resolvedTheme } = useTheme();
@@ -42,7 +45,7 @@ export default function TradingViewChart({
     const colors = useMemo(() => {
         const isDark = resolvedTheme === 'dark';
         return {
-            background: isDark ? { top: '#09090b', bottom: '#000000' } : { top: '#ffffff', bottom: '#f8fafc' },
+            background: isDark ? { top: '#050505', bottom: '#000000' } : { top: '#fafafa', bottom: '#f8fafc' },
             text: isDark ? '#94a3b8' : '#475569',
             grid: isDark ? 'rgba(59, 130, 246, 0.05)' : 'rgba(148, 163, 184, 0.1)',
             borderColor: isDark ? 'rgba(197, 203, 206, 0.1)' : 'rgba(148, 163, 184, 0.2)',
@@ -64,7 +67,7 @@ export default function TradingViewChart({
                 fontFamily: 'Inter, sans-serif',
             },
             width: container.clientWidth || 650,
-            height: container.clientHeight || 600,
+            height: container.clientHeight || 450,
             handleScroll: true,
             handleScale: true,
             grid: {
@@ -87,8 +90,10 @@ export default function TradingViewChart({
                 },
             },
             rightPriceScale: {
+                visible: true,
                 borderColor: colors.borderColor,
                 autoScale: true,
+                alignLabels: true,
                 scaleMargins: {
                     top: 0.15,
                     bottom: 0.15,
@@ -101,10 +106,30 @@ export default function TradingViewChart({
                 barSpacing: 10,
                 shiftVisibleRangeOnNewBar: true,
                 rightOffset: 5,
+                tickMarkFormatter: (time: string | number, tickMarkType: number, locale: string) => {
+                    const date = typeof time === 'number' ? new Date(time * 1000) : new Date(time);
+                    if (isNaN(date.getTime())) return String(time);
+                    if (currentTimeframe === '1H') {
+                        if (date.getHours() === 0 || tickMarkType < 1) {
+                            return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+                        }
+                        return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
+                    }
+                    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+                },
+            },
+            localization: {
+                timeFormatter: (time: string | number) => {
+                    const date = typeof time === 'number' ? new Date(time * 1000) : new Date(time);
+                    if (isNaN(date.getTime())) return String(time);
+                    return date.toLocaleString(undefined, { 
+                        year: 'numeric', month: 'short', day: 'numeric', 
+                        hour: '2-digit', minute: '2-digit' 
+                    });
+                },
             },
         });
 
-        // Use applyOptions for watermark with a safe cast to handle potentially missing type definitions
         chart.applyOptions({
             watermark: {
                 visible: true,
@@ -117,15 +142,9 @@ export default function TradingViewChart({
         } as any);
 
         const series = chart.addSeries(CandlestickSeries, {
-            upColor: '#10b981',
-            downColor: '#ef4444',
-            borderVisible: false,
-            wickUpColor: '#10b981',
-            wickDownColor: '#ef4444',
-            priceLineVisible: true,
-            priceLineWidth: 1,
-            priceLineColor: '#3b82f6',
-            priceLineStyle: 2,
+            upColor: '#10b981', downColor: '#ef4444',
+            borderVisible: false, wickUpColor: '#10b981', wickDownColor: '#ef4444',
+            priceLineVisible: true, priceLineWidth: 1, priceLineColor: '#3b82f6', priceLineStyle: 2,
             priceFormat: {
                 type: 'custom',
                 formatter: (price: number) => {
@@ -137,36 +156,25 @@ export default function TradingViewChart({
             },
         });
 
-        // Volume series
         const volumeSeries = chart.addSeries(HistogramSeries, {
             color: resolvedTheme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(37, 99, 235, 0.1)',
-            priceFormat: {
-                type: 'volume',
-            },
+            priceFormat: { type: 'volume' },
             priceScaleId: '',
         });
 
         volumeSeries.priceScale().applyOptions({
-            scaleMargins: {
-                top: 0.8,
-                bottom: 0,
-            },
+            scaleMargins: { top: 0.8, bottom: 0 },
         });
 
-        // SMA Series (Indicator)
-        const smaSeries = chart.addSeries(LineSeries, {
-            color: '#fbbf24', // Amber
-            lineWidth: 3, // Thicker for better visibility
-            lineStyle: 0,
-            priceLineVisible: false,
-            lastValueVisible: false,
-            crosshairMarkerVisible: false,
-        });
+        // Initialize SMAs
+        const smaSeries = chart.addSeries(LineSeries, { color: '#fbbf24', lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+        const sma50Series = chart.addSeries(LineSeries, { color: '#3b82f6', lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+        const sma200Series = chart.addSeries(LineSeries, { color: '#ef4444', lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
 
         chart.subscribeCrosshairMove((param) => {
             if (param.time && param.point) {
-                const data = param.seriesData.get(series);
-                if (data) setHoverData(data as any);
+                const candle = param.seriesData.get(series);
+                if (candle) setHoverData(candle as any);
             } else {
                 setHoverData(null);
             }
@@ -176,208 +184,184 @@ export default function TradingViewChart({
         seriesRef.current = series;
         volumeSeriesRef.current = volumeSeries;
         smaSeriesRef.current = smaSeries;
+        sma50SeriesRef.current = sma50Series;
+        sma200SeriesRef.current = sma200Series;
 
-        const handleResize = () => {
-            if (chartContainerRef.current && chartRef.current) {
-                const { clientWidth, clientHeight } = chartContainerRef.current;
-                chartRef.current.applyOptions({
-                    width: clientWidth,
-                    height: clientHeight
-                });
+        const resizeObserver = new ResizeObserver(entries => {
+            if (entries[0] && chartRef.current) {
+                const { width, height } = entries[0].contentRect;
+                if (width > 0 && height > 0) {
+                    chartRef.current.applyOptions({ width, height });
+                }
             }
-        };
+        });
 
-        window.addEventListener('resize', handleResize);
+        if (chartContainerRef.current) {
+            resizeObserver.observe(chartContainerRef.current);
+            // Force a resize after a short delay to catch the final layout
+            setTimeout(() => {
+                if (chartContainerRef.current && chartRef.current) {
+                    const { clientWidth, clientHeight } = chartContainerRef.current;
+                    chartRef.current.applyOptions({ width: clientWidth, height: clientHeight });
+                }
+            }, 200);
+        }
 
         return () => {
-            window.removeEventListener('resize', handleResize);
-            if (chartRef.current) {
-                chartRef.current.remove();
-                chartRef.current = null;
-            }
+            resizeObserver.disconnect();
+            if (chartRef.current) chartRef.current.remove();
+            chartRef.current = null;
             seriesRef.current = null;
             volumeSeriesRef.current = null;
             smaSeriesRef.current = null;
+            sma50SeriesRef.current = null;
+            sma200SeriesRef.current = null;
         };
-    }, [currencySymbol, title, colors]);
+    }, [isFullscreen, currencySymbol, title, colors]);
 
-    // Handle Resize on Fullscreen toggle
+    // Scaling and updates
     useEffect(() => {
-        if (chartRef.current && chartContainerRef.current) {
-            const timer = setTimeout(() => {
-                if (chartContainerRef.current && chartRef.current) {
-                    const { clientWidth, clientHeight } = chartContainerRef.current;
-                    chartRef.current.applyOptions({
-                        width: clientWidth,
-                        height: clientHeight
-                    });
-                    setTimeout(() => chartRef.current.timeScale().fitContent(), 50);
-                }
-            }, 150);
-            return () => clearTimeout(timer);
-        }
-    }, [isFullscreen]);
-
-    // Data Update
-    useEffect(() => {
-        if (seriesRef.current && data && data.length > 0) {
+        if (chartRef.current && seriesRef.current && data && data.length > 0) {
             try {
                 seriesRef.current.setData(data);
 
                 if (volumeSeriesRef.current) {
                     const volumeData = data.map(d => ({
                         time: d.time,
-                        value: d.volume || (Math.random() * 100),
-                        color: d.close >= d.open ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'
+                        value: d.volume || 0,
+                        color: d.close >= d.open ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'
                     }));
                     volumeSeriesRef.current.setData(volumeData);
                 }
 
-                // Calculate SMA (20 periods)
-                if (smaSeriesRef.current && data.length > 20) {
-                    const smaData = [];
+                // Calculate SMAs
+                if (data.length > 20) {
+                    const sma20 = [];
+                    const sma50 = [];
+                    const sma200 = [];
                     for (let i = 0; i < data.length; i++) {
                         if (i >= 19) {
-                            const slice = data.slice(i - 19, i + 1);
-                            const sum = slice.reduce((a, b) => a + b.close, 0);
-                            const val = sum / 20;
-                            smaData.push({ time: data[i].time, value: val });
-                            (data[i] as any).ma = val; // Store for hover display
-                        } else {
-                            // Simple average for early points
-                            const slice = data.slice(0, i + 1);
-                            const sum = slice.reduce((a, b) => a + b.close, 0);
-                            const val = sum / slice.length;
-                            smaData.push({ time: data[i].time, value: val });
-                            (data[i] as any).ma = val;
+                            const sum = data.slice(i - 19, i + 1).reduce((a, b) => a + b.close, 0);
+                            sma20.push({ time: data[i].time, value: sum / 20 });
+                        }
+                        if (i >= 49) {
+                            const sum = data.slice(i - 49, i + 1).reduce((a, b) => a + b.close, 0);
+                            sma50.push({ time: data[i].time, value: sum / 50 });
+                        }
+                        if (i >= 199) {
+                            const sum = data.slice(i - 199, i + 1).reduce((a, b) => a + b.close, 0);
+                            sma200.push({ time: data[i].time, value: sum / 200 });
                         }
                     }
-                    smaSeriesRef.current.setData(smaData);
+                    if (smaSeriesRef.current) smaSeriesRef.current.setData(sma20);
+                    if (sma50SeriesRef.current) sma50SeriesRef.current.setData(sma50);
+                    if (sma200SeriesRef.current) sma200SeriesRef.current.setData(sma200);
                 }
 
-                chartRef.current?.timeScale().fitContent();
+                chartRef.current.timeScale().fitContent();
             } catch (err) {
                 console.error("Error updating chart data:", err);
             }
         }
-    }, [data, colors]);
+    }, [data, colors, isFullscreen]);
 
-    return (
-        <div 
-            data-testid="trading-chart"
-            className={`w-full flex flex-col transition-all 
-            ${isFullscreen ? 'fixed inset-0 z-[1000] p-10 bg-white dark:bg-zinc-950 rounded-none h-screen w-screen border-none' : 
-            (seamless ? 'bg-transparent border-none shadow-none p-6 h-full' : 'bg-white dark:bg-zinc-950 rounded-[2.5rem] p-8 border border-zinc-200 dark:border-zinc-800 shadow-2xl h-full')}`}>
-            {/* Header / Info Display */}
-            {!isFullscreen && (
-                <div 
-                    data-testid="chart-header"
-                    className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-8 shrink-0">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-8 flex-1 min-w-0">
-                        <div className="flex flex-col shrink-0">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-[10px] font-black text-blue-600 dark:text-blue-500 uppercase tracking-[0.3em]">{title}</h3>
-                                <span className="w-1 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full"></span>
-                                <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{currentTimeframe} Terminal</span>
-                            </div>
-                            <div className="flex items-center gap-3 mt-1">
-                                <span className="text-2xl font-black text-zinc-900 dark:text-white italic tracking-tighter uppercase">{title.split('/')[0].split(' ')[0]} Analysis</span>
-                                <div className="flex items-center gap-2 px-3 py-1 bg-blue-600/10 dark:bg-green-500/10 border border-blue-600/20 dark:border-green-500/20 rounded-lg">
-                                    <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-green-500 rounded-full animate-pulse"></span>
-                                    <span className="text-[9px] text-blue-600 dark:text-green-500 font-black tracking-widest uppercase">Syncing Live</span>
-                                </div>
-                            </div>
+    useEffect(() => {
+        document.body.style.overflow = isFullscreen ? 'hidden' : '';
+        
+        // Trigger resize after state change
+        const timer = setTimeout(() => {
+            if (chartContainerRef.current && chartRef.current) {
+                const { clientWidth, clientHeight } = chartContainerRef.current;
+                chartRef.current.applyOptions({ width: clientWidth, height: clientHeight });
+            }
+        }, 150);
+
+        return () => { 
+            document.body.style.overflow = '';
+            clearTimeout(timer);
+        };
+    }, [isFullscreen]);
+
+    const chartContent = (
+        <div className={`flex flex-col ${isFullscreen ? '!fixed !top-0 !left-0 !w-screen !h-screen !z-[10000] bg-black p-4' : (seamless ? 'h-full bg-transparent' : 'bg-white dark:bg-[#050505] rounded-[2.5rem] pt-8 px-8 pb-6 border border-zinc-200 dark:border-white/5 shadow-2xl h-full')}`}>
+            {/* Header Content */}
+            <div className={`flex justify-between items-center shrink-0 ${seamless ? 'mb-4' : 'mb-6'}`}>
+                <div className="flex items-center gap-6">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">{title}</h3>
+                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${currentTimeframe === '1H' ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                {currentTimeframe}
+                            </span>
                         </div>
-
-                        {/* OHLC Overlay - Now with better wrapping / growth */}
-                        {hoverData && (
-                            <div className="flex-1 min-w-[280px] overflow-x-auto no-scrollbar">
-                                <div className="flex items-center gap-6 p-4 bg-zinc-100/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl backdrop-blur-md animate-in fade-in slide-in-from-left-4 duration-300 w-max">
-                                    {[
-                                        { key: 'O', val: hoverData.open, color: 'text-zinc-400' },
-                                        { key: 'H', val: hoverData.high, color: 'text-green-500' },
-                                        { key: 'L', val: hoverData.low, color: 'text-red-500' },
-                                        { key: 'C', val: hoverData.close, color: 'text-zinc-900 dark:text-white' },
-                                    ].map((item) => (
-                                        <div key={item.key} className="flex flex-col">
-                                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">{item.key}</span>
-                                            <span className={`text-xs font-black font-mono tracking-tighter ${item.color}`}>
-                                                {currencySymbol}{item.val?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </span>
-                                        </div>
-                                    ))}
-                                    <div className="h-8 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-1"></div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-0.5">MA (20)</span>
-                                        <span className={`text-xs font-black font-mono tracking-tighter text-amber-500`}>
-                                            {currencySymbol}{(data.find(d => d.time === hoverData.time) as any)?.ma?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '---'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        <h4 className="text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-tight mt-1">Market Vectors</h4>
                     </div>
-
-                    {/* Chart Controls - Restored to the Right with absolute visibility priority */}
-                    <div className="flex items-center gap-3 shrink-0 self-end xl:self-center">
-                        <div className="flex bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 shadow-inner h-fit">
-                            {['1H', '1D', '1W', '1M'].map((tf) => (
-                                <button
-                                    key={tf}
-                                    onClick={() => onTimeframeChange?.(tf)}
-                                    className={`px-4 py-1.5 text-[9px] font-black rounded-lg transition-all uppercase tracking-[0.2em] ${currentTimeframe === tf ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}
-                                >
-                                    {tf}
-                                </button>
+                    {hoverData && (
+                        <div className="flex items-center gap-6 px-6 py-3 bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-left-4">
+                            {[
+                                { k: 'O', v: hoverData.open },
+                                { k: 'H', v: hoverData.high, c: 'text-green-500' },
+                                { k: 'L', v: hoverData.low, c: 'text-red-500' },
+                                { k: 'C', v: hoverData.close }
+                            ].map(item => (
+                                <div key={item.k}>
+                                    <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">{item.k}</p>
+                                    <p className={`text-xs font-black font-mono transition-colors ${item.c || 'text-zinc-900 dark:text-white'}`}>
+                                        {currencySymbol}{item.v?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </p>
+                                </div>
                             ))}
                         </div>
-
-                        <button
-                            onClick={() => setIsFullscreen(!isFullscreen)}
-                            className={`px-5 py-2.5 text-[9px] font-black bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl hover:shadow-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all uppercase tracking-widest flex items-center gap-2 shrink-0`}
-                        >
-                            ⛶ Expand
-                        </button>
-                    </div>
+                    )}
                 </div>
-            )}
-
-            {/* Fullscreen Close Button */}
-            {isFullscreen && (
-                <button 
-                    onClick={() => setIsFullscreen(false)}
-                    className="fixed top-8 right-8 z-[1000] bg-red-600 hover:bg-red-700 text-white p-4 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
-                >
-                    ✕ Close Fullscreen
-                </button>
-            )}
-
-            <div
-                ref={chartContainerRef}
-                className={`w-full flex-1 relative min-h-[400px] border transition-all ${seamless ? 'rounded-[2.5rem]' : 'rounded-[2rem]'} 
-                    ${resolvedTheme === 'dark' ? 'bg-[#050505] border-zinc-800/50' : 'bg-[#f8fafc] border-zinc-200/50'}`}
-            >
-                {/* Visual Accent */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent z-10"></div>
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/10 to-transparent z-10"></div>
+                <div className="flex items-center gap-4">
+                    <div className="flex bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-inner">
+                        {['1H', '1D', '1W', '1M'].map(tf => (
+                            <button
+                                key={tf}
+                                onClick={() => onTimeframeChange?.(tf)}
+                                className={`px-4 py-2 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest ${currentTimeframe === tf ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}
+                            >
+                                {tf}
+                            </button>
+                        ))}
+                    </div>
+                    <button onClick={() => setIsFullscreen(!isFullscreen)} className="px-5 py-2.5 text-[9px] font-black bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all uppercase tracking-widest">
+                        {isFullscreen ? '✕ Exit' : '⛶ Full'}
+                    </button>
+                </div>
             </div>
 
-            {/* Footer / Indicator Info */}
-            {!isFullscreen && (
-                <div className="mt-6 flex flex-wrap gap-4 items-center justify-between shrink-0">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/5 border border-amber-500/10 rounded-lg">
-                            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
-                            <span className="text-[8px] text-amber-500 font-black tracking-widest uppercase">SMA (20)</span>
-                        </div>
-                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/5 border border-blue-500/10 rounded-lg">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span className="text-[8px] text-blue-500 font-black tracking-widest uppercase">Volume Flow</span>
-                        </div>
+            {/* Main Chart Container */}
+            <div 
+                ref={chartContainerRef} 
+                className={`flex-1 relative overflow-hidden transition-all duration-300 ${isFullscreen ? 'rounded-none border-none' : 'h-full border border-zinc-100 dark:border-zinc-800/50 rounded-[2rem]'}`} 
+            />
+
+            {/* Footer / Legend */}
+            <div className={`flex items-center justify-between shrink-0 ${seamless ? 'mt-3' : 'mt-4'}`}>
+                <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+                        <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                        <span className="text-[9px] text-amber-500 font-black tracking-widest uppercase">SMA 20</span>
                     </div>
-                    <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest italic">All technical signals synthesized from low-latency market providers</p>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                        <span className="text-[9px] text-blue-500 font-black tracking-widest uppercase">SMA 50</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/5 border border-red-500/10 rounded-lg">
+                        <div className="w-2 h-2 bg-red-500 rounded-full" />
+                        <span className="text-[9px] text-red-500 font-black tracking-widest uppercase">SMA 200</span>
+                    </div>
                 </div>
-            )}
+                <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em] italic">Precision Market Feed v4.51 (SSE Optimized)</p>
+            </div>
         </div>
     );
+
+    if (isFullscreen && typeof document !== 'undefined') {
+        return createPortal(chartContent, document.body);
+    }
+
+    return chartContent;
 }

@@ -1,14 +1,38 @@
 "use client";
 
 import StockCard from "../components/StockCard";
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSettings } from "../context/SettingsContext";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function StocksPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] flex items-center justify-center relative overflow-hidden">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full"></div>
+                <div className="flex flex-col items-center gap-8 relative z-10">
+                    <div className="relative">
+                        <div className="w-16 h-16 border-4 border-blue-600/20 rounded-full"></div>
+                        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+                        <div className="absolute inset-0 flex items-center justify-center text-xl">🚀</div>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] mb-2">Optimizing Market Data</p>
+                        <p className="text-zinc-500 font-bold uppercase text-[8px] tracking-[0.2em] animate-pulse">Calibrating Real-Time Execution Pipeline</p>
+                    </div>
+                </div>
+            </div>
+        }>
+            <StocksContent />
+        </Suspense>
+    );
+}
+
+function StocksContent() {
     interface Stock {
         symbol: string;
         name: string;
@@ -31,31 +55,29 @@ export default function StocksPage() {
         changePercent: number;
     }
 
-    const [filter, setFilter] = useState("all");
-    const [categoryFilter, setCategoryFilter] = useState<string>("all");
-    const [indexFilter, setIndexFilter] = useState<string | null>(null);
-    const [stocks, setStocks] = useState<Stock[]>([]);
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    // Persisted states from URL
+    const [filter, setFilter] = useState(searchParams.get('f') || "all");
+    const [categoryFilter, setCategoryFilter] = useState<string>(searchParams.get('cat') || "all");
+    const [indexFilter, setIndexFilter] = useState<string | null>(searchParams.get('idx') || "all");
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || "");
+    const [activeWatchlistId, setActiveWatchlistId] = useState<string | null>(searchParams.get('w'));
+    const [viewType, setViewType] = useState<'card' | 'table'>((searchParams.get('v') as any) || 'card');
+    const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('p') || "1"));
+
+    const [stocks, setStocks] = useState<Stock[]>([]);
     const [indices, setIndices] = useState<Index[]>([]);
     const [marketStats, setMarketStats] = useState<any>(null);
     const [sectors, setSectors] = useState<string[]>([]);
     const [filteredStocks, setFilteredStocks] = useState<Stock[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
     const [selectedIndex, setSelectedIndex] = useState<Index | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: keyof Stock; direction: 'asc' | 'desc' } | null>(null);
-
-    // Watchlist State
     const [watchlists, setWatchlists] = useState<any[]>([]);
-    const [activeWatchlistId, setActiveWatchlistId] = useState<string | null>(null);
     const [newWatchlistName, setNewWatchlistName] = useState("");
     const [isCreatingWatchlist, setIsCreatingWatchlist] = useState(false);
-
-    // View Strategy State
-    const [viewType, setViewType] = useState<'card' | 'table'>('card');
-
-    // Table Pagination State
-    const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
 
     const { settings } = useSettings();
@@ -79,9 +101,25 @@ export default function StocksPage() {
             setIndices(rawIndices);
             setMarketStats(json.stats);
 
-            if (!selectedIndex && rawIndices.length > 0) {
-                setSelectedIndex(rawIndices[0]);
-                setIndexFilter(rawIndices[0].name);
+            if (rawIndices.length > 0) {
+                // Priority: 1. URL search param 2. Explicit "all" 3. First index from list
+                const urlIdxName = searchParams.get('idx') || indexFilter;
+                
+                if (urlIdxName === 'all') {
+                    setSelectedIndex(null);
+                } else {
+                    const foundIdx = urlIdxName 
+                        ? rawIndices.find(idx => idx.name.toLowerCase() === urlIdxName.toLowerCase())
+                        : null;
+                    
+                    if (foundIdx) {
+                        setSelectedIndex(foundIdx);
+                    } else if (!searchParams.has('idx')) {
+                        // Only force default if no param exists at all (first landing)
+                        setSelectedIndex(rawIndices[0]);
+                        setIndexFilter(rawIndices[0].name);
+                    }
+                }
             }
 
             const allSectorsArr = Array.from(new Set(stockData.map((s) => s.sector || 'Other'))).sort();
@@ -194,7 +232,7 @@ export default function StocksPage() {
                 updated = [];
             }
         }
-        if (indexFilter) {
+        if (indexFilter && indexFilter !== 'all') {
             const idxName = indexFilter.toUpperCase();
             if (idxName.includes('100')) {
                 updated = [...updated].sort((a, b) => {
@@ -237,8 +275,36 @@ export default function StocksPage() {
             });
         }
         setFilteredStocks(updated);
-        setCurrentPage(1);
     }, [filter, stocks, searchTerm, sortConfig, indexFilter, activeWatchlistId, watchlists, categoryFilter]);
+
+    // Handle initial page load and URL sync
+    useEffect(() => {
+        if (loading) return;
+        
+        const timer = setTimeout(() => {
+            const params = new URLSearchParams();
+            if (filter !== 'all') params.set('f', filter);
+            if (categoryFilter !== 'all') params.set('cat', categoryFilter);
+            if (indexFilter && indexFilter !== 'all') params.set('idx', indexFilter);
+            else if (indexFilter === 'all') params.set('idx', 'all');
+            if (searchTerm) params.set('q', searchTerm);
+            if (activeWatchlistId) params.set('w', activeWatchlistId);
+            if (viewType !== 'card') params.set('v', viewType);
+            if (currentPage > 1) params.set('p', currentPage.toString());
+
+            const queryString = params.toString();
+            if (queryString !== searchParams.toString()) {
+                router.replace(`/stocks?${queryString}`, { scroll: false });
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [filter, categoryFilter, indexFilter, searchTerm, activeWatchlistId, viewType, currentPage, loading, router, searchParams]);
+
+    // Reset pagination when central filters change (but not when only page changes)
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filter, categoryFilter, indexFilter, searchTerm, activeWatchlistId]);
 
     const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -290,32 +356,32 @@ export default function StocksPage() {
             )}
 
             <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
                     <div>
-                        <h1 className="text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white">
+                        <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
                             📈 Market <span className="text-blue-500">Explorer</span>
                         </h1>
-                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">PSX Real-Time Trading Terminal</p>
+                        <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1">Real-Time Terminal</p>
                     </div>
                     <button
                         onClick={() => router.push('/stocks/terminal')}
-                        className="group relative px-6 py-3 bg-blue-600 text-white rounded-2xl overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-xl shadow-blue-500/20"
+                        className="group relative px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl sm:rounded-2xl overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-xl shadow-blue-500/20 w-full sm:w-auto"
                     >
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 opacity-0 group-hover:opacity-20 transition-opacity"></div>
-                        <div className="flex items-center gap-3 relative z-10">
-                            <span className="text-lg">📊</span>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-white">Advanced Terminal</span>
+                        <div className="flex items-center justify-center gap-3 relative z-10">
+                            <span className="text-base sm:text-lg">📊</span>
+                            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white">Advanced Terminal</span>
                         </div>
                     </button>
                 </div>
             </header>
 
             {indices.length > 0 && (
-                <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-hidden shadow-sm sticky top-[73px] z-30">
-                    <div className="max-w-[1600px] mx-auto px-8 flex items-center gap-10">
-                        <div className="flex items-center gap-3 flex-shrink-0 border-r border-zinc-200 dark:border-white/10 pr-10">
-                            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
-                            <span className="text-[11px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] italic">Market Pulse Watch</span>
+                <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-x-auto no-scrollbar shadow-sm sticky top-[65px] sm:top-[73px] z-30">
+                    <div className="max-w-[1600px] mx-auto px-4 sm:px-8 flex items-center gap-6 sm:gap-10">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 border-r border-zinc-200 dark:border-white/10 pr-4 sm:pr-10">
+                            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+                            <span className="text-[9px] sm:text-[11px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest italic whitespace-nowrap">Market Pulse</span>
                         </div>
                         {indices.map(idx => {
                             const isPos = idx.change >= 0;
@@ -324,7 +390,7 @@ export default function StocksPage() {
                                 <button
                                     key={idx.name}
                                     onClick={() => {
-                                        if (isSelected) { setSelectedIndex(null); setIndexFilter(null); }
+                                        if (isSelected) { setSelectedIndex(null); setIndexFilter('all'); }
                                         else { setSelectedIndex(idx); setIndexFilter(idx.name); }
                                     }}
                                     className={`flex items-center gap-3 flex-shrink-0 transition-all px-2 py-1 rounded-lg ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900'}`}
@@ -423,27 +489,27 @@ export default function StocksPage() {
 
             <div className="px-4 sm:px-8 py-10 max-w-[1700px] mx-auto w-full space-y-10">
                 {/* Unified Market Control Ribbon */}
-                <div className="bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[2.5rem] border border-zinc-200 dark:border-white/5 p-8 shadow-2xl space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                <div className="bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 shadow-2xl space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                         <div className="flex-1 space-y-6 w-full">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
-                                    <h2 className="text-2xl font-black italic uppercase tracking-tighter text-zinc-900 dark:text-white">Market Intelligent Explorer</h2>
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                                    <h2 className="text-lg sm:text-2xl font-black italic uppercase tracking-tighter text-zinc-900 dark:text-white leading-none">Market Intelligence</h2>
+                                    <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                                         <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span>
                                         Monitoring {filteredStocks.length} Real-Time Assets
                                     </p>
                                 </div>
-                                <div className="flex h-fit bg-zinc-100 dark:bg-white/5 p-1 rounded-2xl border border-zinc-200 dark:border-white/10">
+                                <div className="flex h-fit bg-zinc-100 dark:bg-white/5 p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/10 w-full sm:w-auto">
                                     <button
                                         onClick={() => setViewType('card')}
-                                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'card' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'card' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
                                     >
                                         <span>🎴</span> Card
                                     </button>
                                     <button
                                         onClick={() => setViewType('table')}
-                                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'table' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'table' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
                                     >
                                         <span>📋</span> Table
                                     </button>
@@ -464,16 +530,16 @@ export default function StocksPage() {
 
                                 <div className="relative group">
                                     <select
-                                        value={indexFilter || ""}
+                                        value={indexFilter || "all"}
                                         onChange={(e) => {
                                             const val = e.target.value;
-                                            setIndexFilter(val || null);
+                                            setIndexFilter(val);
                                             const idxObj = indices.find(i => i.name === val);
                                             setSelectedIndex(idxObj || null);
                                         }}
                                         className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
                                     >
-                                        <option value="">Index: All Market</option>
+                                        <option value="all">Index: All Market</option>
                                         {indices.map(idx => (
                                             <option key={idx.name} value={idx.name}>{idx.name}</option>
                                         ))}
@@ -538,7 +604,7 @@ export default function StocksPage() {
                         
                         <div className="flex items-center gap-4 shrink-0">
                             <button
-                                onClick={() => { setFilter('all'); setCategoryFilter('all'); setIndexFilter(null); setSelectedIndex(null); setSearchTerm(""); }}
+                                onClick={() => { setFilter('all'); setCategoryFilter('all'); setIndexFilter('all'); setSelectedIndex(null); setSearchTerm(""); }}
                                 className="text-[9px] font-black text-blue-600 hover:text-red-500 uppercase tracking-widest transition-colors"
                             >
                                 ↺ Reset Pipeline

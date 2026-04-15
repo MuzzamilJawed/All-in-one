@@ -13,11 +13,11 @@ export default function OilDetailPage() {
     const symbol = params.symbol as string;
     const { settings } = useSettings();
     const tableCurrency = settings.currency as 'USD' | 'PKR';
-    
+
     const [loading, setLoading] = useState(true);
     const [item, setItem] = useState<any>(null);
     const [candles, setCandles] = useState<any[]>([]);
-    const [timeframe, setTimeframe] = useState("1H");
+    const [timeframe, setTimeframe] = useState("1D");
 
     useEffect(() => {
         const loadDetail = async () => {
@@ -46,7 +46,11 @@ export default function OilDetailPage() {
         const generateInitialCandles = (data: any) => {
             const basePrice = tableCurrency === 'PKR' ? data.pkrPrice : data.price;
             const candleData = [];
-            const nowSec = Math.floor(Date.now() / 1000);
+            const now = new Date();
+            if (timeframe === "1H") now.setMinutes(0, 0, 0);
+            else now.setHours(0, 0, 0, 0);
+            
+            const nowSec = Math.floor(now.getTime() / 1000);
             const interval = timeframe === "1H" ? 3600 : timeframe === "1D" ? 86400 : 604800;
             const count = 100;
 
@@ -56,17 +60,17 @@ export default function OilDetailPage() {
             for (let i = 0; i < count; i++) {
                 const time = nowSec - i * interval;
                 const change = (Math.random() - 0.5) * volatility;
-                
+
                 const close = lastClose;
                 const open = close / (1 + change);
                 const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.3));
                 const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.3));
 
-                candleData.unshift({ 
-                    time, 
-                    open: parseFloat(open.toFixed(4)), 
-                    high: parseFloat(high.toFixed(4)), 
-                    low: parseFloat(low.toFixed(4)), 
+                candleData.unshift({
+                    time,
+                    open: parseFloat(open.toFixed(4)),
+                    high: parseFloat(high.toFixed(4)),
+                    low: parseFloat(low.toFixed(4)),
                     close: parseFloat(close.toFixed(4)),
                     volume: Math.floor(Math.random() * 50000) + 10000
                 });
@@ -80,9 +84,9 @@ export default function OilDetailPage() {
 
     const formatPrice = (val: number) => {
         if (typeof val !== 'number') return '---';
-        return val.toLocaleString(undefined, { 
-            minimumFractionDigits: val < 10 ? 4 : 2, 
-            maximumFractionDigits: val < 10 ? 4 : 2 
+        return val.toLocaleString(undefined, {
+            minimumFractionDigits: val < 10 ? 4 : 2,
+            maximumFractionDigits: val < 10 ? 4 : 2
         });
     };
 
@@ -154,32 +158,21 @@ export default function OilDetailPage() {
                     <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                         <span className="text-[12rem] font-black italic text-blue-500 uppercase select-none">{symbol}</span>
                     </div>
-                    
+
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 relative z-10">
                         <div>
                             <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Satellite Technical Analysis</h2>
                             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">High-Precision Candlestick Feed / SMA (20)</p>
                         </div>
-                        <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl border border-zinc-200 dark:border-white/10">
-                            {['1H', '1D', '1W'].map(tf => (
-                                <button
-                                    key={tf}
-                                    onClick={() => setTimeframe(tf)}
-                                    className={`px-6 py-2 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest ${timeframe === tf ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}
-                                >
-                                    {tf}
-                                </button>
-                            ))}
-                        </div>
                     </div>
 
                     <div className="h-[600px] w-full relative z-10">
-                        <TradingChart 
-                            title={`${item.name} Market Analysis`} 
-                            data={candles} 
-                            currentTimeframe={timeframe} 
-                            onTimeframeChange={setTimeframe} 
-                            currencySymbol={priceSymbol} 
+                        <TradingChart
+                            title={`${item.name} Market Analysis`}
+                            data={candles}
+                            currentTimeframe={timeframe}
+                            onTimeframeChange={setTimeframe}
+                            currencySymbol={priceSymbol}
                         />
                     </div>
                 </div>
@@ -210,8 +203,8 @@ export default function OilDetailPage() {
 
                     <div className="space-y-8">
                         <div className="flex items-center gap-3">
-                           <span className="text-2xl">🔮</span>
-                           <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Refinery Outlook</h3>
+                            <span className="text-2xl">🔮</span>
+                            <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Refinery Outlook</h3>
                         </div>
                         <div className="bg-zinc-900 rounded-[3rem] p-10 border border-white/5 relative overflow-hidden h-full">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px]"></div>
@@ -221,7 +214,7 @@ export default function OilDetailPage() {
                                     <div className="text-4xl font-black text-white italic uppercase tracking-tighter leading-none mb-4">Strategic <br /> <span className="text-blue-500">Accumulation</span></div>
                                     <p className="text-zinc-400 text-sm leading-relaxed font-medium">Automated analysis engine indicates that {item.name} is entering a period of technical consolidation with a bullish bias for the Q3 interval.</p>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
                                         <p className="text-[8px] font-black text-green-500 uppercase tracking-widest mb-2">Technical Support</p>

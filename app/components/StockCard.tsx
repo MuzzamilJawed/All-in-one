@@ -72,30 +72,30 @@ export default function StockCard({
     return (
         <div
             onClick={onClick}
-            className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm hover:shadow-md transition-all p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col h-full cursor-pointer group/card"
+            className="bg-white dark:bg-zinc-900 rounded-[1.2rem] sm:rounded-xl shadow-sm hover:shadow-md transition-all p-3 sm:p-4 border border-zinc-200 dark:border-zinc-800 flex flex-col h-full cursor-pointer group/card"
         >
-            <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                        <h4 className="text-lg font-black text-zinc-900 dark:text-zinc-50 tracking-tighter">
+            <div className="flex justify-between items-start mb-2 sm:mb-3">
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 sm:gap-1.5 mb-0.5">
+                        <h4 className="text-sm sm:text-lg font-black text-zinc-900 dark:text-zinc-50 tracking-tighter truncate">
                             {symbol}
                         </h4>
-                        <span className="text-[9px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1 py-0.5 rounded uppercase tracking-widest">
+                        <span className="text-[7px] sm:text-[9px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1 py-0.5 rounded uppercase tracking-widest shrink-0">
                             {exchange || 'PSX'}
                         </span>
                     </div>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter line-clamp-2 leading-tight">
+                    <p className="text-[9px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter line-clamp-1 sm:line-clamp-2 leading-tight">
                         {name}
                     </p>
                 </div>
-                <div className={`flex flex-col items-end relative`}>
-                    <div className="flex items-center gap-2 mb-1">
+                <div className={`flex flex-col items-end relative shrink-0`}>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
                         <button
                             onClick={(e) => { e.stopPropagation(); setShowWatchlistMenu(!showWatchlistMenu); }}
-                            className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${showWatchlistMenu ? 'bg-blue-600 text-white shadow-lg' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                            className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-all ${showWatchlistMenu ? 'bg-blue-600 text-white shadow-lg' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                             title="Add to Watchlist"
                         >
-                            <span className="text-[14px] leading-none">{showWatchlistMenu ? "×" : "+"}</span>
+                            <span className="text-[12px] sm:text-[14px] leading-none">{showWatchlistMenu ? "×" : "+"}</span>
                         </button>
 
                         <button
@@ -134,13 +134,13 @@ export default function StockCard({
                                     setTtsLoading(false);
                                 }
                             }}
-                            className={`w-6 h-6 rounded-full flex items-center justify-center transition-all bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700`}
+                            className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-all bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700`}
                             title="Listen"
                         >
-                            <span className="text-[12px] leading-none">{ttsLoading ? '…' : '🔊'}</span>
+                            <span className="text-[10px] sm:text-[12px] leading-none">{ttsLoading ? '…' : '🔊'}</span>
                         </button>
 
-                        <span className={`text-xs font-black ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={`text-[10px] sm:text-xs font-black ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                             {isPositive ? '▲' : '▼'}{Math.abs(changePercent).toFixed(1)}%
                         </span>
                     </div>
@@ -217,17 +217,17 @@ export default function StockCard({
                 </div>
             </div>
 
-            <div className="mt-auto pt-3 flex items-end justify-between border-t border-zinc-100 dark:border-zinc-800">
+            <div className="mt-auto pt-2 sm:pt-3 flex items-end justify-between border-t border-zinc-100 dark:border-zinc-800">
                 <div>
-                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Price</p>
-                    <p className="text-xl font-black text-zinc-900 dark:text-zinc-50 font-mono">
-                        <span className="text-[10px] font-normal mr-0.5">{currencySymbol}</span>
+                    <p className="text-[8px] sm:text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Price</p>
+                    <p className="text-sm sm:text-xl font-black text-zinc-900 dark:text-zinc-50 font-mono leading-none">
+                        <span className="text-[9px] sm:text-[10px] font-normal mr-0.5">{currencySymbol}</span>
                         {currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                     </p>
                 </div>
                 <div className="text-right">
-                    <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-0.5">Vol</p>
-                    <p className="text-[10px] font-bold text-zinc-600 dark:text-zinc-300 font-mono">{volume}</p>
+                    <p className="text-[8px] sm:text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-0.5">Vol</p>
+                    <p className="text-[9px] sm:text-[10px] font-bold text-zinc-600 dark:text-zinc-300 font-mono leading-none">{volume}</p>
                 </div>
             </div>
 

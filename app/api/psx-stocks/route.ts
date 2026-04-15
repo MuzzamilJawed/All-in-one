@@ -160,11 +160,14 @@ export async function GET() {
     // Final Cleanup & Normalization
     indexData.forEach(idx => {
       const name = idx.name.toUpperCase();
-      const trackedIndices = ['KSE100', 'KSE30', 'KMI30', 'KMIALL', 'KMI-ALL', 'ALLSHR', 'BKTI', 'OGTI'];
+      const trackedIndices = ['KSE100', 'KSE30', 'KMI30', 'KMIALL', 'KMI-ALL', 'ALLSHR', 'ALL SHARES', 'ALL SHARES', 'BKTI', 'OGTI'];
       const matches = trackedIndices.find(t => name.includes(t));
       
       if (matches) {
-        let displayName = matches === 'KMIALL' || matches === 'KMI-ALL' ? 'KMIALLSHR' : matches;
+        let displayName = matches;
+        if (matches === 'KMIALL' || matches === 'KMI-ALL') displayName = 'KMIALLSHR';
+        if (matches === 'ALL SHARES' || matches === 'ALL SHARES') displayName = 'ALLSHR';
+        
         if (!indices.find(i => i.name === displayName)) {
           indices.push({
             name: displayName,
@@ -278,10 +281,16 @@ export async function GET() {
       { symbol: 'LUCK', name: 'Lucky Cement Ltd', currentPrice: 625.50, change: -12.50, changePercent: -1.96, open: 638.00, high: 642.00, low: 620.00, volume: '4.8M', sector: 'Cement' },
       { symbol: 'PPL', name: 'Pakistan Petroleum Ltd', currentPrice: 175.25, change: 3.75, changePercent: 2.19, open: 171.50, high: 176.50, low: 170.00, volume: '6.3M', sector: 'Oil & Gas' }
     ];
+
+    const mockIndices = [
+      { name: 'KSE100', value: 65000, change: 450, changePercent: 0.7 },
+      { name: 'KSE30', value: 22000, change: 120, changePercent: 0.55 },
+      { name: 'ALLSHR', value: 43000, change: 210, changePercent: 0.49 }
+    ];
     
     return NextResponse.json({ 
       data: mockStocks,
-      indices: [],
+      indices: mockIndices,
       stats: {},
       timestamp: new Date().toISOString(),
       note: 'Using mock data due to scraping error'
