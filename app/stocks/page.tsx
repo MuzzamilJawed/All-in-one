@@ -4,29 +4,19 @@ import StockCard from "../components/StockCard";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSettings } from "../context/SettingsContext";
+import { useToast } from "../context/ToastContext";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import SectorHeatmap from "../components/SectorHeatmap";
+import CompareTray from "../components/CompareTray";
+import PageSkeleton from "../components/PageSkeleton";
+import { computeSignals, dayRangePosition, toneClasses, parseVolume } from "../lib/stockSignals";
+import { rollLeaders } from "../lib/stockPrefs";
 
 export default function StocksPage() {
     return (
-        <Suspense fallback={
-            <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] flex items-center justify-center relative overflow-hidden">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full"></div>
-                <div className="flex flex-col items-center gap-8 relative z-10">
-                    <div className="relative">
-                        <div className="w-16 h-16 border-4 border-blue-600/20 rounded-full"></div>
-                        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-                        <div className="absolute inset-0 flex items-center justify-center text-xl">🚀</div>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] mb-2">Optimizing Market Data</p>
-                        <p className="text-zinc-500 font-bold uppercase text-[8px] tracking-[0.2em] animate-pulse">Calibrating Real-Time Execution Pipeline</p>
-                    </div>
-                </div>
-            </div>
-        }>
+        <Suspense fallback={<PageSkeleton variant="explorer" />}>
             <StocksContent />
         </Suspense>
     );
@@ -64,8 +54,13 @@ function StocksContent() {
     const [indexFilter, setIndexFilter] = useState<string | null>(searchParams.get('idx') || "all");
     const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || "");
     const [activeWatchlistId, setActiveWatchlistId] = useState<string | null>(searchParams.get('w'));
-    const [viewType, setViewType] = useState<'card' | 'table'>((searchParams.get('v') as any) || 'card');
+    const [viewType, setViewType] = useState<'card' | 'table' | 'heatmap'>((searchParams.get('v') as any) || 'card');
     const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('p') || "1"));
+
+    // Daily-analysis: compare mode + "new since yesterday"
+    const [compareMode, setCompareMode] = useState(false);
+    const [compareSymbols, setCompareSymbols] = useState<string[]>([]);
+    const [newLeaders, setNewLeaders] = useState<Set<string>>(new Set());
 
     const [stocks, setStocks] = useState<Stock[]>([]);
     const [indices, setIndices] = useState<Index[]>([]);
@@ -74,6 +69,7 @@ function StocksContent() {
     const [filteredStocks, setFilteredStocks] = useState<Stock[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIndex, setSelectedIndex] = useState<Index | null>(null);
+    const [indexDayRange, setIndexDayRange] = useState<{ high: number | null; low: number | null }>({ high: null, low: null });
     const [sortConfig, setSortConfig] = useState<{ key: keyof Stock; direction: 'asc' | 'desc' } | null>(null);
     const [watchlists, setWatchlists] = useState<any[]>([]);
     const [newWatchlistName, setNewWatchlistName] = useState("");
@@ -81,6 +77,7 @@ function StocksContent() {
     const itemsPerPage = 20;
 
     const { settings } = useSettings();
+    const { success, error } = useToast();
 
     const load = async (isManual = true) => {
         try {
@@ -94,24 +91,32 @@ function StocksContent() {
                 .filter(s => s && s.symbol)
                 .map(s => ({
                     ...s,
-                    history: [] 
+                    history: []
                 })).sort((a, b) => (a.symbol || "").localeCompare(b.symbol || ""));
 
             setStocks(stockData);
             setIndices(rawIndices);
             setMarketStats(json.stats);
 
+            // "New since yesterday": leaders = top gainers ∪ most active. Compare
+            // against the previous session's leaders (persisted client-side).
+            const topGainers = [...stockData].sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0)).slice(0, 20);
+            const topActive = [...stockData].sort((a, b) => parseVolume(b.volume) - parseVolume(a.volume)).slice(0, 20);
+            const leaderSyms = Array.from(new Set([...topGainers, ...topActive].map(s => s.symbol.toUpperCase())));
+            const prev = rollLeaders(leaderSyms, Date.now());
+            setNewLeaders(new Set(leaderSyms.filter(sym => !prev.has(sym))));
+
             if (rawIndices.length > 0) {
                 // Priority: 1. URL search param 2. Explicit "all" 3. First index from list
                 const urlIdxName = searchParams.get('idx') || indexFilter;
-                
+
                 if (urlIdxName === 'all') {
                     setSelectedIndex(null);
                 } else {
-                    const foundIdx = urlIdxName 
+                    const foundIdx = urlIdxName
                         ? rawIndices.find(idx => idx.name.toLowerCase() === urlIdxName.toLowerCase())
                         : null;
-                    
+
                     if (foundIdx) {
                         setSelectedIndex(foundIdx);
                     } else if (!searchParams.has('idx')) {
@@ -152,11 +157,15 @@ function StocksContent() {
             const json = await res.json();
             if (json.success) {
                 setWatchlists([json.data, ...watchlists]);
+                success(`Watchlist "${newWatchlistName.trim()}" created`);
                 setNewWatchlistName("");
                 setIsCreatingWatchlist(false);
+            } else {
+                error(json.error || "Couldn't create watchlist");
             }
         } catch (err) {
             console.error('Failed to create watchlist', err);
+            error("Network error — couldn't create watchlist");
         }
     };
 
@@ -175,9 +184,13 @@ function StocksContent() {
             const json = await res.json();
             if (json.success) {
                 setWatchlists(watchlists.map(wl => wl._id === watchlistId ? json.data : wl));
+                success(`${symbol.toUpperCase()} added to "${watchlist.name}"`);
+            } else {
+                error(json.error || "Couldn't add symbol");
             }
         } catch (err) {
             console.error('Failed to add symbol to watchlist', err);
+            error("Network error — couldn't add symbol");
         }
     };
 
@@ -195,9 +208,13 @@ function StocksContent() {
             const json = await res.json();
             if (json.success) {
                 setWatchlists(watchlists.map(wl => wl._id === watchlistId ? json.data : wl));
+                success(`${symbol.toUpperCase()} removed from "${watchlist.name}"`);
+            } else {
+                error(json.error || "Couldn't remove symbol");
             }
         } catch (err) {
             console.error('Failed to remove symbol from watchlist', err);
+            error("Network error — couldn't remove symbol");
         }
     };
 
@@ -205,6 +222,30 @@ function StocksContent() {
         load(true);
         fetchWatchlists();
     }, []);
+
+    // Fetch the session (day) high/low for the currently selected index
+    useEffect(() => {
+        if (!selectedIndex) {
+            setIndexDayRange({ high: null, low: null });
+            return;
+        }
+        let cancelled = false;
+        setIndexDayRange({ high: null, low: null });
+        (async () => {
+            try {
+                const res = await fetch(`/api/psx-history?symbol=${encodeURIComponent(selectedIndex.name)}&timeframe=1D`);
+                const json = await res.json();
+                if (cancelled) return;
+                setIndexDayRange({
+                    high: typeof json.dayHigh === 'number' ? json.dayHigh : null,
+                    low: typeof json.dayLow === 'number' ? json.dayLow : null,
+                });
+            } catch {
+                if (!cancelled) setIndexDayRange({ high: null, low: null });
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [selectedIndex?.name]);
 
     useEffect(() => {
         if (!settings.refreshInterval || settings.refreshInterval <= 0) return;
@@ -220,6 +261,46 @@ function StocksContent() {
             direction = 'desc';
         }
         setSortConfig({ key, direction });
+    };
+
+    const toggleCompare = (symbol: string) => {
+        const sym = symbol.toUpperCase();
+        setCompareSymbols(prev => {
+            if (prev.includes(sym)) return prev.filter(s => s !== sym);
+            if (prev.length >= 4) return prev; // cap at 4
+            return [...prev, sym];
+        });
+    };
+
+    const compareStocks = compareSymbols
+        .map(sym => stocks.find(s => s.symbol.toUpperCase() === sym))
+        .filter(Boolean) as Stock[];
+
+    const exportCSV = () => {
+        const rows = [
+            ['Symbol', 'Name', 'Sector', 'Price', 'Change', 'Change%', 'Open', 'High', 'Low', 'Volume'],
+            ...filteredStocks.map(s => [
+                s.symbol,
+                `"${(s.name || '').replace(/"/g, '""')}"`,
+                `"${s.sector || ''}"`,
+                s.currentPrice ?? '',
+                s.change ?? '',
+                (s.changePercent ?? 0).toFixed(2),
+                s.open ?? '',
+                s.high ?? '',
+                s.low ?? '',
+                `"${s.volume || ''}"`,
+            ]),
+        ];
+        const csv = rows.map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const stamp = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `psx-screen-${stamp}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     useEffect(() => {
@@ -280,7 +361,7 @@ function StocksContent() {
     // Handle initial page load and URL sync
     useEffect(() => {
         if (loading) return;
-        
+
         const timer = setTimeout(() => {
             const params = new URLSearchParams();
             if (filter !== 'all') params.set('f', filter);
@@ -347,6 +428,8 @@ function StocksContent() {
         );
     };
 
+    if (loading && stocks.length === 0) return <PageSkeleton variant="explorer" />;
+
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
             {loading && (
@@ -356,7 +439,7 @@ function StocksContent() {
             )}
 
             <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
+                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
                     <div>
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
                             📈 Market <span className="text-blue-500">Explorer</span>
@@ -408,7 +491,7 @@ function StocksContent() {
             )}
 
             {marketStats && (
-                <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 w-full overflow-hidden">
+                <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 w-full">
                     <div className="max-w-7xl mx-auto px-4 sm:px-8">
                         <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-100 dark:divide-zinc-800">
                             <div className="flex-1 py-4 md:pr-8 flex items-center justify-between">
@@ -417,7 +500,7 @@ function StocksContent() {
                                         <span className={`w-2 h-2 rounded-full ${marketStats.status.toLowerCase().includes('open') ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
                                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exchange {marketStats.status}</p>
                                     </div>
-                                    <div className="flex items-baseline gap-4">
+                                    <div className="flex flex-wrap items-baseline gap-4">
                                         <div>
                                             <p className="text-[9px] font-bold text-zinc-400 uppercase">Volume</p>
                                             <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">{marketStats.volume}</p>
@@ -436,7 +519,7 @@ function StocksContent() {
                             <div className="flex-1 py-4 md:pl-8 flex items-center justify-between">
                                 <div className="space-y-1 w-full">
                                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Market Breadth (Symbol Statistics)</p>
-                                    <div className="grid grid-cols-4 gap-2">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                         <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-100/50 dark:border-green-800/30 p-2 rounded-xl text-center">
                                             <p className="text-[8px] font-black text-green-600/80 uppercase mb-0.5">Advanced</p>
                                             <p className="text-sm font-black text-green-600 leading-none">{marketStats.advanced}</p>
@@ -462,7 +545,7 @@ function StocksContent() {
             )}
 
             {selectedIndex && (
-                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-900/40 dark:to-indigo-900/40 p-6 text-white border border-blue-500/20 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-900/40 dark:to-indigo-900/40 p-4 sm:p-6 text-white border border-blue-500/20 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                         <div className="space-y-1">
                             <div className="flex items-center gap-3">
@@ -471,23 +554,37 @@ function StocksContent() {
                             </div>
                             <p className="text-blue-100 text-sm font-medium">Detailed performance metrics and component summary</p>
                         </div>
-                        <div className="flex items-center gap-8">
-                            <div className="text-center md:text-right">
+                        <div className="flex flex-wrap items-center gap-4 sm:gap-8">
+                            <div className="text-center md:text-left">
                                 <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mb-1">Index Points</p>
-                                <p className="text-3xl font-black font-mono leading-none">{selectedIndex.value.toLocaleString()}</p>
+                                <p className="text-xl sm:text-3xl font-black font-mono leading-none">{selectedIndex.value.toLocaleString()}</p>
                             </div>
-                            <div className="text-center md:text-right">
+                            <div className="text-center md:text-left">
                                 <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mb-1">Session Change</p>
-                                <p className={`text-2xl font-black font-mono leading-none flex items-center justify-end gap-1 ${selectedIndex.change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                                <p className={`text-lg sm:text-2xl font-black font-mono leading-none flex items-center justify-end gap-1 ${selectedIndex.change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
                                     {selectedIndex.change >= 0 ? '▲' : '▼'}{Math.abs(selectedIndex.change).toFixed(2)}
                                 </p>
                             </div>
+                            {(indexDayRange.high != null || indexDayRange.low != null) && (
+                                <div className="text-center md:text-left">
+                                    <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mb-1">Day High / Low</p>
+                                    <p className="text-lg sm:text-2xl font-black font-mono leading-none flex items-center justify-end gap-1.5">
+                                        <span className="text-green-300">
+                                            {indexDayRange.high != null ? indexDayRange.high.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                                        </span>
+                                        <span className="text-blue-200/70 text-lg">/</span>
+                                        <span className="text-red-300">
+                                            {indexDayRange.low != null ? indexDayRange.low.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                                        </span>
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className="px-4 sm:px-8 py-10 max-w-[1700px] mx-auto w-full space-y-10">
+            <div className={`px-4 sm:px-8 py-10 max-w-[1700px] mx-auto w-full space-y-10 ${compareStocks.length > 0 ? 'pb-64' : ''}`}>
                 {/* Unified Market Control Ribbon */}
                 <div className="bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 shadow-2xl space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
@@ -512,6 +609,12 @@ function StocksContent() {
                                         className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'table' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
                                     >
                                         <span>📋</span> Table
+                                    </button>
+                                    <button
+                                        onClick={() => setViewType('heatmap')}
+                                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'heatmap' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                    >
+                                        <span>🗺️</span> Heatmap
                                     </button>
                                 </div>
                             </div>
@@ -601,8 +704,22 @@ function StocksContent() {
                                 + Create New
                             </button>
                         </div>
-                        
-                        <div className="flex items-center gap-4 shrink-0">
+
+                        <div className="flex items-center gap-3 sm:gap-4 shrink-0 flex-wrap">
+                            <button
+                                onClick={() => { setCompareMode(m => !m); if (compareMode) setCompareSymbols([]); }}
+                                className={`text-[9px] font-black uppercase tracking-widest transition-colors ${compareMode ? 'text-blue-600' : 'text-zinc-400 hover:text-blue-600'}`}
+                                title="Select cards to compare side by side"
+                            >
+                                ⚖️ Compare{compareMode ? ' On' : ''}
+                            </button>
+                            <button
+                                onClick={exportCSV}
+                                className="text-[9px] font-black text-zinc-400 hover:text-blue-600 uppercase tracking-widest transition-colors"
+                                title="Export the current filtered view to CSV"
+                            >
+                                ⬇️ Export CSV
+                            </button>
                             <button
                                 onClick={() => { setFilter('all'); setCategoryFilter('all'); setIndexFilter('all'); setSelectedIndex(null); setSearchTerm(""); }}
                                 className="text-[9px] font-black text-blue-600 hover:text-red-500 uppercase tracking-widest transition-colors"
@@ -630,7 +747,13 @@ function StocksContent() {
 
                 {/* Explorer Results Area */}
                 <div className="space-y-12 min-h-[800px]">
-                    {viewType === 'card' ? (
+                    {viewType === 'heatmap' ? (
+                        <SectorHeatmap
+                            stocks={filteredStocks}
+                            onSelectSector={(sector) => { setFilter(sector); setViewType('card'); }}
+                            onSelectSymbol={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
+                        />
+                    ) : viewType === 'card' ? (
                         <div className="space-y-12 animate-in fade-in duration-500">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-1">
                                 {paginatedStocks.map((stock) => (
@@ -643,6 +766,10 @@ function StocksContent() {
                                         onAddToWatchlist={handleAddToWatchlist}
                                         onRemoveFromWatchlist={handleRemoveFromWatchlist}
                                         onWatchlistCreated={(newList) => setWatchlists([newList, ...watchlists])}
+                                        isNew={newLeaders.has(stock.symbol.toUpperCase())}
+                                        selectable={compareMode}
+                                        selected={compareSymbols.includes(stock.symbol.toUpperCase())}
+                                        onToggleSelect={toggleCompare}
                                     />
                                 ))}
                                 {filteredStocks.length === 0 && (
@@ -696,35 +823,70 @@ function StocksContent() {
                                 <table className="w-full text-left text-[11px] border-collapse">
                                     <thead>
                                         <tr className="bg-zinc-50 dark:bg-white/5 text-zinc-500">
-                                            <th onClick={() => requestSort('symbol')} className="p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors">Symbol <SortIcon column="symbol" /></th>
-                                            <th onClick={() => requestSort('name')} className="p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors">Company <SortIcon column="name" /></th>
-                                            <th onClick={() => requestSort('currentPrice')} className="p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Price <SortIcon column="currentPrice" /></th>
-                                            <th onClick={() => requestSort('changePercent')} className="p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Change <SortIcon column="changePercent" /></th>
-                                            <th onClick={() => requestSort('volume')} className="p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Volume <SortIcon column="volume" /></th>
-                                            <th className="p-6 font-black uppercase tracking-widest text-right">Action</th>
+                                            <th onClick={() => requestSort('symbol')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors">Symbol <SortIcon column="symbol" /></th>
+                                            <th onClick={() => requestSort('name')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors">Company <SortIcon column="name" /></th>
+                                            <th onClick={() => requestSort('currentPrice')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Price <SortIcon column="currentPrice" /></th>
+                                            <th onClick={() => requestSort('changePercent')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Change <SortIcon column="changePercent" /></th>
+                                            <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-center hidden md:table-cell">Signal</th>
+                                            <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-center hidden lg:table-cell">Day Range</th>
+                                            <th onClick={() => requestSort('volume')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Volume <SortIcon column="volume" /></th>
+                                            <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                                         {paginatedStocks.map((stock) => (
                                             <tr key={stock.symbol} className="hover:bg-blue-500/5 transition-all group">
-                                                <td className="p-6"><span className="px-3 py-1.5 bg-zinc-100 dark:bg-white/10 rounded-lg font-black group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">{stock.symbol}</span></td>
-                                                <td className="p-6 font-black truncate max-w-[250px] dark:text-zinc-300 group-hover:text-blue-600 transition-colors">{stock.name}</td>
-                                                <td className="p-6 font-mono font-black text-right text-sm">{stock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                <td className={`p-6 font-black text-right text-sm ${stock.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                <td className="p-3 sm:p-6"><span className="px-3 py-1.5 bg-zinc-100 dark:bg-white/10 rounded-lg font-black group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">{stock.symbol}</span></td>
+                                                <td className="p-3 sm:p-6 font-black truncate max-w-[250px] dark:text-zinc-300 group-hover:text-blue-600 transition-colors">{stock.name}</td>
+                                                <td className="p-3 sm:p-6 font-mono font-black text-right text-sm">{stock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                <td className={`p-3 sm:p-6 font-black text-right text-sm ${stock.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                                     {stock.changePercent >= 0 ? '▲' : '▼'}{Math.abs(stock.changePercent).toFixed(2)}%
                                                 </td>
-                                                <td className="p-6 font-mono text-zinc-500 dark:text-zinc-500 text-right group-hover:text-zinc-300">{stock.volume}</td>
-                                                <td className="p-6 text-right">
+                                                <td className="p-3 sm:p-6 text-center hidden md:table-cell">
+                                                    <div className="flex items-center justify-center gap-1 flex-wrap">
+                                                        {computeSignals(stock).slice(0, 2).map(sig => (
+                                                            <span key={sig.key} title={sig.title} className={`inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded border ${toneClasses(sig.tone)}`}>
+                                                                {sig.icon} {sig.label}
+                                                            </span>
+                                                        ))}
+                                                        {computeSignals(stock).length === 0 && <span className="text-zinc-300 dark:text-zinc-700">—</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="p-3 sm:p-6 hidden lg:table-cell">
+                                                    {(() => {
+                                                        const pos = dayRangePosition(stock.low, stock.high, stock.currentPrice);
+                                                        if (pos == null) return <div className="text-center text-zinc-300 dark:text-zinc-700">—</div>;
+                                                        return (
+                                                            <div className="min-w-[90px]" title={`${pos.toFixed(0)}% of today's range`}>
+                                                                <div className="relative h-1.5 rounded-full bg-gradient-to-r from-red-500/30 via-zinc-300 dark:via-zinc-700 to-green-500/30">
+                                                                    <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-blue-600 border-2 border-white dark:border-zinc-900" style={{ left: `${pos}%` }}></div>
+                                                                </div>
+                                                                <div className="text-[8px] font-bold text-zinc-400 text-center mt-1 tabular-nums">{pos.toFixed(0)}%</div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </td>
+                                                <td className="p-3 sm:p-6 font-mono text-zinc-500 dark:text-zinc-500 text-right group-hover:text-zinc-300">{stock.volume}</td>
+                                                <td className="p-3 sm:p-6 text-right">
                                                     <button onClick={() => router.push(`/stocks/${stock.symbol.toLowerCase()}`)} className="text-[10px] font-black uppercase bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-600/20">Analyze</button>
                                                 </td>
                                             </tr>
                                         ))}
+                                        {filteredStocks.length === 0 && (
+                                            <tr>
+                                                <td colSpan={8} className="py-24 text-center">
+                                                    <span className="text-4xl block mb-4">🔍</span>
+                                                    <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">No matching scripts found</p>
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
 
                             {/* Table Pagination */}
-                            <div className="px-8 py-6 bg-zinc-50 dark:bg-[#080808] border-t border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            {filteredStocks.length > itemsPerPage && (
+                            <div className="px-4 sm:px-8 py-6 bg-zinc-50 dark:bg-[#080808] border-t border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
                                 <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                                     Displaying {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredStocks.length)} of {filteredStocks.length} Assets
                                 </div>
@@ -757,10 +919,20 @@ function StocksContent() {
                                     </button>
                                 </div>
                             </div>
+                            )}
                         </div>
                     )}
                 </div>
             </div>
+
+            {compareMode && (
+                <CompareTray
+                    stocks={compareStocks}
+                    onRemove={toggleCompare}
+                    onClear={() => setCompareSymbols([])}
+                    onOpen={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
+                />
+            )}
 
             <style jsx global>{`
                 @keyframes loading {

@@ -1,9 +1,11 @@
 "use client";
 
 import PriceCard from "../components/PriceCard";
+import MetalStatCard from "../components/MetalStatCard";
+import PageSkeleton from "../components/PageSkeleton";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "../context/SettingsContext";
 // Use internal API routes to avoid CORS and run scraping/server code server-side
 
@@ -27,16 +29,16 @@ export default function MetalsPage() {
   ]);
 
   const [caratPrices, setCaratPrices] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
   const [goldCandles, setGoldCandles] = useState<any[]>([]);
   const [silverCandles, setSilverCandles] = useState<any[]>([]);
-  const [goldChartTF, setGoldChartTF] = useState("1H");
-  const [silverChartTF, setSilverChartTF] = useState("1H");
+  const [goldRaw, setGoldRaw] = useState<any>(null);     // raw USD/oz history from Yahoo
+  const [silverRaw, setSilverRaw] = useState<any>(null);
+  const [gold52w, setGold52w] = useState<{ low: number | null; high: number | null }>({ low: null, high: null });   // PKR / tola
+  const [silver52w, setSilver52w] = useState<{ low: number | null; high: number | null }>({ low: null, high: null }); // PKR / oz
+  const [goldChartTF, setGoldChartTF] = useState("1D");
+  const [silverChartTF, setSilverChartTF] = useState("1D");
 
-  // Trend Chart State
-  const [trendTimeframe, setTrendTimeframe] = useState("Daily");
   const [trendMetal, setTrendMetal] = useState("gold"); // 'gold' | 'silver'
-  const [trendData, setTrendData] = useState<any[]>([]);
   const { settings, updateSettings } = useSettings();
   const tableCurrency = settings.currency as 'USD' | 'PKR';
   const [detailedRates, setDetailedRates] = useState<any[]>([]);
@@ -144,41 +146,6 @@ export default function MetalsPage() {
           { carat: "12K", purity: 50, pkr: Math.round(basePrice24k * 0.5), usd: Math.round(baseUsd24k * 0.5 * 100) / 100, change: Math.round(change24k * 0.5), percent: changePercent24k },
         ]);
       }
-
-      // Handle History 
-      const stored = localStorage.getItem("metalPriceHistory");
-      let currentHistory = [];
-      const currentGold = gold?.tola24k?.pkrPrice || 530000;
-      const currentSilver = silver?.ounce?.pkrPrice || 4500;
-
-      if (stored) {
-        currentHistory = JSON.parse(stored);
-      }
-
-      if (currentHistory.length === 0) {
-        const now = Date.now();
-        for (let i = 23; i >= 0; i--) {
-          const date = new Date(now - i * 60 * 60 * 1000);
-          currentHistory.push({
-            date: date.toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" }),
-            gold: Math.round(currentGold * (1 + (Math.random() - 0.5) * 0.008)),
-            silver: Math.round(currentSilver * (1 + (Math.random() - 0.5) * 0.008)),
-          });
-        }
-      }
-
-      if (gold?.tola24k?.pkrPrice) {
-        const newEntry = {
-          date: new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" }),
-          gold: gold.tola24k.pkrPrice,
-          silver: silver?.ounce?.pkrPrice || 0,
-        };
-        if (currentHistory.length === 0 || currentHistory[currentHistory.length - 1].date !== newEntry.date) {
-          currentHistory = [...currentHistory.slice(-23), newEntry];
-          localStorage.setItem("metalPriceHistory", JSON.stringify(currentHistory));
-        }
-      }
-      setHistory(currentHistory);
 
       if (gold && silver) {
         console.log('[Metals] Fetched Gold Price:', gold?.tola24k?.pkrPrice, 'PKR / Tola');
@@ -393,142 +360,79 @@ export default function MetalsPage() {
     }
   }, [rawMarketData, tableCurrency]);
 
-  // Refs to keep random data stable between refreshes
-  const stableTrendRef = useRef<Record<string, any[]>>({});
-  const stableCandlesRef = useRef<Record<string, any[]>>({});
-
-  // Separate effect for trend and candlestick generation to react to timeframe changes
+  // Fetch REAL history from Yahoo (USD/oz) whenever a chart timeframe changes.
   useEffect(() => {
-    if (!rawMarketData) return;
-    const { gold, silver } = rawMarketData;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/metals-history?metal=gold&timeframe=${goldChartTF}`);
+        const json = await res.json();
+        if (!cancelled && json?.success && Array.isArray(json.data) && json.data.length) setGoldRaw(json);
+      } catch { /* keep previous */ }
+    })();
+    return () => { cancelled = true; };
+  }, [goldChartTF]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/metals-history?metal=silver&timeframe=${silverChartTF}`);
+        const json = await res.json();
+        if (!cancelled && json?.success && Array.isArray(json.data) && json.data.length) setSilverRaw(json);
+      } catch { /* keep previous */ }
+    })();
+    return () => { cancelled = true; };
+  }, [silverChartTF]);
+
+  // Scale the real USD/oz candles to the displayed currency+unit, anchoring the
+  // last close to the live spot price. Also derive the 52-week range in PKR.
+  useEffect(() => {
+    const gold = rawMarketData?.gold;
+    const silver = rawMarketData?.silver;
     const isPkr = tableCurrency === 'PKR';
-    const currentGoldPrice = isPkr ? (gold?.tola24k?.pkrPrice || 285000) : (gold?.tola24k?.usdPrice || 980);
-    const currentSilverPrice = isPkr ? (silver?.ounce?.pkrPrice || 3500) : (silver?.ounce?.usdPrice || 31);
 
-    const currentPrice = trendMetal === 'gold' ? currentGoldPrice : currentSilverPrice;
+    // Implied USD→PKR rate from the live gold ounce quote (falls back to ~280).
+    const fx = (gold?.ounce24k?.pkrPrice && gold?.ounce24k?.usdPrice)
+      ? gold.ounce24k.pkrPrice / gold.ounce24k.usdPrice
+      : 280;
 
-    const trendKey = `${trendMetal}-${trendTimeframe}-${tableCurrency}`;
-
-    const updateTrendData = () => {
-      let points = 24;
-      let interval = 3600 * 1000;
-      let volatility = 0.005;
-
-      if (trendTimeframe === 'Daily') { points = 24; interval = 3600 * 1000; volatility = 0.002; }
-      if (trendTimeframe === 'Weekly') { points = 7; interval = 24 * 3600 * 1000; volatility = 0.008; }
-      if (trendTimeframe === 'Monthly') { points = 30; interval = 24 * 3600 * 1000; volatility = 0.01; }
-      if (trendTimeframe === 'Yearly') { points = 52; interval = 7 * 24 * 3600 * 1000; volatility = 0.015; }
-
-      // If we already have stable data for this config, just update the LAST point
-      if (stableTrendRef.current[trendKey] && stableTrendRef.current[trendKey].length === points) {
-        const existing = [...stableTrendRef.current[trendKey]];
-        existing[existing.length - 1] = {
-          ...existing[existing.length - 1],
-          price: isPkr ? Math.round(currentPrice) : parseFloat(currentPrice.toFixed(2))
-        };
-        stableTrendRef.current[trendKey] = existing;
-        setTrendData(existing);
-        return;
-      }
-
-      console.log(`[TrendChart] Generating new stable data for ${trendKey}`);
-      const newTrendData = [];
-      const now = Date.now();
-      let currentSimPrice = currentPrice;
-      const prices = [currentPrice];
-      const times = [now];
-
-      for (let i = 1; i < points; i++) {
-        const trendBias = (trendTimeframe === 'Yearly' || trendTimeframe === 'Monthly') ? 0.001 : 0;
-        const change = (Math.random() - 0.5) * (volatility * 2);
-        const prevPrice = currentSimPrice * (1 - change - trendBias);
-        currentSimPrice = prevPrice;
-        prices.push(prevPrice);
-        times.push(now - i * interval);
-      }
-
-      for (let i = points - 1; i >= 0; i--) {
-        const time = new Date(times[i]);
-        let label = (trendTimeframe === 'Daily')
-          ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          : time.toLocaleDateString([], { month: 'short', day: 'numeric' });
-
-        newTrendData.push({
-          name: label,
-          price: isPkr ? Math.round(prices[i]) : parseFloat(prices[i].toFixed(2))
-        });
-      }
-      stableTrendRef.current[trendKey] = newTrendData;
-      setTrendData(newTrendData);
+    const scaleCandles = (raw: any, anchorDisplay?: number) => {
+      if (!raw?.data?.length) return [];
+      const lastClose = raw.data[raw.data.length - 1].close;
+      if (!lastClose) return [];
+      const scale = (anchorDisplay && anchorDisplay > 0) ? anchorDisplay / lastClose : 1;
+      return raw.data.map((c: any) => ({
+        time: c.time,
+        open: c.open * scale,
+        high: c.high * scale,
+        low: c.low * scale,
+        close: c.close * scale,
+        volume: c.volume,
+      }));
     };
 
-    const generateCandles = (basePrice: number, tf: string, metal: string) => {
-      const candleKey = `${metal}-${tf}-${tableCurrency}`;
+    // Gold chart is quoted per tola; silver per ounce (matches the spot cards).
+    const goldAnchor = isPkr ? gold?.tola24k?.pkrPrice : gold?.tola24k?.usdPrice;
+    const silverAnchor = isPkr ? silver?.ounce?.pkrPrice : silver?.ounce?.usdPrice;
+    setGoldCandles(scaleCandles(goldRaw, goldAnchor));
+    setSilverCandles(scaleCandles(silverRaw, silverAnchor));
 
-      // If already exists, just update last candle
-      if (stableCandlesRef.current[candleKey] && stableCandlesRef.current[candleKey].length > 0) {
-        const existing = [...stableCandlesRef.current[candleKey]];
-        const lastIndex = existing.length - 1;
-        const last = { ...existing[lastIndex] };
-        
-        // Ensure the last candle's close is synced with the latest market price
-        last.close = basePrice;
-        last.high = Math.max(last.high, basePrice);
-        last.low = Math.min(last.low, basePrice);
-        
-        existing[lastIndex] = last;
-        stableCandlesRef.current[candleKey] = existing;
-        return existing;
-      }
+    // 52-week range in PKR (gold per tola = USD/oz × fx × 0.375; silver per oz = USD/oz × fx).
+    if (goldRaw?.fiftyTwoWeekHigh && goldRaw?.fiftyTwoWeekLow) {
+      setGold52w({ low: goldRaw.fiftyTwoWeekLow * fx * 0.375, high: goldRaw.fiftyTwoWeekHigh * fx * 0.375 });
+    }
+    if (silverRaw?.fiftyTwoWeekHigh && silverRaw?.fiftyTwoWeekLow) {
+      setSilver52w({ low: silverRaw.fiftyTwoWeekLow * fx, high: silverRaw.fiftyTwoWeekHigh * fx });
+    }
+  }, [goldRaw, silverRaw, rawMarketData, tableCurrency]);
 
-      let count = 60;
-      let seconds = 3600; // 1H
-      if (tf === "1D") { seconds = 86400; count = 45; }
-      if (tf === "1W") { seconds = 604800; count = 52; }
-      if (tf === "1M") { seconds = 2592000; count = 24; }
-
-      const candles = [];
-      const now = Math.floor(Date.now() / 1000);
-      let currentPrice = basePrice;
-      const volatility = tf === "1M" ? 0.05 : tf === "1W" ? 0.03 : tf === "1D" ? 0.015 : 0.005;
-
-      // Generate candles from newest to oldest
-      for (let i = 0; i < count; i++) {
-        const time = now - i * seconds;
-        const change = (Math.random() - 0.5) * volatility;
-        
-        const close = currentPrice;
-        const open = close / (1 + change); // Walk backwards
-        
-        const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.3));
-        const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.3));
-        
-        candles.unshift({ 
-          time: time, 
-          open: parseFloat(open.toFixed(4)), 
-          high: parseFloat(high.toFixed(4)), 
-          low: parseFloat(low.toFixed(4)), 
-          close: parseFloat(close.toFixed(4)),
-          volume: Math.floor(Math.random() * 1000) + 500
-        });
-        
-        currentPrice = open;
-      }
-
-      stableCandlesRef.current[candleKey] = candles;
-      return candles;
-    };
-
-    updateTrendData();
-    setGoldCandles(generateCandles(currentGoldPrice, goldChartTF, 'gold'));
-    setSilverCandles(generateCandles(currentSilverPrice, silverChartTF, 'silver'));
-  }, [rawMarketData, trendTimeframe, trendMetal, goldChartTF, silverChartTF, tableCurrency]);
+  if (loading && !rawMarketData) return <PageSkeleton variant="metals" />;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
-        <div className="px-4 sm:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
+        <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 max-w-[1600px] mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
             <div>
               <h1 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase italic tracking-tighter">
@@ -560,12 +464,40 @@ export default function MetalsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 items-stretch mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 items-stretch mb-6">
           {metalPrices
             .filter(m => !["Gold (24K) - Per Ounce", "Silver - Per Kilogram"].includes(m.title))
             .map((metal) => (
               <PriceCard key={metal.title} {...metal} currency={tableCurrency} />
             ))}
+        </div>
+
+        {/* 52-week range + price-target alerts (always in PKR) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+          <MetalStatCard
+            metal="GOLD"
+            label="Gold 24K"
+            icon="🥇"
+            unitLabel="per tola"
+            currentPrice={rawMarketData?.gold?.tola24k?.pkrPrice}
+            change={rawMarketData?.gold?.tola24k?.change}
+            changePercent={rawMarketData?.gold?.tola24k?.changePercent}
+            low52={gold52w.low}
+            high52={gold52w.high}
+            accent="from-amber-500 to-yellow-600"
+          />
+          <MetalStatCard
+            metal="SILVER"
+            label="Silver 999"
+            icon="🥈"
+            unitLabel="per ounce"
+            currentPrice={rawMarketData?.silver?.ounce?.pkrPrice}
+            change={rawMarketData?.silver?.ounce?.change}
+            changePercent={rawMarketData?.silver?.ounce?.changePercent}
+            low52={silver52w.low}
+            high52={silver52w.high}
+            accent="from-zinc-500 to-zinc-700"
+          />
         </div>
 
         <div className="flex justify-center mb-12">
@@ -586,18 +518,18 @@ export default function MetalsPage() {
 
         {showMore && (
           <div className="mt-8 animate-in fade-in slide-in-from-top-6 duration-500">
-            <div className="bg-white dark:bg-zinc-900 rounded-[3rem] p-8 md:p-12 shadow-2xl border border-zinc-200 dark:border-zinc-800 relative overflow-hidden">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3rem] p-5 sm:p-8 md:p-12 shadow-2xl border border-zinc-200 dark:border-zinc-800 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
                 <span className="text-9xl font-black italic text-blue-500 uppercase select-none font-mono">CALC</span>
               </div>
               
               <div className="relative z-10">
-                <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter mb-12 flex items-center gap-3">
+                <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter mb-6 sm:mb-12 flex items-center gap-3">
                   <span className="w-12 h-1.5 bg-blue-600 rounded-full"></span>
                   Metal Price Calculator
                 </h2>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
                   <div className="space-y-10">
                     <div className="space-y-4">
                       <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-2">Selection Logic</label>
@@ -655,7 +587,7 @@ export default function MetalsPage() {
                           type="number" 
                           value={calcQuantity}
                           onChange={(e) => setCalcQuantity(parseFloat(e.target.value) || 0)}
-                          className="w-full bg-zinc-50 dark:bg-zinc-800 border-none rounded-3xl p-6 text-2xl font-black transition-all focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-zinc-50 font-mono"
+                          className="w-full bg-zinc-50 dark:bg-zinc-800 border-none rounded-3xl p-4 sm:p-6 text-xl sm:text-2xl font-black transition-all focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-zinc-50 font-mono"
                           placeholder="0.00"
                         />
                         <div className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-400 font-black uppercase tracking-widest text-xs pointer-events-none">
@@ -665,7 +597,7 @@ export default function MetalsPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col justify-center items-center bg-blue-600 rounded-[2.5rem] p-12 text-white shadow-2xl shadow-blue-500/20 relative group overflow-hidden">
+                  <div className="flex flex-col justify-center items-center bg-blue-600 rounded-[2.5rem] p-6 sm:p-12 text-white shadow-2xl shadow-blue-500/20 relative group overflow-hidden">
                     {/* Animated background pulse */}
                     <div className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors pointer-events-none" />
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
@@ -675,8 +607,8 @@ export default function MetalsPage() {
                       
                       <div className="space-y-2">
                         <div className="flex items-center justify-center gap-4">
-                          <span className="text-4xl font-medium text-blue-200 lowercase">{tableCurrency === 'PKR' ? 'Rs.' : '$'}</span>
-                          <span className="text-7xl font-black tracking-tighter font-mono break-all line-clamp-1">
+                          <span className="text-2xl sm:text-4xl font-medium text-blue-200 lowercase">{tableCurrency === 'PKR' ? 'Rs.' : '$'}</span>
+                          <span className="text-4xl sm:text-7xl font-black tracking-tighter font-mono break-words">
                             {(() => {
                               const isPkr = tableCurrency === 'PKR';
                               let basePrice = 0;
@@ -745,33 +677,33 @@ export default function MetalsPage() {
               {showPurity ? "Hide Purity Guide" : "Analyze Purity"}
             </button>
           </div>
-          <div className="overflow-x-auto no-scrollbar">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead className="bg-white dark:bg-zinc-900">
                 <tr className="border-b border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400">
-                  <th className="p-4 font-normal text-xs uppercase">Last Updated</th>
-                  <th className="p-4 font-normal text-xs uppercase">Metal</th>
-                  <th className="p-4 font-normal text-xs uppercase text-right">Price (Ounce)</th>
-                  <th className="p-4 font-normal text-xs uppercase text-right">Price (Tola)</th>
-                  <th className="p-4 font-normal text-xs uppercase text-center">Daily</th>
-                  <th className="p-4 font-normal text-xs uppercase text-center">Weekly</th>
-                  <th className="p-4 font-normal text-xs uppercase text-center">Monthly</th>
-                  <th className="p-4 font-normal text-xs uppercase text-center">Yearly</th>
+                  <th className="p-2 sm:p-4 font-normal text-xs uppercase whitespace-nowrap">Last Updated</th>
+                  <th className="p-2 sm:p-4 font-normal text-xs uppercase whitespace-nowrap">Metal</th>
+                  <th className="p-2 sm:p-4 font-normal text-xs uppercase text-right whitespace-nowrap">Price (Ounce)</th>
+                  <th className="p-2 sm:p-4 font-normal text-xs uppercase text-right whitespace-nowrap">Price (Tola)</th>
+                  <th className="p-2 sm:p-4 font-normal text-xs uppercase text-center">Daily</th>
+                  <th className="p-2 sm:p-4 font-normal text-xs uppercase text-center">Weekly</th>
+                  <th className="p-2 sm:p-4 font-normal text-xs uppercase text-center">Monthly</th>
+                  <th className="p-2 sm:p-4 font-normal text-xs uppercase text-center">Yearly</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
                 {detailedRates.map((item) => (
                   <tr key={item.name} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                    <td className="p-4 text-[10px] text-zinc-500">{new Date().toLocaleString()}</td>
-                    <td className="p-4 font-bold text-zinc-900 dark:text-zinc-50">{item.name}</td>
-                    <td className="p-4 text-right font-mono font-medium">{item.priceOunce ? (tableCurrency === 'PKR' ? 'Rs. ' : '$') + item.priceOunce.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'}</td>
-                    <td className="p-4 text-right font-mono font-medium">{item.priceTola ? (tableCurrency === 'PKR' ? 'Rs. ' : '$') + item.priceTola.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'}</td>
-                    <td className="p-4 text-center">
+                    <td className="p-2 sm:p-4 text-[10px] text-zinc-500 whitespace-nowrap">{new Date().toLocaleString()}</td>
+                    <td className="p-2 sm:p-4 font-bold text-zinc-900 dark:text-zinc-50 whitespace-nowrap">{item.name}</td>
+                    <td className="p-2 sm:p-4 text-right font-mono font-medium whitespace-nowrap">{item.priceOunce ? (tableCurrency === 'PKR' ? 'Rs. ' : '$') + item.priceOunce.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'}</td>
+                    <td className="p-2 sm:p-4 text-right font-mono font-medium whitespace-nowrap">{item.priceTola ? (tableCurrency === 'PKR' ? 'Rs. ' : '$') + item.priceTola.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'}</td>
+                    <td className="p-2 sm:p-4 text-center">
                       <span className={`text-xs font-bold ${(item.changePercent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>{item.changePercent ? (item.changePercent > 0 ? '+' : '') + item.changePercent + '%' : '-'}</span>
                     </td>
-                    <td className="p-4 text-center">{item.weeklyPercent ? item.weeklyPercent + '%' : '-'}</td>
-                    <td className="p-4 text-center">{item.monthPercent ? item.monthPercent + '%' : '-'}</td>
-                    <td className="p-4 text-center">{item.yearPercent ? item.yearPercent + '%' : '-'}</td>
+                    <td className="p-2 sm:p-4 text-center">{item.weeklyPercent ? item.weeklyPercent + '%' : '-'}</td>
+                    <td className="p-2 sm:p-4 text-center">{item.monthPercent ? item.monthPercent + '%' : '-'}</td>
+                    <td className="p-2 sm:p-4 text-center">{item.yearPercent ? item.yearPercent + '%' : '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -790,7 +722,7 @@ export default function MetalsPage() {
                 onClick={() => setShowPurity(false)}
               ></div>
               
-              <div className="relative bg-white dark:bg-[#050505] rounded-[3rem] p-8 md:p-12 shadow-2xl border border-zinc-200 dark:border-white/5 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+              <div className="relative bg-white dark:bg-[#050505] rounded-2xl sm:rounded-[3rem] p-4 sm:p-8 md:p-12 shadow-2xl border border-zinc-200 dark:border-white/5 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
                 
                 <div className="flex justify-between items-center mb-10 shrink-0">
@@ -819,7 +751,8 @@ export default function MetalsPage() {
                 </div>
 
                 <div className="overflow-y-auto pr-4 custom-scrollbar">
-                  <table className="w-full text-left text-sm border-separate border-spacing-y-3">
+                  <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm border-separate border-spacing-y-3 min-w-[560px]">
                     <thead>
                       <tr className="text-zinc-400">
                         <th className="pb-4 px-4 font-black uppercase tracking-widest text-[10px]">Reference</th>
@@ -853,7 +786,8 @@ export default function MetalsPage() {
                       })}
                     </tbody>
                   </table>
-                  
+                  </div>
+
                   <div className="mt-10 p-6 bg-amber-500/5 rounded-[2rem] border border-amber-500/10">
                     <p className="text-[10px] text-amber-500/70 font-black uppercase tracking-widest text-center">Calculations based on 24K Gold Reference of {tableCurrency === 'PKR' ? 'Rs.' : '$'}{(tableCurrency === 'PKR' ? caratPrices[0]?.pkr : caratPrices[0]?.usd)?.toLocaleString()} per Tola</p>
                   </div>
@@ -863,7 +797,7 @@ export default function MetalsPage() {
           )}
           
           {/* Main Velocity Terminal */}
-          <div className="bg-white dark:bg-zinc-900 rounded-[3.5rem] p-10 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden relative group">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3.5rem] p-4 sm:p-10 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden relative group">
             <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                 <span className="text-[12rem] font-black italic text-amber-500 uppercase select-none">{trendMetal}</span>
             </div>

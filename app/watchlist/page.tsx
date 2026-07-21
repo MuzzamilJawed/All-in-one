@@ -1,11 +1,14 @@
 "use client";
 
+import PageSkeleton from "../components/PageSkeleton";
 import { useState, useEffect } from "react";
 import StockCard from "../components/StockCard";
 import PriceCard from "../components/PriceCard";
 import { fetchGoldPrice, fetchSilverPrice } from "../lib/api";
+import { useToast } from "../context/ToastContext";
 
 export default function WatchlistPage() {
+  const { success, error } = useToast();
   const [watchlists, setWatchlists] = useState<any[]>([]);
   const [selectedWlId, setSelectedWlId] = useState<string | null>(null);
   const [stocksData, setStocksData] = useState<any[]>([]);
@@ -62,9 +65,13 @@ export default function WatchlistPage() {
       const json = await res.json();
       if (json.success) {
         setWatchlists(watchlists.map(w => w._id === watchlistId ? json.data : w));
+        success(`${symbol.toUpperCase()} removed from "${wl.name}"`);
+      } else {
+        error(json.error || "Couldn't remove symbol");
       }
     } catch (err) {
       console.error("Error removing symbol", err);
+      error("Network error — couldn't remove symbol");
     }
   };
 
@@ -84,13 +91,18 @@ export default function WatchlistPage() {
       const json = await res.json();
       if (json.success) {
         setWatchlists(watchlists.map(wl => wl._id === watchlistId ? json.data : wl));
+        success(`${symbol.toUpperCase()} added to "${watchlist.name}"`);
+      } else {
+        error(json.error || "Couldn't add symbol");
       }
     } catch (err) {
       console.error('Failed to add symbol to watchlist', err);
+      error("Network error — couldn't add symbol");
     }
   };
 
   const handleDeleteWatchlist = async (id: string) => {
+    const target = watchlists.find(w => w._id === id);
     if (!confirm("Are you sure you want to delete this watchlist?")) return;
     try {
       const res = await fetch(`/api/watchlists/${id}`, { method: 'DELETE' });
@@ -100,9 +112,13 @@ export default function WatchlistPage() {
         setWatchlists(remaining);
         if (remaining.length > 0) setSelectedWlId(remaining[0]._id);
         else setSelectedWlId(null);
+        success(`Watchlist "${target?.name ?? ''}" deleted`);
+      } else {
+        error(json.error || "Couldn't delete watchlist");
       }
     } catch (err) {
       console.error("Error deleting watchlist", err);
+      error("Network error — couldn't delete watchlist");
     }
   };
 
@@ -127,22 +143,24 @@ export default function WatchlistPage() {
   const bestPerformer = [...watchlistItems].sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0))[0];
   const worstPerformer = [...watchlistItems].sort((a, b) => (a.changePercent || 0) - (b.changePercent || 0))[0];
 
+  if (loading && stocksData.length === 0) return <PageSkeleton variant="cards" />;
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-        <div className="px-8 py-6">
-          <h1 className="text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white">
+        <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
             ⭐ My <span className="text-blue-500">Watchlists</span>
           </h1>
-          <p className="text-zinc-500 dark:text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">
+          <p className="text-zinc-500 dark:text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">
             Personalized Asset Monitoring Engine
           </p>
         </div>
       </header>
 
       {/* Watchlist Hub Tabs */}
-      <div className="bg-zinc-100 dark:bg-black/30 backdrop-blur-sm border-b border-zinc-200 dark:border-white/5 px-8 py-2 overflow-x-auto no-scrollbar flex items-center gap-2">
+      <div className="bg-zinc-100 dark:bg-black/30 backdrop-blur-sm border-b border-zinc-200 dark:border-white/5 px-4 sm:px-8 py-2 overflow-x-auto no-scrollbar flex items-center gap-2">
         {watchlists.map(wl => (
           <button
             key={wl._id}
@@ -170,7 +188,7 @@ export default function WatchlistPage() {
       </div>
 
       {/* Content */}
-      <div className="p-8">
+      <div className="max-w-[1600px] mx-auto p-4 sm:p-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -178,7 +196,7 @@ export default function WatchlistPage() {
         ) : watchlists.length === 0 ? (
           <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-xl p-16 text-center border border-zinc-200 dark:border-zinc-800">
             <p className="text-5xl mb-6">🏜️</p>
-            <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 mb-3 uppercase tracking-tighter">
+            <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 mb-3 uppercase tracking-tighter">
               No Watchlists Found
             </h2>
             <p className="text-zinc-500 font-medium mb-8 max-w-md mx-auto">
@@ -198,7 +216,7 @@ export default function WatchlistPage() {
                 <div key={item.symbol || item.id} className="relative group/wrapper">
                   <button
                     onClick={() => handleRemoveSymbol(selectedWlId!, item.symbol)}
-                    className="absolute -top-2 -right-2 z-50 bg-white dark:bg-zinc-800 text-red-500 rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-xl border border-zinc-200 dark:border-zinc-700 opacity-0 group-hover/wrapper:opacity-100 transition-all hover:bg-red-50"
+                    className="absolute -top-2 -right-2 z-50 bg-white dark:bg-zinc-800 text-red-500 rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-xl border border-zinc-200 dark:border-zinc-700 opacity-100 sm:opacity-0 sm:group-hover/wrapper:opacity-100 transition-all hover:bg-red-50"
                     title="Remove from Watchlist"
                   >
                     ✕
@@ -228,7 +246,7 @@ export default function WatchlistPage() {
 
         {/* Stats & Insights */}
         {watchlistItems.length > 0 && (
-          <div className="mt-12 bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[3rem] shadow-2xl p-10 border border-zinc-200 dark:border-white/5">
+          <div className="mt-12 bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-2xl sm:rounded-[3rem] shadow-2xl p-5 sm:p-10 border border-zinc-200 dark:border-white/5">
             <div className="flex items-center gap-3 mb-10">
               <span className="text-2xl">📊</span>
               <h2 className="text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">
@@ -236,11 +254,11 @@ export default function WatchlistPage() {
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
               <div className="bg-zinc-100 dark:bg-white/5 p-8 rounded-[2rem] border border-zinc-200 dark:border-white/5 group hover:bg-zinc-200 dark:hover:bg-white/[0.08] transition-all">
                 <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-3">Active Monitors</p>
                 <div className="flex items-end gap-2">
-                  <p className="text-5xl font-black text-zinc-900 dark:text-white tracking-tighter italic">{watchlistItems.length}</p>
+                  <p className="text-3xl sm:text-5xl font-black text-zinc-900 dark:text-white tracking-tighter italic">{watchlistItems.length}</p>
                   <p className="text-[10px] font-black text-zinc-500 pb-2 uppercase tracking-widest">Assets</p>
                 </div>
               </div>
@@ -248,7 +266,7 @@ export default function WatchlistPage() {
               <div className="bg-zinc-100 dark:bg-white/5 p-8 rounded-[2rem] border border-zinc-200 dark:border-white/5 group hover:bg-zinc-200 dark:hover:bg-white/[0.08] transition-all">
                 <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-3">Session Alpha</p>
                 <div className="flex items-end gap-1">
-                  <p className={`text-5xl font-black tracking-tighter italic ${avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  <p className={`text-3xl sm:text-5xl font-black tracking-tighter italic ${avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                     {avgChange >= 0 ? '+' : ''}{avgChange.toFixed(2)}%
                   </p>
                 </div>

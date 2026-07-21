@@ -5,6 +5,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --tooltip-bg: #ffffff;
+  --tooltip-fg: #171717;
+  --tooltip-border: #e4e4e7;
 }
 
 @theme inline {
@@ -17,6 +20,9 @@
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --tooltip-bg: #18181b;
+  --tooltip-fg: #ededed;
+  --tooltip-border: #3f3f46;
 }
 
 body {
@@ -61,4 +67,26 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Toast entrance animation */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-item {
+  animation: toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-item {
+    animation: none;
+  }
 }

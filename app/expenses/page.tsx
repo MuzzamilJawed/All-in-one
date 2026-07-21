@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useToast } from "../context/ToastContext";
 
 interface Expense {
   id: string;
@@ -17,6 +18,7 @@ const CATEGORIES = ["Food", "Transport", "Entertainment", "Utilities", "Healthca
 const COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E2"];
 
 export default function ExpensesPage() {
+  const { success, error, info } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [formData, setFormData] = useState({
     description: "",
@@ -47,7 +49,7 @@ export default function ExpensesPage() {
     e.preventDefault();
 
     if (!formData.description || !formData.amount) {
-      alert("Please fill in all required fields");
+      error("Please fill in description and amount");
       return;
     }
 
@@ -60,6 +62,7 @@ export default function ExpensesPage() {
         )
       );
       setEditingId(null);
+      success(`"${formData.description}" updated`);
     } else {
       const newExpense: Expense = {
         id: Date.now().toString(),
@@ -71,6 +74,7 @@ export default function ExpensesPage() {
         notes: formData.notes,
       };
       setExpenses([newExpense, ...expenses]);
+      success(`Expense added — PKR ${parseFloat(formData.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
     }
 
     setFormData({
@@ -96,7 +100,10 @@ export default function ExpensesPage() {
   };
 
   const handleDeleteExpense = (id: string) => {
+    if (!confirm("Are you sure you want to delete this expense?")) return;
+    const removed = expenses.find((exp) => exp.id === id);
     setExpenses(expenses.filter((exp) => exp.id !== id));
+    info(`"${removed?.description ?? 'Expense'}" deleted`);
   };
 
   const getDateRange = () => {
@@ -160,313 +167,211 @@ export default function ExpensesPage() {
       .reduce((sum, exp) => sum + exp.amount, 0),
   })).filter((item) => item.value > 0);
 
+  const inputClass = "w-full px-3 py-2.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
+  const labelClass = "block text-xs font-black text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">💰 Expense Tracker</h1>
-          <p className="text-slate-400">Manage and analyze your spending habits</p>
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
+      {/* Dynamic Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/5 dark:bg-blue-600/10 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/5 dark:bg-indigo-600/10 blur-[120px] rounded-full"></div>
+      </div>
+
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+        <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
+            💰 Expense <span className="text-blue-500 text-xl sm:text-2xl">Tracker</span>
+          </h1>
+          <p className="text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">
+            Spending Intelligence & Analysis
+          </p>
+        </div>
+      </header>
+
+      <main className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
+        {/* Stats Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
+          <div className="bg-white dark:bg-zinc-900/60 rounded-[1.5rem] border border-zinc-200 dark:border-white/5 p-5 sm:p-6 shadow-sm">
+            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-2">Total Expenses</p>
+            <p className="text-2xl sm:text-3xl font-black font-mono tracking-tighter text-zinc-900 dark:text-white break-words min-w-0">PKR {totalExpenses.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+            <p className="text-xs font-bold text-zinc-400 mt-1">{filteredExpenses.length} transactions</p>
+          </div>
+          <div className="bg-white dark:bg-zinc-900/60 rounded-[1.5rem] border border-zinc-200 dark:border-white/5 p-5 sm:p-6 shadow-sm">
+            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-2">Average Expense</p>
+            <p className="text-2xl sm:text-3xl font-black font-mono tracking-tighter text-zinc-900 dark:text-white break-words min-w-0">PKR {avgExpense.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+            <p className="text-xs font-bold text-zinc-400 mt-1">Per transaction</p>
+          </div>
+          <div className="bg-white dark:bg-zinc-900/60 rounded-[1.5rem] border border-zinc-200 dark:border-white/5 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-2">Time Period</p>
+            <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className={inputClass}>
+              <option value="day">Last Day</option>
+              <option value="week">Last Week</option>
+              <option value="month">Last Month</option>
+              <option value="year">Last Year</option>
+            </select>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-8">
           {/* Add Expense Form */}
-          <div className="lg:col-span-1 bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <span>➕</span> {editingId ? "Edit" : "Add"} Expense
-            </h2>
-            <form onSubmit={handleAddExpense} className="space-y-4">
+          <div className="lg:col-span-1 bg-white dark:bg-zinc-900/60 backdrop-blur-sm rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden shadow-sm">
+            <div className="px-6 py-5 border-b border-zinc-100 dark:border-white/5">
+              <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">
+                {editingId ? "✏️ Edit Expense" : "➕ Add Expense"}
+              </h2>
+            </div>
+            <form onSubmit={handleAddExpense} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Description</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="e.g., Lunch at café"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
+                <label className={labelClass}>Description</label>
+                <input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="e.g., Lunch at café" className={inputClass} />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Amount (PKR)</label>
-                <input
-                  type="number"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
+                <label className={labelClass}>Amount (PKR)</label>
+                <input type="number" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} placeholder="0.00" step="0.01" min="0" className={inputClass} />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Category</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:border-blue-500"
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
+                <label className={labelClass}>Category</label>
+                <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className={inputClass}>
+                  {CATEGORIES.map((cat) => (<option key={cat} value={cat}>{cat}</option>))}
                 </select>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Date</label>
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:border-blue-500"
-                />
+                <label className={labelClass}>Date</label>
+                <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className={inputClass} />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Payment Method</label>
-                <select
-                  value={formData.paymentMethod}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      paymentMethod: e.target.value as "cash" | "card" | "transfer" | "other",
-                    })
-                  }
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:border-blue-500"
-                >
+                <label className={labelClass}>Payment Method</label>
+                <select value={formData.paymentMethod} onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as "cash" | "card" | "transfer" | "other" })} className={inputClass}>
                   <option value="cash">Cash</option>
                   <option value="card">Card</option>
                   <option value="transfer">Transfer</option>
                   <option value="other">Other</option>
                 </select>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Notes (Optional)</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Add any notes..."
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
-                  rows={2}
-                />
+                <label className={labelClass}>Notes (Optional)</label>
+                <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Add any notes..." className={inputClass + " resize-none"} rows={2} />
               </div>
-
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition"
-              >
-                {editingId ? "Update" : "Add"} Expense
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 px-4 rounded-xl transition-all uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-600/20">
+                {editingId ? "Update Expense" : "Add Expense"}
               </button>
-
               {editingId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingId(null);
-                    setFormData({
-                      description: "",
-                      amount: "",
-                      category: "Food",
-                      date: new Date().toISOString().split("T")[0],
-                      paymentMethod: "cash",
-                      notes: "",
-                    });
-                  }}
-                  className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded transition"
-                >
+                <button type="button" onClick={() => { setEditingId(null); setFormData({ description: "", amount: "", category: "Food", date: new Date().toISOString().split("T")[0], paymentMethod: "cash", notes: "" }); }} className="w-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-black py-3 px-4 rounded-xl transition-all uppercase tracking-widest text-xs">
                   Cancel
                 </button>
               )}
             </form>
           </div>
 
-          {/* Stats */}
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg shadow-lg p-6 border border-blue-500">
-              <p className="text-slate-200 text-sm font-medium mb-1">Total Expenses</p>
-              <p className="text-3xl font-bold">PKR {totalExpenses.toFixed(0)}</p>
-              <p className="text-blue-200 text-xs mt-2">{filteredExpenses.length} transactions</p>
-            </div>
+          {/* Charts */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Category Breakdown */}
+            {categoryData.length > 0 && (
+              <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 shadow-sm">
+                <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4">📊 Spending by Category</h2>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={categoryData} cx="50%" cy="50%" labelLine={false} outerRadius={90} dataKey="value">
+                      {categoryData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: "var(--tooltip-bg, #fff)", color: "var(--tooltip-fg, #171717)", border: "1px solid var(--tooltip-border, #e4e4e7)", borderRadius: "0.75rem", fontSize: "12px" }} itemStyle={{ color: "var(--tooltip-fg, #171717)" }} labelStyle={{ color: "var(--tooltip-fg, #171717)" }} formatter={(value: any) => `PKR ${Number(value).toFixed(0)}`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
 
-            <div className="bg-gradient-to-br from-green-600 to-green-800 rounded-lg shadow-lg p-6 border border-green-500">
-              <p className="text-slate-200 text-sm font-medium mb-1">Average Expense</p>
-              <p className="text-3xl font-bold">PKR {avgExpense.toFixed(0)}</p>
-              <p className="text-green-200 text-xs mt-2">Per transaction</p>
-            </div>
+            {/* Daily Trend */}
+            {lineChartData.length > 0 && (
+              <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 shadow-sm">
+                <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4">📈 Daily Trend</h2>
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={lineChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" className="dark:stroke-zinc-800" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#71717a" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "#71717a" }} />
+                    <Tooltip contentStyle={{ backgroundColor: "var(--tooltip-bg, #fff)", color: "var(--tooltip-fg, #171717)", border: "1px solid var(--tooltip-border, #e4e4e7)", borderRadius: "0.75rem", fontSize: "12px" }} itemStyle={{ color: "var(--tooltip-fg, #171717)" }} labelStyle={{ color: "var(--tooltip-fg, #171717)" }} formatter={(value: any) => `PKR ${Number(value).toFixed(0)}`} />
+                    <Line type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: "#3b82f6", r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
 
-            <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg shadow-lg p-6 border border-purple-500">
-              <p className="text-slate-200 text-sm font-medium mb-1">Time Period</p>
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:border-purple-400 mt-2"
-              >
-                <option value="day">Last Day</option>
-                <option value="week">Last Week</option>
-                <option value="month">Last Month</option>
-                <option value="year">Last Year</option>
-              </select>
-            </div>
+            {/* Payment Method */}
+            {paymentMethodData.length > 0 && (
+              <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 shadow-sm">
+                <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4">💳 By Payment Method</h2>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={paymentMethodData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#71717a" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "#71717a" }} />
+                    <Tooltip contentStyle={{ backgroundColor: "var(--tooltip-bg, #fff)", color: "var(--tooltip-fg, #171717)", border: "1px solid var(--tooltip-border, #e4e4e7)", borderRadius: "0.75rem", fontSize: "12px" }} itemStyle={{ color: "var(--tooltip-fg, #171717)" }} labelStyle={{ color: "var(--tooltip-fg, #171717)" }} formatter={(value: any) => `PKR ${Number(value).toFixed(0)}`} />
+                    <Bar dataKey="value" fill="#10b981" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Category Breakdown */}
-          {categoryData.length > 0 && (
-            <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
-              <h2 className="text-xl font-bold mb-4">📊 By Category</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: PKR ${value.toFixed(0)}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: any) => `PKR ${Number(value).toFixed(2)}`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* Daily Trend */}
-          {lineChartData.length > 0 && (
-            <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
-              <h2 className="text-xl font-bold mb-4">📈 Daily Trend</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={lineChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-                  <XAxis dataKey="date" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
-                    formatter={(value: any) => `PKR ${Number(value).toFixed(2)}`}
-                  />
-                  <Line type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6" }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* Payment Method */}
-          {paymentMethodData.length > 0 && (
-            <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
-              <h2 className="text-xl font-bold mb-4">💳 By Payment Method</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={paymentMethodData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-                  <XAxis dataKey="name" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
-                    formatter={(value: any) => `PKR ${Number(value).toFixed(2)}`}
-                  />
-                  <Bar dataKey="value" fill="#10b981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* Category Filter & Stats */}
-          <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
-            <h2 className="text-xl font-bold mb-4">🏷️ Filter by Category</h2>
-            <div className="space-y-2">
-              <button
-                onClick={() => setFilter("all")}
-                className={`w-full px-4 py-2 rounded text-left transition ${
-                  filter === "all"
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                }`}
-              >
-                All Categories ({expenses.length})
+        {/* Category Filter */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filter === "all" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "bg-white dark:bg-zinc-900 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800"}`}>
+            All ({expenses.length})
+          </button>
+          {CATEGORIES.map((cat) => {
+            const count = expenses.filter((exp) => exp.category === cat).length;
+            if (count === 0) return null;
+            return (
+              <button key={cat} onClick={() => setFilter(cat)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filter === cat ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "bg-white dark:bg-zinc-900 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800"}`}>
+                {cat} ({count})
               </button>
-              {CATEGORIES.map((cat) => {
-                const count = expenses.filter((exp) => exp.category === cat).length;
-                const amount = expenses
-                  .filter((exp) => exp.category === cat)
-                  .reduce((sum, exp) => sum + exp.amount, 0);
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setFilter(cat)}
-                    className={`w-full px-4 py-2 rounded text-left transition flex justify-between items-center ${
-                      filter === cat
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                    }`}
-                  >
-                    <span>{cat}</span>
-                    <span className="text-xs">{count} • PKR {amount.toFixed(0)}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            );
+          })}
         </div>
 
-        {/* Expenses List */}
-        <div className="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
-          <h2 className="text-xl font-bold mb-4">📋 Recent Expenses</h2>
+        {/* Expenses Table */}
+        <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden shadow-sm">
+          <div className="px-6 sm:px-8 py-5 border-b border-zinc-100 dark:border-white/5">
+            <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">📋 Recent Expenses</h2>
+          </div>
           {filteredExpenses.length === 0 ? (
-            <p className="text-slate-400 text-center py-8">No expenses found for this period</p>
+            <div className="py-16 text-center">
+              <p className="text-4xl mb-4">📭</p>
+              <p className="text-zinc-400 font-black uppercase tracking-widest text-xs">No expenses found for this period</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left py-3 px-4 font-semibold text-slate-300">Description</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-300">Category</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-300">Amount</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-300">Date</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-300">Method</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-300">Actions</th>
+                  <tr className="border-b border-zinc-100 dark:border-white/5">
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Description</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Category</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-right">Amount</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Date</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Method</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-center">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                   {filteredExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((exp) => (
-                    <tr key={exp.id} className="border-b border-slate-700 hover:bg-slate-700/50 transition">
-                      <td className="py-3 px-4">{exp.description}</td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-1 rounded bg-slate-700 text-xs">{exp.category}</span>
+                    <tr key={exp.id} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4 text-sm font-bold text-zinc-900 dark:text-zinc-50">{exp.description}</td>
+                      <td className="px-6 py-4">
+                        <span className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-black text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">{exp.category}</span>
                       </td>
-                      <td className="py-3 px-4 font-semibold">PKR {exp.amount.toFixed(2)}</td>
-                      <td className="py-3 px-4 text-slate-400">
-                        {new Date(exp.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                      <td className="px-6 py-4 text-right font-mono font-black text-zinc-900 dark:text-white text-sm">PKR {exp.amount.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                      <td className="px-6 py-4 text-xs font-bold text-zinc-500">{new Date(exp.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-black text-zinc-500 uppercase tracking-wide">{exp.paymentMethod}</span>
                       </td>
-                      <td className="py-3 px-4">
-                        <span className="text-xs capitalize">{exp.paymentMethod}</span>
-                      </td>
-                      <td className="py-3 px-4 flex gap-2">
-                        <button
-                          onClick={() => handleEditExpense(exp)}
-                          className="text-blue-400 hover:text-blue-300 transition text-xs"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteExpense(exp.id)}
-                          className="text-red-400 hover:text-red-300 transition text-xs"
-                        >
-                          Delete
-                        </button>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2 justify-center">
+                          <button onClick={() => handleEditExpense(exp)} className="px-2 py-2 text-xs font-black text-blue-500 hover:text-blue-600 transition-colors uppercase tracking-wide">Edit</button>
+                          <button onClick={() => handleDeleteExpense(exp.id)} className="px-2 py-2 text-xs font-black text-red-500 hover:text-red-600 transition-colors uppercase tracking-wide">Delete</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -475,7 +380,7 @@ export default function ExpensesPage() {
             </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

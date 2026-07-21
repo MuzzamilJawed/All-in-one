@@ -258,7 +258,7 @@ export default function StockDetailPage() {
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30">
             {/* Header */}
             <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-4 sm:py-6 flex justify-between items-center gap-4">
+                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center gap-4">
                     <div className="flex items-center gap-3 sm:gap-6">
                         <button onClick={() => router.push('/stocks')} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group shrink-0">
                             <span className="text-zinc-500 group-hover:text-blue-500 transition-colors font-bold text-sm sm:text-base">←</span>
@@ -469,7 +469,7 @@ export default function StockDetailPage() {
                                     <table className="w-full">
                                         <thead>
                                             <tr>
-                                                <th className="text-left py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Key Metric</th>
+                                                <th className="text-left py-4 pr-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] sticky left-0 z-10 bg-white dark:bg-zinc-900">Key Metric</th>
                                                 {deepDetails.financialHistory.years.map((year: string) => (
                                                     <th key={year} className="text-right py-4 px-6 text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-[0.2em] bg-zinc-50 dark:bg-white/[0.02] first:rounded-l-xl last:rounded-r-xl">
                                                         FY {year}
@@ -480,7 +480,7 @@ export default function StockDetailPage() {
                                         <tbody className="divide-y divide-zinc-50 dark:divide-white/5">
                                             {deepDetails.financialHistory.data.map((row: any, i: number) => (
                                                 <tr key={i} className="group hover:bg-zinc-50 dark:hover:bg-white/[0.01] transition-colors">
-                                                    <td className="py-5 text-xs font-black text-zinc-500 uppercase group-hover:text-blue-500 transition-colors italic pr-4">
+                                                    <td className="py-5 text-xs font-black text-zinc-500 uppercase group-hover:text-blue-500 transition-colors italic pr-4 sticky left-0 z-10 bg-white dark:bg-zinc-900">
                                                         {row.metric}
                                                     </td>
                                                     {row.values.map((val: string, j: number) => (
@@ -508,7 +508,7 @@ export default function StockDetailPage() {
                                 </div>
                                 <h4 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">{stock.name}</h4>
                                 <p className="text-xs font-black text-zinc-500 uppercase tracking-widest">{stock.sector} Segment / Specialized Board</p>
-                                <div className="flex flex-wrap gap-x-12 gap-y-6 relative z-10 mt-6">
+                                <div className="flex flex-wrap gap-x-6 sm:gap-x-12 gap-y-6 relative z-10 mt-6">
                                     <div>
                                         <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1 shadow-sm">Shares Outstanding</p>
                                         <p className="text-sm font-black text-zinc-900 dark:text-white font-mono">{deepDetails.profile.shares}</p>
@@ -573,8 +573,8 @@ export default function StockDetailPage() {
                 {/* Related Stocks Section */}
                 {relatedStocks.length > 0 && (
                     <section className="space-y-6 pt-12 border-t border-zinc-200 dark:border-white/5">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Sector Corollaries: {stock.sector}</h2>
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                            <h2 className="text-lg sm:text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Sector Corollaries: {stock.sector}</h2>
                             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Comparison Analytics</p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">

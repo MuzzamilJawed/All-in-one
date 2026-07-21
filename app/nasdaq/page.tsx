@@ -1,9 +1,11 @@
 "use client";
 
+import PageSkeleton from "../components/PageSkeleton";
 import StockCard from "../components/StockCard";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from 'next/navigation';
 import { useSettings } from "../context/SettingsContext";
+import { useToast } from "../context/ToastContext";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
 
@@ -58,6 +60,7 @@ export default function NasdaqPage() {
 
     // Global Settings
     const { settings } = useSettings();
+    const { success, error } = useToast();
     const router = useRouter();
     const displayCurrency = settings.currency as 'USD' | 'PKR';
 
@@ -154,11 +157,15 @@ export default function NasdaqPage() {
             const json = await res.json();
             if (json.success) {
                 setWatchlists([json.data, ...watchlists]);
+                success(`Watchlist "${newWatchlistName.trim()}" created`);
                 setNewWatchlistName("");
                 setIsCreatingWatchlist(false);
+            } else {
+                error(json.error || "Couldn't create watchlist");
             }
         } catch (err) {
             console.error('Failed to create watchlist', err);
+            error("Network error — couldn't create watchlist");
         }
     };
 
@@ -177,9 +184,13 @@ export default function NasdaqPage() {
             const json = await res.json();
             if (json.success) {
                 setWatchlists(watchlists.map(wl => wl._id === watchlistId ? json.data : wl));
+                success(`${symbol.toUpperCase()} added to "${watchlist.name}"`);
+            } else {
+                error(json.error || "Couldn't add symbol");
             }
         } catch (err) {
             console.error('Failed to add symbol to watchlist', err);
+            error("Network error — couldn't add symbol");
         }
     };
 
@@ -197,9 +208,13 @@ export default function NasdaqPage() {
             const json = await res.json();
             if (json.success) {
                 setWatchlists(watchlists.map(wl => wl._id === watchlistId ? json.data : wl));
+                success(`${symbol.toUpperCase()} removed from "${watchlist.name}"`);
+            } else {
+                error(json.error || "Couldn't remove symbol");
             }
         } catch (err) {
             console.error('Failed to remove symbol from watchlist', err);
+            error("Network error — couldn't remove symbol");
         }
     };
 
@@ -207,6 +222,11 @@ export default function NasdaqPage() {
         load(true);
         fetchWatchlists();
     }, []);
+
+    // Reset pagination when filters/search/watchlist change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filter, categoryFilter, searchTerm, activeWatchlistId]);
 
     const filteredStocks = useMemo(() => {
         let updated = [...stocks];
@@ -276,6 +296,8 @@ export default function NasdaqPage() {
         return pages;
     };
 
+    if (loading && stocks.length === 0) return <PageSkeleton variant="explorer" />;
+
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
             {/* Real-time Loading Indicator */}
@@ -286,7 +308,7 @@ export default function NasdaqPage() {
             )}
 
             <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-4 sm:py-6 flex justify-between items-center">
+                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center">
                     <div>
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white">
                             🇺🇸 NASDAQ <span className="text-blue-500">Terminal</span>
@@ -349,13 +371,13 @@ export default function NasdaqPage() {
                             <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-white/10 p-1 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-inner">
                                 <button
                                     onClick={() => setViewType('card')}
-                                    className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'card' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    className={`flex-1 sm:flex-none px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'card' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
                                 >
                                     Cards
                                 </button>
                                 <button
                                     onClick={() => setViewType('table')}
-                                    className={`flex-1 sm:flex-none px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'table' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    className={`flex-1 sm:flex-none px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'table' ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
                                 >
                                     Table
                                 </button>
@@ -479,7 +501,7 @@ export default function NasdaqPage() {
                 <div className="space-y-8 sm:space-y-12 min-h-[800px]">
                     {viewType === 'card' ? (
                         <div className="space-y-8 sm:space-y-12 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-8 px-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-8 px-1">
                                 {paginatedStocks.map((stock) => (
                                     <StockCard
                                         key={stock.symbol}
@@ -499,7 +521,7 @@ export default function NasdaqPage() {
                                         onWatchlistCreated={(newList) => setWatchlists([newList, ...watchlists])}
                                     />
                                 ))}
-                                {filteredStocks.length === 0 && (
+                                {!loading && filteredStocks.length === 0 && (
                                     <div className="col-span-full py-48 text-center bg-white dark:bg-white/5 rounded-[3.5rem] border border-dashed border-zinc-200 dark:border-white/10">
                                         <span className="text-5xl block mb-6">🛰️</span>
                                         <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-xs px-12">Universal market scan complete: No matching footprints detected</p>
@@ -541,38 +563,38 @@ export default function NasdaqPage() {
                                     </span>
                                 </div>
                             </div>
-                            <div className="overflow-x-auto no-scrollbar">
+                            <div className="overflow-x-auto">
                                 <table className="w-full text-left text-[11px] border-collapse min-w-[800px]">
                                     <thead>
                                         <tr className="bg-zinc-100/50 dark:bg-black uppercase tracking-widest text-zinc-400 font-black">
-                                            <th onClick={() => requestSort('symbol')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors">Ticker Symbol</th>
-                                            <th onClick={() => requestSort('name')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors">Organization Name</th>
-                                            <th onClick={() => requestSort('currentPrice')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Execution Price</th>
-                                            <th onClick={() => requestSort('changePercent')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Momentum Delta</th>
-                                            <th onClick={() => requestSort('volume')} className="p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Market Fluidity</th>
-                                            <th className="p-8 text-center">Strategic Analysis</th>
+                                            <th onClick={() => requestSort('symbol')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors">Ticker Symbol</th>
+                                            <th onClick={() => requestSort('name')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors">Organization Name</th>
+                                            <th onClick={() => requestSort('currentPrice')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Execution Price</th>
+                                            <th onClick={() => requestSort('changePercent')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Momentum Delta</th>
+                                            <th onClick={() => requestSort('volume')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Market Fluidity</th>
+                                            <th className="p-3 sm:p-8 text-center">Strategic Analysis</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                                         {paginatedStocks.map((stock) => (
                                             <tr key={stock.symbol} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-all group">
-                                                <td className="p-8">
+                                                <td className="p-3 sm:p-8">
                                                     <span className="px-4 py-2 bg-zinc-100 dark:bg-white/5 rounded-xl font-black group-hover:text-blue-600 group-hover:scale-105 transition-all inline-block shadow-sm">
                                                         {stock.symbol}
                                                     </span>
                                                 </td>
-                                                <td className="p-8 font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-xs">{stock.name}</td>
-                                                <td className="p-8 font-mono font-black text-right text-sm">
+                                                <td className="p-3 sm:p-8 font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-xs">{stock.name}</td>
+                                                <td className="p-3 sm:p-8 font-mono font-black text-right text-sm">
                                                     {displayCurrency === 'USD' ? '$' : 'Rs.'}
                                                     {(displayCurrency === 'USD' ? stock.currentPrice : (stock.pkrPrice || stock.currentPrice * exchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </td>
-                                                <td className="p-8 text-right">
+                                                <td className="p-3 sm:p-8 text-right">
                                                     <span className={`px-4 py-1.5 rounded-xl font-black ${stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-600'}`}>
                                                         {stock.changePercent >= 0 ? '▲' : '▼'}{Math.abs(stock.changePercent)?.toFixed(2)}%
                                                     </span>
                                                 </td>
-                                                <td className="p-8 font-mono text-zinc-400 text-right font-black uppercase">{stock.volume}</td>
-                                                <td className="p-8 text-center">
+                                                <td className="p-3 sm:p-8 font-mono text-zinc-400 text-right font-black uppercase">{stock.volume}</td>
+                                                <td className="p-3 sm:p-8 text-center">
                                                     <button onClick={() => router.push(`/nasdaq/${stock.symbol.toLowerCase()}`)} className="text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white px-6 py-3 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-600/30">Detailed Audit</button>
                                                 </td>
                                             </tr>

@@ -1,5 +1,7 @@
 "use client";
 
+import PageSkeleton from "../components/PageSkeleton";
+
 import PriceCard from "../components/PriceCard";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
@@ -201,20 +203,22 @@ export default function OilPage() {
     return () => clearInterval(interval);
   }, [settings.refreshInterval, loadPrices]);
 
+  if (loading && oilPrices.length === 0) return <PageSkeleton variant="cards" />;
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
-        <div className="px-4 sm:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
+        <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 max-w-[1600px] mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
             <div>
               <h1 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 tracking-tighter uppercase italic">
                 🛢️ Energy Markets
-                <span className="bg-blue-600 text-white text-[8px] sm:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
+                <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
                   Live
                 </span>
               </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1 sm:mt-2 flex items-center gap-2">
+              <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1 sm:mt-2 flex items-center gap-2">
                 <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full ${loading ? 'bg-amber-500' : 'bg-green-500'} animate-pulse`}></span>
                 {loading ? "Synchronizing satellite Feeds..." : `Terminal Active - ${new Date().toLocaleTimeString()}`}
               </p>
@@ -230,7 +234,7 @@ export default function OilPage() {
         </div>
       </div>
 
-      <div className="p-8 pb-32 max-w-7xl mx-auto w-full space-y-12">
+      <div className="p-4 sm:p-8 pb-32 max-w-[1600px] mx-auto w-full space-y-12">
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-6 flex items-center gap-4">
             <span className="text-2xl">⚠️</span>
@@ -239,7 +243,7 @@ export default function OilPage() {
         )}
 
         {/* Price Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8">
           {oilPrices.map((oil) => (
             <div key={oil.title} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95" onClick={() => {
               const fullItem = allEnergy.find(i => i.name === oil.title);
@@ -255,16 +259,16 @@ export default function OilPage() {
           <div className="p-5 sm:p-8 border-b border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Energy Contracts Feed</h2>
-              <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-widest mt-1">Satellite Comparison Benchmark</p>
+              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Satellite Comparison Benchmark</p>
             </div>
             <div className="text-[10px] font-black text-blue-500 border border-blue-500/20 px-4 py-2 rounded-xl uppercase tracking-widest bg-blue-500/5">
               {allEnergy.length} Active Feeds
             </div>
           </div>
-          <div className="overflow-x-auto no-scrollbar">
+          <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-zinc-200 dark:border-white/5 text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] bg-zinc-50/50 dark:bg-white/5">
+                <tr className="border-b border-zinc-200 dark:border-white/5 text-[10px] sm:text-xs font-black text-zinc-500 uppercase tracking-[0.2em] bg-zinc-50/50 dark:bg-white/5">
                   <th className="px-4 sm:px-8 py-3 sm:py-5">Scrip</th>
                   <th className="px-4 sm:px-8 py-3 sm:py-5 text-right">Price</th>
                   <th className="px-4 sm:px-8 py-3 sm:py-5 text-right">24h%</th>
@@ -286,16 +290,16 @@ export default function OilPage() {
                       {tableCurrency === 'PKR' ? 'Rs. ' : '$'}
                       {formatPrice(tableCurrency === 'PKR' ? item.pkrPrice : item.price)}
                     </td>
-                    <td className={`px-4 sm:px-8 py-3 sm:py-5 text-right text-[8px] sm:text-[10px] font-black ${item.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    <td className={`px-4 sm:px-8 py-3 sm:py-5 text-right text-[10px] sm:text-xs font-black ${item.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                       {item.changePercent >= 0 ? '▲' : '▼'}{Math.abs(item.changePercent).toFixed(1)}%
                     </td>
-                    <td className={`px-4 sm:px-8 py-3 sm:py-5 text-center text-[8px] sm:text-[10px] font-bold hidden sm:table-cell ${item.weekly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`px-4 sm:px-8 py-3 sm:py-5 text-center text-[10px] sm:text-xs font-bold hidden sm:table-cell ${item.weekly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {item.weekly > 0 ? '+' : ''}{item.weekly}%
                     </td>
-                    <td className={`px-4 sm:px-8 py-3 sm:py-5 text-center text-[8px] sm:text-[10px] font-bold hidden sm:table-cell ${item.monthly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`px-4 sm:px-8 py-3 sm:py-5 text-center text-[10px] sm:text-xs font-bold hidden sm:table-cell ${item.monthly >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {item.monthly > 0 ? '+' : ''}{item.monthly}%
                     </td>
-                    <td className="px-4 sm:px-8 py-3 sm:py-5 text-right text-[8px] font-black text-zinc-500 uppercase tracking-widest hidden md:table-cell">
+                    <td className="px-4 sm:px-8 py-3 sm:py-5 text-right text-[10px] font-black text-zinc-500 uppercase tracking-widest hidden md:table-cell">
                       {item.date || 'Live'}
                     </td>
                   </tr>
@@ -306,22 +310,22 @@ export default function OilPage() {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-12">
           {/* Trend Chart */}
-          <div className="xl:col-span-2 bg-white dark:bg-zinc-900 rounded-[3rem] shadow-sm p-10 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group">
+          <div className="xl:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3rem] shadow-sm p-5 sm:p-10 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
 
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center mb-8 sm:mb-10 gap-6">
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Market Momentum</h2>
-                <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-widest mt-1">Velocity Trace: <span className="text-blue-500">{allEnergy.find(i => i.key === trendEnergy)?.name}</span></p>
+                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Velocity Trace: <span className="text-blue-500">{allEnergy.find(i => i.key === trendEnergy)?.name}</span></p>
               </div>
 
               <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
                 <select
                   value={trendEnergy}
                   onChange={(e) => setTrendEnergy(e.target.value)}
-                  className="flex-1 sm:flex-none bg-zinc-100 dark:bg-zinc-800/50 rounded-xl px-3 sm:px-4 py-2 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border-none outline-none focus:ring-1 focus:ring-blue-500 transition-all dark:text-zinc-300"
+                  className="flex-1 sm:flex-none bg-zinc-100 dark:bg-zinc-800/50 rounded-xl px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest border-none outline-none focus:ring-1 focus:ring-blue-500 transition-all dark:text-zinc-300"
                 >
                   {allEnergy.map(item => (
                     <option key={item.key} value={item.key}>{item.name}</option>
@@ -333,7 +337,7 @@ export default function OilPage() {
                     <button
                       key={tf}
                       onClick={() => setTrendTimeframe(tf)}
-                      className={`px-3 py-1.5 text-[8px] sm:text-[9px] font-black rounded-lg transition-all uppercase tracking-widest ${trendTimeframe === tf ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}
+                      className={`px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-lg transition-all uppercase tracking-widest ${trendTimeframe === tf ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}
                     >
                       {tf}
                     </button>
@@ -342,7 +346,7 @@ export default function OilPage() {
               </div>
             </div>
 
-            <div className="h-[400px] w-full">
+            <div className="h-[360px] sm:h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData}>
                   <defs>
@@ -375,7 +379,7 @@ export default function OilPage() {
 
           {/* Market Stats Sidebar */}
           <div className="space-y-8">
-            <div className="bg-zinc-900 text-white rounded-[3rem] p-10 relative overflow-hidden border border-white/5">
+            <div className="bg-zinc-900 text-white rounded-2xl sm:rounded-[3rem] p-5 sm:p-10 relative overflow-hidden border border-white/5">
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/20 to-transparent"></div>
               <h3 className="relative z-10 text-xl font-black uppercase italic tracking-tighter mb-6">Terminal Summary</h3>
               <div className="relative z-10 space-y-6">
@@ -392,12 +396,12 @@ export default function OilPage() {
                   <span className="font-mono font-black text-amber-500">STABLE</span>
                 </div>
                 <div className="pt-4">
-                  <p className="text-[9px] leading-relaxed text-zinc-400 font-medium uppercase italic">Automated analysis suggests high volatility in {allEnergy.find(i => i.key === trendEnergy)?.name || 'Markets'} for the next 48 hours due to regional infrastructure reports.</p>
+                  <p className="text-xs leading-relaxed text-zinc-400 font-medium uppercase italic">Automated analysis suggests high volatility in {allEnergy.find(i => i.key === trendEnergy)?.name || 'Markets'} for the next 48 hours due to regional infrastructure reports.</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-zinc-900 rounded-[3rem] p-10 border border-zinc-200 dark:border-zinc-800">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3rem] p-5 sm:p-10 border border-zinc-200 dark:border-zinc-800">
               <h3 className="text-xl font-black uppercase italic tracking-tighter mb-6 dark:text-white">Price Alerts</h3>
               <div className="space-y-4">
                 {[
@@ -407,7 +411,7 @@ export default function OilPage() {
                 ].map((alert, i) => (
                   <div key={i} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-white/5">
                     <span className="text-[10px] font-black uppercase dark:text-zinc-300 tracking-tight">{alert.title}</span>
-                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase ${alert.status === 'Triggered' ? 'bg-red-500 text-white' : 'bg-blue-500/10 text-blue-500'}`}>{alert.status}</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${alert.status === 'Triggered' ? 'bg-red-500 text-white' : 'bg-blue-500/10 text-blue-500'}`}>{alert.status}</span>
                   </div>
                 ))}
               </div>
@@ -419,11 +423,11 @@ export default function OilPage() {
         <div className="mt-12">
           <div className="flex items-end justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Technical Analysis</h2>
+              <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Technical Analysis</h2>
               <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">High Precision Candlestick Feed: <span className="text-blue-500">{allEnergy.find(i => i.key === trendEnergy)?.name}</span></p>
             </div>
           </div>
-          <div className="h-[600px] w-full mb-12">
+          <div className="h-[360px] sm:h-[600px] w-full mb-12">
             <TradingChart title={`${(allEnergy.find(i => i.key === trendEnergy)?.name || 'Oil').toUpperCase()} / ${tableCurrency}`} data={oilCandles} currentTimeframe={oilChartTF} onTimeframeChange={setOilChartTF} currencySymbol={tableCurrency === 'PKR' ? 'Rs.' : '$'} />
           </div>
         </div>

@@ -66,8 +66,10 @@ export default function CommandPalette() {
 
     const onKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "ArrowDown") {
+            if (filteredResults.length === 0) return;
             setSelectedIndex(prev => (prev + 1) % filteredResults.length);
         } else if (e.key === "ArrowUp") {
+            if (filteredResults.length === 0) return;
             setSelectedIndex(prev => (prev - 1 + filteredResults.length) % filteredResults.length);
         } else if (e.key === "Enter" && filteredResults[selectedIndex]) {
             handleSelect(filteredResults[selectedIndex].symbol);
@@ -80,14 +82,14 @@ export default function CommandPalette() {
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
             
-            <div className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center gap-4 px-8 py-6 border-b border-zinc-100 dark:border-white/5">
-                    <span className="text-xl">🔍</span>
+            <div className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-8 py-4 sm:py-6 border-b border-zinc-100 dark:border-white/5">
+                    <span className="text-xl shrink-0">🔍</span>
                     <input
                         ref={inputRef}
                         type="text"
                         placeholder="Search Scrips, Sectors, or Commodities... (e.g. HUBC, Oil)"
-                        className="flex-1 bg-transparent border-none outline-none text-lg font-black uppercase italic tracking-tighter text-zinc-900 dark:text-white placeholder:text-zinc-400"
+                        className="flex-1 min-w-0 bg-transparent border-none outline-none text-base sm:text-lg font-black uppercase italic tracking-tighter text-zinc-900 dark:text-white placeholder:text-zinc-400"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onKeyDown={onKeyDown}
@@ -102,26 +104,26 @@ export default function CommandPalette() {
                                 <button
                                     key={stock.symbol}
                                     onClick={() => handleSelect(stock.symbol)}
-                                    className={`w-full flex items-center justify-between p-6 rounded-3xl transition-all text-left ${
+                                    className={`w-full flex items-center justify-between gap-3 p-3 sm:p-6 rounded-2xl sm:rounded-3xl transition-all text-left ${
                                         i === selectedIndex ? "bg-blue-600 text-white scale-[1.02] shadow-xl shadow-blue-600/20" : "hover:bg-zinc-50 dark:hover:bg-white/5"
                                     }`}
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black ${i === selectedIndex ? "bg-white/20" : "bg-zinc-100 dark:bg-white/5 text-blue-500"}`}>
+                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black shrink-0 ${i === selectedIndex ? "bg-white/20" : "bg-zinc-100 dark:bg-white/5 text-blue-500"}`}>
                                             {stock.symbol[0]}
                                         </div>
-                                        <div>
-                                            <p className={`font-black uppercase italic tracking-tighter ${i === selectedIndex ? "text-white" : "text-zinc-900 dark:text-white"}`}>
+                                        <div className="min-w-0">
+                                            <p className={`font-black uppercase italic tracking-tighter truncate ${i === selectedIndex ? "text-white" : "text-zinc-900 dark:text-white"}`}>
                                                 {stock.symbol}
                                             </p>
-                                            <p className={`text-[10px] font-bold uppercase tracking-widest ${i === selectedIndex ? "text-blue-100" : "text-zinc-500"}`}>
+                                            <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${i === selectedIndex ? "text-blue-100" : "text-zinc-500"}`}>
                                                 {stock.name}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col items-end">
-                                        <p className={`font-mono font-black ${i === selectedIndex ? "text-white" : "text-zinc-900 dark:text-white"}`}>
-                                            Rs.{stock.currentPrice}
+                                    <div className="flex flex-col items-end shrink-0">
+                                        <p className={`font-mono font-black tabular-nums ${i === selectedIndex ? "text-white" : "text-zinc-900 dark:text-white"}`}>
+                                            Rs.{(stock.currentPrice ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </p>
                                         <p className={`text-[10px] font-black ${stock.change >= 0 ? (i === selectedIndex ? 'text-green-200' : 'text-green-500') : (i === selectedIndex ? 'text-red-200' : 'text-red-500')}`}>
                                             {stock.change >= 0 ? '▲' : '▼'}{Math.abs(stock.changePercent)}%
@@ -167,7 +169,7 @@ export default function CommandPalette() {
                             <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Navigate</span>
                         </div>
                     </div>
-                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Terminal Intelligence v2.0</p>
+                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">AlphaBazaar v1.0</p>
                 </div>
             </div>
         </div>

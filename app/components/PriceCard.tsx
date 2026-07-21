@@ -28,11 +28,11 @@ export default function PriceCard({
   const currencySymbol = currency === 'PKR' ? 'Rs.' : '$';
 
   return (
-    <div className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm hover:shadow-2xl transition-all duration-500 relative overflow-hidden">
+    <div className="group h-full flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-8 shadow-sm hover:shadow-2xl transition-all duration-500 relative overflow-hidden">
       {/* Decorative background element */}
       <div className={`absolute top-0 right-0 w-32 h-32 opacity-[0.03] dark:opacity-[0.05] rounded-bl-full translate-x-12 -translate-y-12 transition-transform duration-700 group-hover:scale-150 ${isPositive ? 'bg-green-500' : 'bg-red-500'}`}></div>
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex-1 flex flex-col">
         <div className="flex justify-between items-start mb-6">
           <div className="space-y-1">
             <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter uppercase italic">
@@ -60,11 +60,11 @@ export default function PriceCard({
             <p className="text-red-500 text-xs font-black uppercase tracking-widest">Connection Interrupted</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1 flex flex-col">
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-medium text-zinc-400">{currencySymbol}</span>
-                <span className="text-3xl lg:text-5xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono break-all sm:break-normal">
+                <span className="text-xl sm:text-2xl font-medium text-zinc-400 shrink-0">{currencySymbol}</span>
+                <span className="text-2xl sm:text-4xl lg:text-5xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono tabular-nums break-words min-w-0">
                   {(displayPrice || 0).toLocaleString(undefined, { 
                     minimumFractionDigits: (displayPrice || 0) < 10 ? 4 : 2, 
                     maximumFractionDigits: (displayPrice || 0) < 10 ? 4 : 2 
@@ -83,7 +83,7 @@ export default function PriceCard({
               </div>
             </div>
 
-            <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+            <div className="mt-auto pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
               <div className="space-y-0.5">
                 <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Market Refresh</p>
                 <p className="text-[10px] font-bold text-zinc-900 dark:text-zinc-50">{lastUpdated}</p>

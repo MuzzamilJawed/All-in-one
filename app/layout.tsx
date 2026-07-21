@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Sidebar from "./components/Sidebar";
+import AppShell from "./components/AppShell";
 import CommandPalette from "./components/CommandPalette";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SettingsProvider } from "./context/SettingsContext";
+import { SidebarProvider } from "./context/SidebarContext";
+import { ToastProvider } from "./context/ToastContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "All-in-One Dashboard",
-  description: "Your centralized hub for gold, silver, and PSX stocks",
+  title: "AlphaBazaar — Markets & Analysis",
+  description: "Track PSX stocks, gold & silver, forex, crypto and oil — with movers, heatmaps, watchlists and price alerts.",
 };
 
 export default function RootLayout({
@@ -38,13 +40,12 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div className="flex bg-zinc-50 dark:bg-[#050505]">
-              <Sidebar />
-              <main className="flex-1 lg:ml-64 min-w-0">
-                {children}
-              </main>
-            </div>
-            <CommandPalette />
+            <SidebarProvider>
+              <ToastProvider>
+                <AppShell>{children}</AppShell>
+                <CommandPalette />
+              </ToastProvider>
+            </SidebarProvider>
           </ThemeProvider>
         </SettingsProvider>
       </body>

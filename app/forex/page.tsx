@@ -1,6 +1,7 @@
 "use client";
 
-import PriceCard from "../components/PriceCard";
+import PageSkeleton from "../components/PageSkeleton";
+
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "../context/SettingsContext";
 import dynamic from 'next/dynamic';
@@ -23,7 +24,8 @@ export default function ForexPage() {
             if (!res.ok) throw new Error("Failed to fetch rates");
             const data = await res.json();
             setForexRates(data);
-            if (!selectedPair && data.length > 0) setSelectedPair(data[1]); // Default to first pair after USD
+            setError("");
+            if (!selectedPair && data.length > 0) setSelectedPair(data[1] ?? data[0]); // Default to first pair after USD
         } catch (err) {
             setError("Unable to load exchange rates");
         } finally {
@@ -74,6 +76,8 @@ export default function ForexPage() {
         setTrendData(data);
     }, [selectedPair, currency, chartTF]);
 
+    if (loading && forexRates.length === 0) return <PageSkeleton variant="table" />;
+
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
             {/* Dynamic Background */}
@@ -83,7 +87,7 @@ export default function ForexPage() {
             </div>
 
             <div className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
-                <header className="mb-8 sm:mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8">
+                <header className="mb-8 sm:mb-12 pl-12 lg:pl-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8">
                     <div>
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                             <h1 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">💱 Forex Terminal</h1>
@@ -114,7 +118,7 @@ export default function ForexPage() {
                         <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900/50">
                             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Market Watch</h2>
                         </div>
-                        <div className="flex-1 overflow-y-auto no-scrollbar">
+                        <div className="flex-1 overflow-y-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead className="sticky top-0 z-20 bg-zinc-50/90 dark:bg-zinc-900/90 backdrop-blur-md">
                                     <tr className="border-b border-zinc-200 dark:border-white/5">
@@ -124,6 +128,16 @@ export default function ForexPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
+                                    {loading && forexRates.length === 0 && (
+                                        <tr>
+                                            <td colSpan={3} className="px-6 py-16 text-center">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                                    <p className="text-zinc-500 font-black uppercase text-[9px] tracking-widest">Loading...</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
                                     {forexRates.map((rate) => (
                                         <tr 
                                             key={rate.code}
@@ -144,7 +158,7 @@ export default function ForexPage() {
                                                 </div>
                                             </td>
                                             <td className={`px-4 py-5 text-right font-mono text-sm font-black tracking-tighter ${selectedPair?.code === rate.code ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-white'}`}>
-                                                {currency === 'PKR' ? rate.pkrPrice.toFixed(2) : rate.usdPrice.toFixed(4)}
+                                                {currency === 'PKR' ? (rate.pkrPrice ?? 0).toFixed(2) : (rate.usdPrice ?? 0).toFixed(4)}
                                             </td>
                                             <td className={`px-6 py-5 text-right text-[10px] font-black ${rate.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                                 {rate.changePercent >= 0 ? '▲' : '▼'}{Math.abs(rate.changePercent).toFixed(2)}%
@@ -172,7 +186,7 @@ export default function ForexPage() {
                         </div>
 
                         {/* Tactical Stats Overlay */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6">
+                        <div className="grid grid-cols-3 gap-3 sm:gap-6">
                             {[
                                 { label: 'Volatility', val: (Math.random() * 0.5 + 0.1).toFixed(2) + '%', color: 'text-blue-500', icon: '⚡' },
                                 { label: 'Spread', val: '0.0001 pts', color: 'text-indigo-500', icon: '📊' },

@@ -84,7 +84,7 @@ export default function NasdaqSymbolPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">Accessing NASDAQ Satellite Feed...</p>
@@ -94,9 +94,9 @@ export default function NasdaqSymbolPage() {
     }
     if (!stock) {
         return (
-          <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
               <div className="text-center">
-                  <h1 className="text-4xl font-black text-white italic uppercase mb-4">Route Error</h1>
+                  <h1 className="text-2xl sm:text-4xl font-black text-white italic uppercase mb-4">Route Error</h1>
                   <p className="text-zinc-500 mb-8 uppercase text-xs tracking-widest font-black">No market data available for {symbol}</p>
                   <button onClick={() => router.push('/nasdaq')} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-500 transition-all">Back to NASDAQ Console</button>
               </div>
@@ -106,24 +106,24 @@ export default function NasdaqSymbolPage() {
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white p-6">
-            <button onClick={() => router.back()} className="text-blue-600 font-black tracking-widest text-[10px] uppercase hover:underline mb-8 flex items-center gap-2">← Back to Console</button>
+            <button onClick={() => router.back()} className="text-blue-600 font-black tracking-widest text-[10px] uppercase hover:underline mb-8 pl-10 lg:pl-0 flex items-center gap-2">← Back to Console</button>
             <div className="max-w-4xl mx-auto space-y-12">
                 <div className="max-w-md">
                     <StockCard {...stock} exchange="NASDAQ" />
                 </div>
                 
                 {stock.history && (
-                    <div className="bg-white dark:bg-zinc-900 rounded-[3.5rem] p-10 border border-zinc-200 dark:border-zinc-800 shadow-2xl relative overflow-hidden group">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3.5rem] p-5 sm:p-10 border border-zinc-200 dark:border-zinc-800 shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                             <span className="text-[12rem] font-black italic text-blue-500 uppercase select-none">{stock.symbol}</span>
                         </div>
                         <div className="flex justify-between items-center mb-12 relative z-10">
                             <div>
-                                <h2 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Satellite Velocity Terminal</h2>
+                                <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Satellite Velocity Terminal</h2>
                                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Institutional Technical Feed: {stock.symbol} / {displayCurrency}</p>
                             </div>
                         </div>
-                        <div className="h-[550px] relative z-10">
+                        <div className="h-[350px] sm:h-[550px] relative z-10">
                             <TradingChart 
                                 title={`${stock.symbol} / ${displayCurrency}`} 
                                 data={stock.history} 

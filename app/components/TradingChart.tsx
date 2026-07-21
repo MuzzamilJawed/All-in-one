@@ -283,21 +283,21 @@ export default function TradingChart({
     }, [isFullscreen]);
 
     const chartContent = (
-        <div className={`flex flex-col ${isFullscreen ? '!fixed !top-0 !left-0 !w-screen !h-screen !z-[10000] bg-black p-4' : (seamless ? 'h-full bg-transparent' : 'bg-white dark:bg-[#050505] rounded-[2.5rem] pt-8 px-8 pb-6 border border-zinc-200 dark:border-white/5 shadow-2xl h-full')}`}>
+        <div className={`flex flex-col ${isFullscreen ? '!fixed !top-0 !left-0 !w-screen !h-screen !z-[10000] bg-black p-4' : (seamless ? 'h-full bg-transparent' : 'bg-white dark:bg-[#050505] rounded-2xl sm:rounded-[2.5rem] pt-4 px-4 pb-4 sm:pt-8 sm:px-8 sm:pb-6 border border-zinc-200 dark:border-white/5 shadow-2xl h-full')}`}>
             {/* Header Content */}
-            <div className={`flex justify-between items-center shrink-0 ${seamless ? 'mb-4' : 'mb-6'}`}>
-                <div className="flex items-center gap-6">
-                    <div>
+            <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 shrink-0 ${seamless ? 'mb-4' : 'mb-6'}`}>
+                <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+                    <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                            <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">{title}</h3>
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${currentTimeframe === '1H' ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                            <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] truncate">{title}</h3>
+                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase shrink-0 ${currentTimeframe === '1H' ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
                                 {currentTimeframe}
                             </span>
                         </div>
-                        <h4 className="text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-tight mt-1">Market Vectors</h4>
+                        <h4 className="text-lg sm:text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-tight mt-1">Market Vectors</h4>
                     </div>
                     {hoverData && (
-                        <div className="flex items-center gap-6 px-6 py-3 bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-left-4">
+                        <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-left-4">
                             {[
                                 { k: 'O', v: hoverData.open },
                                 { k: 'H', v: hoverData.high, c: 'text-green-500' },
@@ -314,33 +314,33 @@ export default function TradingChart({
                         </div>
                     )}
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4 flex-wrap shrink-0">
                     <div className="flex bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-inner">
                         {['1H', '1D', '1W', '1M'].map(tf => (
                             <button
                                 key={tf}
                                 onClick={() => onTimeframeChange?.(tf)}
-                                className={`px-4 py-2 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest ${currentTimeframe === tf ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}
+                                className={`px-3 sm:px-4 py-2 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest ${currentTimeframe === tf ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}
                             >
                                 {tf}
                             </button>
                         ))}
                     </div>
-                    <button onClick={() => setIsFullscreen(!isFullscreen)} className="px-5 py-2.5 text-[9px] font-black bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all uppercase tracking-widest">
+                    <button onClick={() => setIsFullscreen(!isFullscreen)} className="px-3 sm:px-5 py-2 sm:py-2.5 text-[9px] font-black bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all uppercase tracking-widest">
                         {isFullscreen ? '✕ Exit' : '⛶ Full'}
                     </button>
                 </div>
             </div>
 
             {/* Main Chart Container */}
-            <div 
-                ref={chartContainerRef} 
-                className={`flex-1 relative overflow-hidden transition-all duration-300 ${isFullscreen ? 'rounded-none border-none' : 'h-full border border-zinc-100 dark:border-zinc-800/50 rounded-[2rem]'}`} 
+            <div
+                ref={chartContainerRef}
+                className={`flex-1 relative overflow-hidden transition-all duration-300 min-h-[260px] sm:min-h-[380px] ${isFullscreen ? 'rounded-none border-none min-h-0' : 'h-full border border-zinc-100 dark:border-zinc-800/50 rounded-2xl sm:rounded-[2rem]'}`}
             />
 
             {/* Footer / Legend */}
-            <div className={`flex items-center justify-between shrink-0 ${seamless ? 'mt-3' : 'mt-4'}`}>
-                <div className="flex items-center gap-6">
+            <div className={`flex flex-wrap items-center justify-between gap-2 shrink-0 ${seamless ? 'mt-3' : 'mt-4'}`}>
+                <div className="flex items-center gap-2 sm:gap-6 flex-wrap">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/5 border border-amber-500/10 rounded-lg">
                         <div className="w-2 h-2 bg-amber-500 rounded-full" />
                         <span className="text-[9px] text-amber-500 font-black tracking-widest uppercase">SMA 20</span>
@@ -354,7 +354,7 @@ export default function TradingChart({
                         <span className="text-[9px] text-red-500 font-black tracking-widest uppercase">SMA 200</span>
                     </div>
                 </div>
-                <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em] italic">Precision Market Feed v4.51 (SSE Optimized)</p>
+                <p className="hidden sm:block text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em] italic">Precision Market Feed v4.51 (SSE Optimized)</p>
             </div>
         </div>
     );

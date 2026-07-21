@@ -92,7 +92,7 @@ export default function OilDetailPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">Synchronizing Market Feeds...</p>
@@ -103,7 +103,7 @@ export default function OilDetailPage() {
 
     if (!item) {
         return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
                 <div className="text-center">
                     <h1 className="text-4xl font-black text-white italic uppercase mb-4">404 Terminal Error</h1>
                     <p className="text-zinc-500 mb-8 uppercase text-xs tracking-widest font-black">Asset not found in energy constellation</p>
@@ -120,7 +120,7 @@ export default function OilDetailPage() {
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30">
             {/* Header */}
             <div className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto px-8 py-6 flex justify-between items-center">
+                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center">
                     <div className="flex items-center gap-6">
                         <button onClick={() => router.push('/oil')} className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group">
                             <span className="text-zinc-500 group-hover:text-blue-500 transition-colors">←</span>
@@ -136,25 +136,25 @@ export default function OilDetailPage() {
                 </div>
             </div>
 
-            <main className="max-w-[1600px] mx-auto p-8 space-y-12">
+            <main className="max-w-[1600px] mx-auto p-4 sm:p-8 space-y-8 sm:space-y-12">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
                     {[
-                        { label: "Execution Price", value: `${priceSymbol}${formatPrice(currentPrice)}`, sub: `${item.changePercent >= 0 ? '+' : ''}${item.changePercent.toFixed(2)}%`, color: item.changePercent >= 0 ? 'text-green-500' : 'text-red-500' },
+                        { label: "Execution Price", value: `${priceSymbol}${formatPrice(currentPrice)}`, sub: `${(item.changePercent ?? 0) >= 0 ? '+' : ''}${(item.changePercent ?? 0).toFixed(2)}%`, color: (item.changePercent ?? 0) >= 0 ? 'text-green-500' : 'text-red-500' },
                         { label: "Weekly Momentum", value: `${item.weekly > 0 ? '+' : ''}${item.weekly}%`, sub: "7D Analysis", color: item.weekly >= 0 ? 'text-green-500' : 'text-red-500' },
                         { label: "Monthly Outlook", value: `${item.monthly > 0 ? '+' : ''}${item.monthly}%`, sub: "30D Projection", color: item.monthly >= 0 ? 'text-green-500' : 'text-red-500' },
                         { label: "Volume Scrip", value: "CONSOLIDATED", sub: "Market Dynamics", color: 'text-blue-500' },
                     ].map((stat, i) => (
-                        <div key={i} className="bg-white dark:bg-zinc-900/50 p-8 rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-sm">
+                        <div key={i} className="bg-white dark:bg-zinc-900/50 p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-sm">
                             <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2">{stat.label}</p>
-                            <div className="text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter mb-1">{stat.value}</div>
+                            <div className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter mb-1">{stat.value}</div>
                             <div className={`text-[10px] font-black ${stat.color}`}>{stat.sub}</div>
                         </div>
                     ))}
                 </div>
 
                 {/* Main Technical Chart */}
-                <div className="bg-white dark:bg-zinc-900 rounded-[3.5rem] p-10 border border-zinc-200 dark:border-white/5 shadow-xl relative overflow-hidden group">
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3.5rem] p-5 sm:p-10 border border-zinc-200 dark:border-white/5 shadow-xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                         <span className="text-[12rem] font-black italic text-blue-500 uppercase select-none">{symbol}</span>
                     </div>
@@ -166,7 +166,7 @@ export default function OilDetailPage() {
                         </div>
                     </div>
 
-                    <div className="h-[600px] w-full relative z-10">
+                    <div className="h-[360px] sm:h-[600px] w-full relative z-10">
                         <TradingChart
                             title={`${item.name} Market Analysis`}
                             data={candles}
@@ -178,7 +178,7 @@ export default function OilDetailPage() {
                 </div>
 
                 {/* Intelligence & News Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
                     <div className="space-y-8">
                         <div className="flex items-center gap-3">
                             <span className="text-2xl">📰</span>
@@ -189,7 +189,7 @@ export default function OilDetailPage() {
                                 { title: "Global Supply Chain Resilience", time: "2H AGO", text: `Detailed analysis of current extraction rates for ${item.name} reveals a robust movement profile despite regional volatility markers.`, tag: "HOT" },
                                 { title: "Satellite Inventory Assessment", time: "5H AGO", text: "New imagery confirms a 1.2% expansion in terminal storage, suggesting a stable flow forecast for the next financial quarter.", tag: "LIVE" }
                             ].map((news, i) => (
-                                <div key={i} className="bg-white dark:bg-zinc-900/50 p-8 rounded-[2.5rem] border border-zinc-200 dark:border-white/5 relative overflow-hidden group">
+                                <div key={i} className="bg-white dark:bg-zinc-900/50 p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 relative overflow-hidden group">
                                     <div className="absolute top-0 right-0 p-6 opacity-10 font-black text-5xl italic uppercase select-none group-hover:scale-110 transition-transform">{news.tag}</div>
                                     <div className="relative z-10">
                                         <p className="text-[9px] font-black text-blue-500 mb-2 uppercase tracking-widest">{news.time}</p>
@@ -206,23 +206,23 @@ export default function OilDetailPage() {
                             <span className="text-2xl">🔮</span>
                             <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Refinery Outlook</h3>
                         </div>
-                        <div className="bg-zinc-900 rounded-[3rem] p-10 border border-white/5 relative overflow-hidden h-full">
+                        <div className="bg-zinc-900 rounded-2xl sm:rounded-[3rem] p-5 sm:p-10 border border-white/5 relative overflow-hidden h-full">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px]"></div>
                             <div className="relative z-10 space-y-10">
                                 <div>
                                     <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Sentiment Synthesis</p>
-                                    <div className="text-4xl font-black text-white italic uppercase tracking-tighter leading-none mb-4">Strategic <br /> <span className="text-blue-500">Accumulation</span></div>
+                                    <div className="text-2xl sm:text-4xl font-black text-white italic uppercase tracking-tighter leading-none mb-4">Strategic <br /> <span className="text-blue-500">Accumulation</span></div>
                                     <p className="text-zinc-400 text-sm leading-relaxed font-medium">Automated analysis engine indicates that {item.name} is entering a period of technical consolidation with a bullish bias for the Q3 interval.</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-6">
-                                    <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+                                    <div className="bg-white/5 p-6 rounded-3xl border border-white/10 min-w-0">
                                         <p className="text-[8px] font-black text-green-500 uppercase tracking-widest mb-2">Technical Support</p>
-                                        <p className="text-xl font-black text-white font-mono">{priceSymbol}{formatPrice(currentPrice * 0.94)}</p>
+                                        <p className="text-lg sm:text-xl font-black text-white font-mono">{priceSymbol}{formatPrice(currentPrice * 0.94)}</p>
                                     </div>
-                                    <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+                                    <div className="bg-white/5 p-6 rounded-3xl border border-white/10 min-w-0">
                                         <p className="text-[8px] font-black text-red-500 uppercase tracking-widest mb-2">Resistance Band</p>
-                                        <p className="text-xl font-black text-white font-mono">{priceSymbol}{formatPrice(currentPrice * 1.07)}</p>
+                                        <p className="text-lg sm:text-xl font-black text-white font-mono">{priceSymbol}{formatPrice(currentPrice * 1.07)}</p>
                                     </div>
                                 </div>
 

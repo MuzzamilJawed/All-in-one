@@ -46,8 +46,16 @@ function MarketTerminalContent() {
     const [selectedAsset, setSelectedAsset] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [candles, setCandles] = useState<any[]>([]);
+    const [dayRange, setDayRange] = useState<{ high: number | null; low: number | null }>({ high: null, low: null });
     const [chartLoading, setChartLoading] = useState(false);
+    const [clockTime, setClockTime] = useState("");
     const { settings } = useSettings();
+
+    useEffect(() => {
+        setClockTime(new Date().toLocaleTimeString());
+        const id = setInterval(() => setClockTime(new Date().toLocaleTimeString()), 60000);
+        return () => clearInterval(id);
+    }, []);
 
     const fetchHistory = useCallback(async (symbol: string, tf: string, asset: any) => {
         setChartLoading(true);
@@ -55,6 +63,12 @@ function MarketTerminalContent() {
             const res = await fetch(`/api/psx-history?symbol=${symbol}&timeframe=${tf}`);
             const json = await res.json();
             
+            // Session (day) high/low reported by the data provider (indices via PSX feed)
+            setDayRange({
+                high: typeof json.dayHigh === 'number' ? json.dayHigh : null,
+                low: typeof json.dayLow === 'number' ? json.dayLow : null,
+            });
+
             if (json.success && json.data) {
                 let history = [...json.data];
                 
@@ -275,7 +289,7 @@ function MarketTerminalContent() {
     }
 
     return (
-        <div className="h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white flex flex-col overflow-hidden selection:bg-blue-500/30">
+        <div className="min-h-screen lg:h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white flex flex-col lg:overflow-hidden selection:bg-blue-500/30">
             {/* Dynamic Background Glows */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/5 dark:bg-blue-600/10 blur-[120px] rounded-full"></div>
@@ -283,7 +297,7 @@ function MarketTerminalContent() {
             </div>
 
             {/* Minimalist Professional Header */}
-            <header className="h-16 border-b border-zinc-200 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl flex items-center justify-between px-4 sm:px-8 shrink-0 relative z-30">
+            <header className="h-16 border-b border-zinc-200 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl flex items-center justify-between pl-16 pr-4 sm:pr-8 lg:pl-8 shrink-0 relative z-30">
                 <div className="flex items-center gap-3 sm:gap-6">
                     <button
                         onClick={() => router.push('/stocks')}
@@ -312,14 +326,22 @@ function MarketTerminalContent() {
                         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Live</span>
                     </div>
                     <div className="hidden lg:block text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest">
-                        EST {new Date().toLocaleTimeString()}
+                        {clockTime ? `EST ${clockTime}` : ""}
                     </div>
                 </div>
             </header>
 
-            <div className="flex-1 flex overflow-hidden relative h-full">
+            <div className="flex-1 flex lg:overflow-hidden relative h-full">
+                {/* Mobile Drawer Backdrop Scrim */}
+                {isSidebarOpen && (
+                    <div
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                    />
+                )}
+
                 {/* Lateral Navigation Pane - Mobile Drawer & Desktop Sidebar */}
-                <aside 
+                <aside
                     data-testid="equity-watch-list"
                     className={`fixed lg:relative inset-y-0 left-0 w-[300px] sm:w-[380px] h-full border-r border-zinc-200 dark:border-white/5 bg-white dark:bg-[#080808] lg:bg-white/40 lg:dark:bg-black/20 backdrop-blur-3xl lg:backdrop-blur-md flex flex-col shrink-0 overflow-hidden transform transition-transform duration-300 ease-in-out z-50 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                     <div className="p-6 border-b border-zinc-200 dark:border-white/5 space-y-6">
@@ -380,10 +402,10 @@ function MarketTerminalContent() {
                 </aside>
 
                 {/* Main Visualization Center */}
-                <main className="flex-1 bg-zinc-50/50 dark:bg-black/40 flex flex-col overflow-hidden relative">
+                <main className="flex-1 bg-zinc-50/50 dark:bg-black/40 flex flex-col lg:overflow-hidden relative">
                     <div className="h-20 lg:h-24 bg-gradient-to-r from-transparent via-blue-900/5 to-transparent border-b border-zinc-200 dark:border-white/5 flex items-center justify-between px-4 sm:px-10 shrink-0">
                         {selectedAsset && (
-                            <div className="flex items-center gap-12">
+                            <div className="flex flex-wrap items-center gap-4 lg:gap-10">
                                 <div>
                                     <div className="flex items-center gap-3 sm:gap-4 mb-1">
                                         <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter truncate max-w-[150px] sm:max-w-none">{selectedAsset.symbol}</h2>
@@ -394,9 +416,19 @@ function MarketTerminalContent() {
                                     <p className="text-zinc-500 text-[8px] sm:text-[11px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] truncate max-w-[200px] sm:max-w-none">{selectedAsset.name || selectedAsset.symbol} {selectedAsset.sector ? `• ${selectedAsset.sector}` : ''}</p>
                                 </div>
 
+                                {/* Compact price + change (mobile only) */}
+                                <div className="flex sm:hidden items-center gap-2">
+                                    <p className="text-lg font-black font-mono text-zinc-900 dark:text-white leading-none">
+                                        {viewMode === 'indices' ? '' : 'Rs.'}{selectedAsset.currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </p>
+                                    <span className={`text-xs font-bold ${selectedAsset.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                        {selectedAsset.changePercent >= 0 ? '+' : ''}{selectedAsset.changePercent?.toFixed(2)}%
+                                    </span>
+                                </div>
+
                                 <div className="h-10 w-[1px] bg-zinc-200 dark:bg-white/10 hidden md:block"></div>
 
-                                <div className="hidden sm:flex items-center gap-6 sm:gap-10">
+                                <div className="hidden sm:flex items-center gap-4 lg:gap-10">
                                     <div>
                                         <p className="text-[8px] sm:text-[9px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-1">Current Price</p>
                                         <p className="text-xl sm:text-2xl font-black font-mono text-zinc-900 dark:text-white leading-none">
@@ -424,12 +456,40 @@ function MarketTerminalContent() {
                                             </div>
                                         </>
                                     )}
+                                    {viewMode === 'indices' && (dayRange.high != null || dayRange.low != null) && (
+                                        <>
+                                            <div className="h-8 w-[1px] bg-zinc-200 dark:bg-white/10 hidden lg:block"></div>
+                                            <div className="hidden lg:block">
+                                                <p className="text-[8px] sm:text-[9px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-1">Day High / Low</p>
+                                                <div className="flex items-center gap-2 leading-none">
+                                                    <span className="text-sm sm:text-base font-black font-mono text-green-500">
+                                                        {dayRange.high != null ? dayRange.high.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                                                    </span>
+                                                    <span className="text-zinc-400 dark:text-zinc-600 text-xs">/</span>
+                                                    <span className="text-sm sm:text-base font-black font-mono text-red-500">
+                                                        {dayRange.low != null ? dayRange.low.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         )}
+
+                        {/* Full Report Button */}
+                        {selectedAsset && viewMode === 'stocks' && (
+                            <button
+                                onClick={() => router.push(`/stocks/report/${selectedAsset.symbol}?exchange=PSX`)}
+                                className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-blue-400 dark:hover:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl border border-blue-500/30 hover:border-blue-600 transition-all duration-200 shrink-0 group"
+                            >
+                                <span className="text-sm group-hover:scale-110 transition-transform">📋</span>
+                                <span className="hidden sm:inline">Full Report</span>
+                            </button>
+                        )}
                     </div>
 
-                    <div className="flex-1 p-4 lg:p-6 relative min-h-[600px]">
+                    <div className="flex-1 p-4 lg:p-6 relative min-h-[320px] lg:min-h-[600px]">
                         <div className="absolute inset-0 p-4 lg:p-6 flex flex-col">
                             <div className="flex-1 bg-white dark:bg-black/60 rounded-3xl border border-zinc-200 dark:border-white/5 overflow-hidden shadow-[0_0_50px_-12px_rgba(37,99,235,0.15)] transition-all duration-1000 relative">
                                 <div className="h-full w-full relative">

@@ -13,12 +13,12 @@ export default function StatCard({
   change,
   changeLabel,
 }: StatCardProps) {
-  const isPositive = change ? change >= 0 : true;
+  const isPositive = change !== undefined ? change >= 0 : true;
 
   return (
-    <div className="group bg-white dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl p-6 border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
-      <div className="flex items-center justify-between mb-4">
-        <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">
+    <div className="group bg-white dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl p-4 sm:p-6 border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">
           {icon}
         </div>
         {change !== undefined && (

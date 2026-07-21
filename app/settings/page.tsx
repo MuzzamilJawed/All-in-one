@@ -3,13 +3,15 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useSettings } from "../context/SettingsContext";
+import { useToast } from "../context/ToastContext";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { settings, updateSettings } = useSettings();
+  const { success, info } = useToast();
   const [mounted, setMounted] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  // Ensure hydration match
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -25,175 +27,174 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
-    alert("Settings are saved automatically!");
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+    success("Settings saved");
   };
 
+  const handleReset = () => {
+    updateSettings({
+      currency: 'PKR',
+      refreshInterval: 30,
+      notifications: true,
+      soundAlerts: false,
+      priceAlerts: true,
+    });
+    setTheme('system');
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+    info("Settings restored to defaults");
+  };
+
+  const selectClass = "w-full sm:w-auto px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-700 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
+
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
+      {/* Dynamic Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/5 dark:bg-blue-600/10 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/5 dark:bg-indigo-600/10 blur-[120px] rounded-full"></div>
+      </div>
+
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="px-8 py-6">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            ⚙️ Settings
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+        <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
+            ⚙️ Configuration <span className="text-blue-500 text-xl sm:text-2xl">Hub</span>
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400 mt-1">
-            Customize your dashboard experience
+          <p className="text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">
+            Dashboard Preferences & Controls
           </p>
         </div>
-      </div>
+      </header>
 
       {/* Content */}
-      <div className="p-8 max-w-2xl">
-        <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700">
-          <div className="p-6 space-y-6">
-            {/* Display Settings */}
-            <div>
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-4">
-                Display Settings
-              </h2>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-zinc-900 dark:text-zinc-50 font-medium">
-                    Currency
-                  </label>
-                  <select
-                    value={settings.currency}
-                    onChange={(e) => handleChange("currency", e.target.value)}
-                    className="px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 border border-zinc-300 dark:border-zinc-600"
-                  >
-                    <option>PKR</option>
-                    <option>USD</option>
-                    <option>EUR</option>
+      <main className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+
+          {/* Display Settings */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-sm rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden shadow-sm">
+              <div className="px-6 sm:px-8 py-5 border-b border-zinc-100 dark:border-white/5">
+                <h2 className="text-base sm:text-lg font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">Display Settings</h2>
+                <p className="text-zinc-500 text-xs font-bold mt-0.5">Visual preferences for the dashboard</p>
+              </div>
+              <div className="p-6 sm:p-8 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <label className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">Default Currency</label>
+                    <p className="text-xs text-zinc-500 mt-0.5">Prices display in this currency</p>
+                  </div>
+                  <select value={settings.currency} onChange={(e) => handleChange("currency", e.target.value)} className={selectClass}>
+                    <option value="PKR">PKR — Pakistani Rupee</option>
+                    <option value="USD">USD — US Dollar</option>
+                    <option value="EUR">EUR — Euro</option>
                   </select>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="text-zinc-900 dark:text-zinc-50 font-medium">
-                    Theme
-                  </label>
-                  <select
-                    value={mounted ? theme : 'system'}
-                    onChange={(e) => handleChange("theme", e.target.value)}
-                    className="px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 border border-zinc-300 dark:border-zinc-600"
-                  >
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="system">System</option>
+                <div className="border-t border-zinc-100 dark:border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <label className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">Color Theme</label>
+                    <p className="text-xs text-zinc-500 mt-0.5">Light, dark or follow system</p>
+                  </div>
+                  <select value={mounted ? (theme ?? 'system') : 'system'} onChange={(e) => handleChange("theme", e.target.value)} className={selectClass}>
+                    <option value="light">☀️ Light Mode</option>
+                    <option value="dark">🌙 Dark Mode</option>
+                    <option value="system">💻 System Default</option>
                   </select>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="text-zinc-900 dark:text-zinc-50 font-medium">
-                    Refresh Interval (seconds)
-                  </label>
-                  <select
-                    value={settings.refreshInterval}
-                    onChange={(e) => handleChange("refreshInterval", e.target.value)}
-                    className="px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 border border-zinc-300 dark:border-zinc-600"
-                  >
-                    <option value="1">1 second</option>
-                    <option value="5">5 seconds</option>
-                    <option value="10">10 seconds</option>
-                    <option value="30">30 seconds</option>
-                    <option value="60">1 minute</option>
-                    <option value="120">2 minutes</option>
-                    <option value="300">5 minutes</option>
+                <div className="border-t border-zinc-100 dark:border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <label className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">Auto-Refresh Interval</label>
+                    <p className="text-xs text-zinc-500 mt-0.5">How often live data updates</p>
+                  </div>
+                  <select value={settings.refreshInterval} onChange={(e) => handleChange("refreshInterval", e.target.value)} className={selectClass}>
+                    <option value="1">Every 1 second</option>
+                    <option value="5">Every 5 seconds</option>
+                    <option value="10">Every 10 seconds</option>
+                    <option value="30">Every 30 seconds</option>
+                    <option value="60">Every 1 minute</option>
+                    <option value="120">Every 2 minutes</option>
+                    <option value="300">Every 5 minutes</option>
                   </select>
                 </div>
               </div>
             </div>
 
-            <hr className="border-zinc-200 dark:border-zinc-700" />
-
-            {/* Notification Settings */}
-            <div>
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-4">
-                Notifications
-              </h2>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-zinc-900 dark:text-zinc-50 font-medium">
-                    Enable Notifications
-                  </label>
-                  <input
-                    type="checkbox"
-                    checked={settings.notifications}
-                    onChange={(e) => handleChange("notifications", e.target.checked)}
-                    className="w-5 h-5 rounded border-zinc-300 dark:border-zinc-600"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <label className="text-zinc-900 dark:text-zinc-50 font-medium">
-                    Sound Alerts
-                  </label>
-                  <input
-                    type="checkbox"
-                    checked={settings.soundAlerts}
-                    onChange={(e) => handleChange("soundAlerts", e.target.checked)}
-                    className="w-5 h-5 rounded border-zinc-300 dark:border-zinc-600"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <label className="text-zinc-900 dark:text-zinc-50 font-medium">
-                    Price Alerts
-                  </label>
-                  <input
-                    type="checkbox"
-                    checked={settings.priceAlerts}
-                    onChange={(e) => handleChange("priceAlerts", e.target.checked)}
-                    className="w-5 h-5 rounded border-zinc-300 dark:border-zinc-600"
-                  />
-                </div>
+            {/* Notifications */}
+            <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-sm rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden shadow-sm">
+              <div className="px-6 sm:px-8 py-5 border-b border-zinc-100 dark:border-white/5">
+                <h2 className="text-base sm:text-lg font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">Alert Settings</h2>
+                <p className="text-zinc-500 text-xs font-bold mt-0.5">Notifications and market alerts</p>
+              </div>
+              <div className="p-6 sm:p-8 space-y-5">
+                {[
+                  { key: 'notifications', label: 'Enable Notifications', desc: 'System-level push alerts' },
+                  { key: 'soundAlerts', label: 'Sound Alerts', desc: 'Audio cues on price events' },
+                  { key: 'priceAlerts', label: 'Price Alerts', desc: 'Notify on threshold breaches' },
+                ].map(({ key, label, desc }) => (
+                  <div key={key} className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">{label}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
+                    </div>
+                    <button
+                      onClick={() => handleChange(key, !(settings as any)[key])}
+                      className={`relative w-12 h-6 rounded-full transition-all duration-300 shrink-0 ${(settings as any)[key] ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-700'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${(settings as any)[key] ? 'translate-x-6' : ''}`}></span>
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <hr className="border-zinc-200 dark:border-zinc-700" />
-
-            {/* Data & Privacy */}
-            <div>
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-4">
-                Data & Privacy
-              </h2>
-              <div className="space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
-                <p>
-                  • Your data is stored locally in your browser cache
-                </p>
-                <p>
-                  • No personal information is sent to external servers
-                </p>
-                <p>
-                  • Market data is fetched from public APIs
-                </p>
-              </div>
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleSave}
+                className={`flex-1 py-3 px-6 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg ${saved ? 'bg-green-500 text-white shadow-green-500/20' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20 hover:scale-[1.02] active:scale-95'}`}
+              >
+                {saved ? '✓ Saved' : 'Save Settings'}
+              </button>
+              <button
+                onClick={handleReset}
+                className="flex-1 py-3 px-6 rounded-2xl font-black uppercase text-xs tracking-widest bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-all"
+              >
+                Reset to Default
+              </button>
             </div>
           </div>
 
-          {/* Save Button */}
-          <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-800 border-t border-zinc-200 dark:border-zinc-700 flex gap-3">
-            <button
-              onClick={handleSave}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              Save Settings
-            </button>
-            <button
-              onClick={() => alert("Settings reset to default")}
-              className="flex-1 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-50 font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              Reset to Default
-            </button>
+          {/* Sidebar Info */}
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-sm rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 sm:p-8 shadow-sm">
+              <h3 className="text-sm font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4">Data & Privacy</h3>
+              <ul className="space-y-3">
+                {[
+                  'Data stored locally in your browser',
+                  'No personal info sent to servers',
+                  'Market data from public APIs',
+                  'Settings auto-saved on change',
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1 shrink-0"></span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 sm:p-8 text-white">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-200 mb-2">Pro Tip</p>
+              <p className="text-sm font-bold leading-relaxed text-blue-50">
+                Set refresh interval to 30s or higher to reduce API calls and improve performance during long sessions.
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Info */}
-        <div className="mt-6 bg-blue-50 dark:bg-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-          <p className="text-sm text-blue-900 dark:text-blue-100">
-            <strong>ℹ️ Tip:</strong> Your settings are saved automatically. Visit this page anytime to update your preferences.
-          </p>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }

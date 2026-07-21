@@ -27,9 +27,47 @@ export async function GET(request: Request) {
         };
 
         const lookupSymbol = yahooSymbol.toUpperCase();
+
+        // PSX indices are NOT available on Yahoo Finance (every ^KSE100 etc. 404s).
+        // Use PSX's own intraday time-series feed to derive the session high/low.
+        // This branch ALWAYS returns HTTP 200 (with null high/low on failure) so the
+        // client never logs a repeating "failed to load resource" console error.
         if (indexMapping[lookupSymbol]) {
-            yahooSymbol = indexMapping[lookupSymbol];
-        } else if (!yahooSymbol.includes('.') && !yahooSymbol.startsWith('^')) {
+            try {
+                const psxRes = await fetch(`https://dps.psx.com.pk/timeseries/int/${encodeURIComponent(lookupSymbol)}`, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Cache-Control': 'no-cache',
+                    },
+                    next: { revalidate: 30 },
+                });
+
+                if (psxRes.ok) {
+                    const psxJson = await psxRes.json();
+                    // Expected shape: { status: 1, data: [ [unixTs, price, volume], ... ] }
+                    const rows = Array.isArray(psxJson?.data) ? psxJson.data : [];
+                    const prices: number[] = rows
+                        .map((r: any) => Number(Array.isArray(r) ? r[1] : r?.price))
+                        .filter((n: number) => Number.isFinite(n) && n > 0);
+
+                    if (prices.length > 0) {
+                        return NextResponse.json({
+                            success: true,
+                            symbol: lookupSymbol,
+                            dayHigh: Math.max(...prices),
+                            dayLow: Math.min(...prices),
+                            data: [],
+                        });
+                    }
+                }
+            } catch {
+                // fall through to graceful empty response
+            }
+
+            return NextResponse.json({ success: true, symbol: lookupSymbol, dayHigh: null, dayLow: null, data: [] });
+        }
+
+        if (!yahooSymbol.includes('.') && !yahooSymbol.startsWith('^')) {
             // Most PSX stocks on Yahoo use .KA (Karachi)
             yahooSymbol = `${yahooSymbol}.KA`;
         }
@@ -111,9 +149,13 @@ export async function GET(request: Request) {
             };
         }).filter((d: any) => d.open != null && d.close != null);
 
+        const meta = result.meta || {};
+
         return NextResponse.json({
             success: true,
             symbol: yahooSymbol,
+            dayHigh: meta.regularMarketDayHigh ?? null,
+            dayLow: meta.regularMarketDayLow ?? null,
             data: formattedData
         });
 

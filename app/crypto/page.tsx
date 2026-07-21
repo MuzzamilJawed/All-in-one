@@ -1,6 +1,7 @@
 "use client";
 
-import PriceCard from "../components/PriceCard";
+import PageSkeleton from "../components/PageSkeleton";
+
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "../context/SettingsContext";
 import dynamic from 'next/dynamic';
@@ -23,6 +24,7 @@ export default function CryptoPage() {
             if (!res.ok) throw new Error("Failed to fetch crypto prices");
             const data = await res.json();
             setCryptoData(data);
+            setError("");
             if (!selectedCoin && data.length > 0) setSelectedCoin(data[0]);
         } catch (err) {
             setError("Unable to load crypto market data");
@@ -83,52 +85,77 @@ export default function CryptoPage() {
         return colors[symbol] || '#3b82f6';
     };
 
+    if (loading && cryptoData.length === 0) return <PageSkeleton variant="cards" />;
+
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-black p-3 sm:p-8">
-            <div className="max-w-7xl mx-auto">
-                <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
+            {/* Dynamic Background */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-600/5 dark:bg-orange-600/8 blur-[120px] rounded-full"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 dark:bg-blue-600/8 blur-[120px] rounded-full"></div>
+            </div>
+
+            {/* Sticky Header */}
+            <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase italic tracking-tighter">
-                            ₿ Crypto Hub
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2">
+                            ₿ Crypto <span className="text-orange-500">Hub</span>
                             <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">Live</span>
                         </h1>
-                        <p className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-sm mt-1 font-bold uppercase tracking-wide">Global Digital Asset Pulse</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">Global Digital Asset Pulse</p>
                     </div>
-
                     <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700">
-                        <button onClick={() => updateSettings({ currency: 'USD' })} className={`flex-1 sm:flex-none px-4 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${displayCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-orange-500' : 'text-zinc-500'}`}>USD View</button>
-                        <button onClick={() => updateSettings({ currency: 'PKR' })} className={`flex-1 sm:flex-none px-4 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${displayCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600' : 'text-zinc-500'}`}>PKR View</button>
+                        <button onClick={() => updateSettings({ currency: 'USD' })} className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 text-[10px] sm:text-xs font-black rounded-lg transition-all uppercase tracking-widest ${displayCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-orange-500' : 'text-zinc-500'}`}>USD View</button>
+                        <button onClick={() => updateSettings({ currency: 'PKR' })} className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 text-[10px] sm:text-xs font-black rounded-lg transition-all uppercase tracking-widest ${displayCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600' : 'text-zinc-500'}`}>PKR View</button>
                     </div>
-                </header>
+                </div>
+            </header>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-8">
+            <div className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
+
+                {error && (
+                    <div className="mb-8 p-6 bg-red-500/10 border border-red-500/20 rounded-[2.5rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+                        <span className="text-2xl">⚠️</span>
+                        <p className="text-red-500 font-black uppercase text-xs tracking-widest">{error}</p>
+                    </div>
+                )}
+
+                {loading && cryptoData.length === 0 && (
+                    <div className="py-24 flex flex-col items-center justify-center gap-4">
+                        <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">Loading Market Data...</p>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-8">
                     {cryptoData.slice(0, 5).map((coin) => (
                         <div key={coin.id} onClick={() => setSelectedCoin(coin)} className="cursor-pointer group">
                             <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${selectedCoin?.id === coin.id ? 'bg-white dark:bg-zinc-900 border-orange-500/50 shadow-xl' : 'bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 hover:border-zinc-700'}`}>
                                 <div className="flex justify-between items-center mb-2 sm:mb-3">
                                     <span className="font-black text-zinc-900 dark:text-zinc-50 text-xs sm:text-sm tracking-tighter uppercase italic">{coin.symbol}</span>
                                     <span className={`text-[10px] font-black ${coin.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                        {coin.changePercent >= 0 ? '+' : ''}{coin.changePercent.toFixed(1)}%
+                                        {coin.changePercent >= 0 ? '+' : ''}{(coin.changePercent ?? 0).toFixed(1)}%
                                     </span>
                                 </div>
                                 <div className="text-lg sm:text-2xl font-mono font-black text-zinc-900 dark:text-white tracking-tighter italic">
-                                    {displayCurrency === 'USD' ? '$' : 'Rs.'}{(displayCurrency === 'USD' ? coin.usdPrice : coin.pkrPrice).toLocaleString(undefined, { maximumFractionDigits: coin.usdPrice > 1 ? 2 : 4 })}
+                                    {displayCurrency === 'USD' ? '$' : 'Rs.'}{(displayCurrency === 'USD' ? (coin.usdPrice ?? 0) : (coin.pkrPrice ?? 0)).toLocaleString(undefined, { maximumFractionDigits: (coin.usdPrice ?? 0) > 1 ? 2 : 4 })}
                                 </div>
-                                <div className="text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1 sm:mt-2 truncate">{coin.name}</div>
+                                <div className="text-[10px] sm:text-xs font-black text-zinc-500 uppercase tracking-widest mt-1 sm:mt-2 truncate">{coin.name}</div>
                             </div>
                         </div>
                     ))}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-8">
                     <div className="lg:col-span-3 bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                             <div>
                                 <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">
                                     {selectedCoin?.name} <span className="text-zinc-400 font-normal">Pulse</span>
                                 </h2>
-                                <div className="flex items-center gap-4 mt-2">
-                                    <span className="text-2xl sm:text-4xl font-mono font-black text-zinc-900 dark:text-white tracking-tighter italic">
+                                <div className="flex flex-wrap items-center gap-4 mt-2">
+                                    <span className="text-xl sm:text-4xl font-mono font-black text-zinc-900 dark:text-white tracking-tighter italic">
                                         {displayCurrency === 'USD' ? '$' : 'Rs.'}{(displayCurrency === 'USD' ? selectedCoin?.usdPrice : selectedCoin?.pkrPrice)?.toLocaleString()}
                                     </span>
                                     <span className={`text-xs sm:text-base font-black ${selectedCoin?.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -157,7 +184,7 @@ export default function CryptoPage() {
                         <div className="p-5 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
                             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Market Surveillance</h2>
                         </div>
-                        <div className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-[400px] lg:max-h-none overflow-y-auto no-scrollbar">
+                        <div className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-[400px] lg:max-h-none overflow-y-auto">
                             {cryptoData.map((coin) => (
                                 <div
                                     key={coin.id}
@@ -175,10 +202,10 @@ export default function CryptoPage() {
                                     </div>
                                     <div className="text-right">
                                         <div className="font-mono font-black text-zinc-900 dark:text-white text-xs sm:text-sm tracking-tighter">
-                                            {displayCurrency === 'USD' ? '$' : ''}{(displayCurrency === 'USD' ? coin.usdPrice : coin.pkrPrice).toLocaleString(undefined, { maximumFractionDigits: coin.usdPrice > 1 ? 2 : 4 })}
+                                            {displayCurrency === 'USD' ? '$' : 'Rs.'}{(displayCurrency === 'USD' ? (coin.usdPrice ?? 0) : (coin.pkrPrice ?? 0)).toLocaleString(undefined, { maximumFractionDigits: (coin.usdPrice ?? 0) > 1 ? 2 : 4 })}
                                         </div>
-                                        <div className={`text-[8px] sm:text-[10px] font-black ${coin.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                            {coin.changePercent >= 0 ? '+' : ''}{coin.changePercent.toFixed(1)}%
+                                        <div className={`text-[10px] sm:text-xs font-black ${coin.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                            {coin.changePercent >= 0 ? '+' : ''}{(coin.changePercent ?? 0).toFixed(1)}%
                                         </div>
                                     </div>
                                 </div>
