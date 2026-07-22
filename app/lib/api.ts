@@ -848,43 +848,41 @@ export async function fetchForexRates() {
 /**
  * Fetch real-time Crypto prices from CoinGecko
  */
-export async function fetchCryptoPrices() {
+export async function fetchCryptoPrices(page = 1, perPage = 20) {
   try {
-    console.log("Fetching Crypto prices...");
-    const ids = "bitcoin,ethereum,binancecoin,solana,ripple,cardano,dogecoin,tron,polkadot,avalanche-2";
-    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd,pkr&include_24hr_change=true&include_last_updated_at=true`);
-    
-    if (!response.ok) throw new Error("Crypto fetch failed");
+    console.log(`Fetching Crypto prices (page ${page})...`);
+    const rate = await getLiveExchangeRate(); // USD -> PKR
+
+    const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${perPage}&page=${page}&sparkline=false&price_change_percentage=24h`;
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 60 },
+    });
+
+    if (!response.ok) throw new Error(`Crypto fetch failed (${response.status})`);
     const data = await response.json();
+    if (!Array.isArray(data)) throw new Error("Unexpected crypto response shape");
 
-    const cryptoMap: any = {
-      "bitcoin": { name: "Bitcoin", symbol: "BTC" },
-      "ethereum": { name: "Ethereum", symbol: "ETH" },
-      "binancecoin": { name: "BNB", symbol: "BNB" },
-      "solana": { name: "Solana", symbol: "SOL" },
-      "ripple": { name: "XRP", symbol: "XRP" },
-      "cardano": { name: "Cardano", symbol: "ADA" },
-      "dogecoin": { name: "Dogecoin", symbol: "DOGE" },
-      "tron": { name: "TRON", symbol: "TRX" },
-      "polkadot": { name: "Polkadot", symbol: "DOT" },
-      "avalanche-2": { name: "Avalanche", symbol: "AVAX" }
-    };
+    const toPkr = (v: number | null | undefined) =>
+      typeof v === "number" && Number.isFinite(v) ? v * rate : null;
 
-    return Object.keys(data).map(id => {
-      const details = data[id];
-      const info = cryptoMap[id] || { name: id, symbol: id.toUpperCase() };
-      
-      return {
-        id,
-        name: info.name,
-        symbol: info.symbol,
-        usdPrice: details.usd,
-        pkrPrice: details.pkr,
-        changePercent: details.usd_24h_change || 0,
-        lastUpdated: new Date(details.last_updated_at * 1000).toLocaleTimeString(),
-      };
-    }).sort((a, b) => b.usdPrice - a.usdPrice);
-
+    return data.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      symbol: (c.symbol || "").toUpperCase(),
+      image: c.image,
+      rank: c.market_cap_rank ?? null,
+      usdPrice: c.current_price ?? null,
+      pkrPrice: toPkr(c.current_price),
+      changePercent: c.price_change_percentage_24h ?? 0,
+      // Real 24h high/low (USD) — used for pivot support/resistance
+      high24h: c.high_24h ?? null,
+      low24h: c.low_24h ?? null,
+      pkrHigh24h: toPkr(c.high_24h),
+      pkrLow24h: toPkr(c.low_24h),
+      marketCap: c.market_cap ?? null,
+      lastUpdated: c.last_updated ? new Date(c.last_updated).toLocaleTimeString() : "",
+    }));
   } catch (error) {
     console.error("Error fetching Crypto prices:", error);
     return null;

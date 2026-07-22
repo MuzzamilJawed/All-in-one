@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../../components/TradingChart'), { ssr: false });
 import { useSettings } from "../../context/SettingsContext";
+import { computePivotLevels, nextLevels } from "../../lib/levels";
 
 export default function MarketTerminalPage() {
     return (
@@ -33,14 +34,14 @@ export default function MarketTerminalPage() {
 function MarketTerminalContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    
+
     // Read initial state from URL
     const [viewMode, setViewMode] = useState<'stocks' | 'indices'>((searchParams.get('view') as any) || 'indices');
     const [selectedSymbol, setSelectedSymbol] = useState<string | null>(searchParams.get('symbol'));
     const [timeframe, setTimeframe] = useState(searchParams.get('tf') || "1D");
     const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || "");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    
+
     const [stocks, setStocks] = useState<any[]>([]);
     const [indices, setIndices] = useState<any[]>([]);
     const [selectedAsset, setSelectedAsset] = useState<any>(null);
@@ -62,7 +63,7 @@ function MarketTerminalContent() {
         try {
             const res = await fetch(`/api/psx-history?symbol=${symbol}&timeframe=${tf}`);
             const json = await res.json();
-            
+
             // Session (day) high/low reported by the data provider (indices via PSX feed)
             setDayRange({
                 high: typeof json.dayHigh === 'number' ? json.dayHigh : null,
@@ -71,20 +72,20 @@ function MarketTerminalContent() {
 
             if (json.success && json.data) {
                 let history = [...json.data];
-                
+
                 // Inject Live Candle from Real-time Scraped Data
                 if (asset && asset.currentPrice) {
                     const now = new Date();
                     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                     const liveTime = Math.floor(now.getTime() / 1000);
-                    
+
                     // Construct a candle from real-time data
                     let currentPrice = parseFloat(asset.currentPrice);
                     let change = parseFloat(asset.change || 0);
 
                     if (!isNaN(currentPrice)) {
                         const lastIndex = history.length - 1;
-                        
+
                         // Price Discrepancy Correction
                         if (lastIndex >= 0) {
                             const lastClose = history[lastIndex].close;
@@ -106,37 +107,37 @@ function MarketTerminalContent() {
 
                         let liveCandle: any = {
                             time: tf === '1H' ? liveTime : todayStr,
-                            open: asset.open ? (parseFloat(asset.open) * (currentPrice/parseFloat(asset.currentPrice))) : (currentPrice - change),
-                            high: asset.high ? (parseFloat(asset.high) * (currentPrice/parseFloat(asset.currentPrice))) : Math.max(currentPrice, (currentPrice - change)),
-                            low: asset.low ? (parseFloat(asset.low) * (currentPrice/parseFloat(asset.currentPrice))) : Math.min(currentPrice, (currentPrice - change)),
+                            open: asset.open ? (parseFloat(asset.open) * (currentPrice / parseFloat(asset.currentPrice))) : (currentPrice - change),
+                            high: asset.high ? (parseFloat(asset.high) * (currentPrice / parseFloat(asset.currentPrice))) : Math.max(currentPrice, (currentPrice - change)),
+                            low: asset.low ? (parseFloat(asset.low) * (currentPrice / parseFloat(asset.currentPrice))) : Math.min(currentPrice, (currentPrice - change)),
                             close: currentPrice,
                             volume: parseInt((asset.volume || '0').replace(/[^0-9]/g, '')) || 0
                         };
 
                         if (lastIndex >= 0) {
                             const lastTime = history[lastIndex].time;
-                            
+
                             // Expansion: For 1H view, create a series of bars for today
                             if (tf === '1H') {
                                 // Deduplicate: remove any daily bar for today from history before expansion
-                                if (lastTime === todayStr || (typeof lastTime === 'number' && lastTime === Math.floor(new Date(todayStr).getTime()/1000))) {
+                                if (lastTime === todayStr || (typeof lastTime === 'number' && lastTime === Math.floor(new Date(todayStr).getTime() / 1000))) {
                                     history.splice(lastIndex, 1);
                                 }
-                                
+
                                 const todayHours = [];
                                 const startHour = 9; // PSX Start
                                 const currentHour = now.getHours();
                                 const marketCloseHour = 16;
-                                
+
                                 for (let h = startHour; h <= Math.min(currentHour, marketCloseHour); h++) {
                                     const hTime = new Date(now);
                                     hTime.setHours(h, 0, 0, 0);
                                     const hTimeSec = Math.floor(hTime.getTime() / 1000);
-                                    
+
                                     // Progressively approach currentPrice
                                     const progress = (h - startHour + 1) / (Math.min(currentHour, marketCloseHour) - startHour + 1);
                                     const hPrice = liveCandle.open + (currentPrice - liveCandle.open) * progress;
-                                    
+
                                     todayHours.push({
                                         ...liveCandle,
                                         time: hTimeSec,
@@ -147,7 +148,7 @@ function MarketTerminalContent() {
                                         volume: Math.floor(liveCandle.volume / 8)
                                     });
                                 }
-                                
+
                                 if (todayHours.length > 0) {
                                     history.push(...todayHours);
                                 }
@@ -155,8 +156,8 @@ function MarketTerminalContent() {
                                 // Standard Injection logic
                                 if (lastTime === liveCandle.time) {
                                     history[lastIndex] = { ...history[lastIndex], ...liveCandle };
-                                } else if ((typeof lastTime === 'string' && todayStr > lastTime) || 
-                                           (typeof lastTime === 'number' && liveTime > lastTime)) {
+                                } else if ((typeof lastTime === 'string' && todayStr > lastTime) ||
+                                    (typeof lastTime === 'number' && liveTime > lastTime)) {
                                     history.push(liveCandle);
                                 }
                             }
@@ -208,16 +209,16 @@ function MarketTerminalContent() {
 
                 setStocks(stockData);
                 setIndices(indexData);
-                
+
                 // Determine which asset to select
                 const currentList = (searchParams.get('view') || viewMode) === 'indices' ? indexData : stockData;
                 const symbolToFind = selectedSymbol || searchParams.get('symbol');
-                
+
                 let initial = null;
                 if (symbolToFind) {
                     initial = currentList.find((s: any) => s.symbol.toLowerCase() === symbolToFind.toLowerCase());
                 }
-                
+
                 if (!initial && currentList.length > 0) {
                     initial = currentList[0];
                 }
@@ -268,6 +269,23 @@ function MarketTerminalContent() {
         (s.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Support / resistance (pivot points) for the selected asset.
+    // Stocks use session high/low; indices use the fetched day high/low.
+    const srHigh = viewMode === 'indices' ? dayRange.high : selectedAsset?.high;
+    const srLow = viewMode === 'indices' ? dayRange.low : selectedAsset?.low;
+    const srClose = selectedAsset?.currentPrice != null ? Number(selectedAsset.currentPrice) : undefined;
+    const srLevels = selectedAsset ? computePivotLevels(srHigh, srLow, srClose) : null;
+    const srNext = (srLevels && typeof srClose === 'number')
+        ? nextLevels(srClose, srLevels)
+        : { nextResistance: null as number | null, nextSupport: null as number | null };
+    const srSym = viewMode === 'indices' ? '' : 'Rs.';
+    const fmtSR = (v: number | null | undefined) =>
+        v == null ? '—' : `${srSym}${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const srPriceLines = [
+        ...(srNext.nextResistance != null ? [{ price: srNext.nextResistance, color: '#ef4444', title: 'Resistance' }] : []),
+        ...(srNext.nextSupport != null ? [{ price: srNext.nextSupport, color: '#22c55e', title: 'Support' }] : []),
+    ];
+
     if (loading) {
         return (
             <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] flex items-center justify-center relative overflow-hidden">
@@ -315,7 +333,7 @@ function MarketTerminalContent() {
                 </div>
 
                 <div className="flex items-center gap-4 sm:gap-8">
-                    <button 
+                    <button
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                         className="lg:hidden p-2 rounded-lg bg-blue-600/10 text-blue-600 border border-blue-500/20"
                     >
@@ -477,22 +495,32 @@ function MarketTerminalContent() {
                             </div>
                         )}
 
-                        {/* Full Report Button */}
+                        {/* Details + Full Report */}
                         {selectedAsset && viewMode === 'stocks' && (
-                            <button
-                                onClick={() => router.push(`/stocks/report/${selectedAsset.symbol}?exchange=PSX`)}
-                                className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-blue-400 dark:hover:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl border border-blue-500/30 hover:border-blue-600 transition-all duration-200 shrink-0 group"
-                            >
-                                <span className="text-sm group-hover:scale-110 transition-transform">📋</span>
-                                <span className="hidden sm:inline">Full Report</span>
-                            </button>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                    onClick={() => router.push(`/stocks/${encodeURIComponent(selectedAsset.symbol)}`)}
+                                    className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-blue-400 dark:hover:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl border border-blue-500/30 hover:border-blue-600 transition-all duration-200 group"
+                                    title="Open full stock details"
+                                >
+                                    <span className="text-sm group-hover:scale-110 transition-transform">📈</span>
+                                    <span className="hidden sm:inline">Details</span>
+                                </button>
+                                <button
+                                    onClick={() => router.push(`/stocks/report/${selectedAsset.symbol}?exchange=PSX&from=terminal`)}
+                                    className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-blue-400 dark:hover:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl border border-blue-500/30 hover:border-blue-600 transition-all duration-200 group"
+                                >
+                                    <span className="text-sm group-hover:scale-110 transition-transform">📋</span>
+                                    <span className="hidden sm:inline">Full Report</span>
+                                </button>
+                            </div>
                         )}
                     </div>
 
                     <div className="flex-1 p-4 lg:p-6 relative min-h-[320px] lg:min-h-[600px]">
                         <div className="absolute inset-0 p-4 lg:p-6 flex flex-col">
                             <div className="flex-1 bg-white dark:bg-black/60 rounded-3xl border border-zinc-200 dark:border-white/5 overflow-hidden shadow-[0_0_50px_-12px_rgba(37,99,235,0.15)] transition-all duration-1000 relative">
-                                <div className="h-full w-full relative">
+                                <div className="h-full w-full relative px-3 sm:px-5 py-2">
                                     {chartLoading && (
                                         <div className="absolute inset-0 z-20 bg-white/50 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center">
                                             <div className="flex flex-col items-center gap-3">
@@ -508,27 +536,50 @@ function MarketTerminalContent() {
                                         onTimeframeChange={setTimeframe}
                                         currencySymbol={viewMode === 'indices' ? '' : 'Rs.'}
                                         seamless={true}
+                                        priceLines={srPriceLines}
                                     />
                                 </div>
                             </div>
 
-                            <div className="mt-4 lg:mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 shrink-0 pb-2">
-                                {[
-                                    { label: viewMode === 'stocks' ? 'Market Cap' : 'Index Weight', val: 'Proprietary Vector', icon: '🏛️' },
-                                    { label: 'Volatility Index', val: timeframe === '1H' ? '0.012 σ' : '0.045 σ', icon: '⚡' },
-                                    { label: 'Alpha Strength', val: ((selectedAsset?.changePercent || 0) * 1.2).toFixed(2) + '%', icon: '💎' },
-                                    { label: 'Neural Sentiment', val: (selectedAsset?.changePercent || 0) >= 0 ? 'BULLISH' : 'BEARISH', icon: '🧠' },
-                                ].map((stat, i) => (
-                                    <div key={i} className="bg-white/60 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 rounded-xl sm:rounded-[2rem] p-3 sm:p-5 hover:bg-zinc-100 dark:hover:bg-white/[0.08] transition-all group/stat backdrop-blur-md shadow-sm">
-                                        <div className="flex items-center gap-2 sm:gap-4">
-                                            <div className="text-lg sm:text-2xl group-hover:scale-110 transition-transform">{stat.icon}</div>
-                                            <div>
-                                                <p className="text-[8px] lg:text-[9px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-0.5 lg:mb-1">{stat.label}</p>
-                                                <p className={`text-[10px] lg:text-xs font-black uppercase tracking-tighter ${i === 3 ? ((selectedAsset?.changePercent || 0) >= 0 ? 'text-green-500' : 'text-red-500') : 'text-zinc-900 dark:text-zinc-300'}`}>{stat.val}</p>
+                            {/* Support / Resistance (pivot levels from session high/low) */}
+                            <div className="mt-4 lg:mt-6 shrink-0 pb-2">
+                                {srLevels ? (
+                                    <>
+                                        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                                            <p className="text-[9px] lg:text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Support / Resistance · Pivot Levels</p>
+                                            <div className="flex items-center gap-2 sm:gap-3">
+                                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                                                    <span className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest">Next Support</span>
+                                                    <span className="text-xs font-black font-mono text-green-600 dark:text-green-400 tabular-nums">{fmtSR(srNext.nextSupport)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                                                    <span className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-widest">Next Resistance</span>
+                                                    <span className="text-xs font-black font-mono text-red-600 dark:text-red-400 tabular-nums">{fmtSR(srNext.nextResistance)}</span>
+                                                </div>
                                             </div>
                                         </div>
+                                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
+                                            {[
+                                                { label: 'S3', val: srLevels.s3, tone: 'text-green-600 dark:text-green-400' },
+                                                { label: 'S2', val: srLevels.s2, tone: 'text-green-600 dark:text-green-400' },
+                                                { label: 'S1', val: srLevels.s1, tone: 'text-green-600 dark:text-green-400' },
+                                                { label: 'PIVOT', val: srLevels.pivot, tone: 'text-zinc-900 dark:text-white' },
+                                                { label: 'R1', val: srLevels.r1, tone: 'text-red-600 dark:text-red-400' },
+                                                { label: 'R2', val: srLevels.r2, tone: 'text-red-600 dark:text-red-400' },
+                                                { label: 'R3', val: srLevels.r3, tone: 'text-red-600 dark:text-red-400' },
+                                            ].map((lvl) => (
+                                                <div key={lvl.label} className="bg-white/60 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 rounded-xl sm:rounded-2xl px-2 py-2 sm:py-2.5 text-center backdrop-blur-md shadow-sm">
+                                                    <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-0.5">{lvl.label}</p>
+                                                    <p className={`text-[10px] lg:text-xs font-black font-mono tabular-nums truncate ${lvl.tone}`}>{fmtSR(lvl.val)}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="bg-white/60 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 rounded-xl sm:rounded-2xl px-4 py-4 text-center backdrop-blur-md shadow-sm">
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Support / resistance unavailable — no session range yet</p>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     </div>

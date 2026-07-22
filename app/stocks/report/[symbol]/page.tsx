@@ -634,6 +634,17 @@ function ReportContent({ symbol }: { symbol: string }) {
 
     const changePositive = report.changePercent !== null ? report.changePercent >= 0 : null;
 
+    // Dynamic "back" target — reflects the screen the user arrived from (?from=…).
+    const from = searchParams.get("from") || "";
+    const backTargets: Record<string, { label: string; href: string }> = {
+        terminal: { label: "Terminal", href: "/stocks/terminal" },
+        stock: { label: report.symbol, href: `/stocks/${(report.symbol || "").toLowerCase()}` },
+        stocks: { label: "Market Explorer", href: "/stocks" },
+        watchlist: { label: "Watchlist", href: "/watchlist" },
+    };
+    const back = backTargets[from] || null;
+    const goBack = () => { if (back) router.push(back.href); else router.back(); };
+
     return (
         <>
             <style>{`
@@ -651,8 +662,17 @@ function ReportContent({ symbol }: { symbol: string }) {
 
                 {/* ── Action bar ── */}
                 <div className="no-print sticky top-0 z-50 bg-white/90 dark:bg-black/90 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 flex items-center justify-between gap-3">
-                    <button onClick={() => router.back()} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-zinc-500 hover:text-blue-500 transition-colors">
-                        ← Terminal
+                    <button
+                        onClick={goBack}
+                        title={back ? `Back to ${back.label}` : "Go back"}
+                        className="group flex items-center gap-2 pl-1.5 pr-3 sm:pr-3.5 py-1.5 rounded-full bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 transition-all"
+                    >
+                        <span className="w-6 h-6 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-600 dark:text-zinc-300 group-hover:-translate-x-0.5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all">
+                            <span className="text-sm leading-none">←</span>
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
+                            <span className="hidden sm:inline">Back to </span>{back ? back.label : "Back"}
+                        </span>
                     </button>
                     <div className="flex items-center gap-3">
                         <div className="flex gap-1 items-center">
@@ -671,7 +691,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                     </div>
                 </div>
 
-                <div ref={printRef} className="max-w-[1240px] mx-auto px-4 py-6 lg:px-8 lg:py-8 space-y-4">
+                <div ref={printRef} className="w-full px-4 py-6 lg:px-8 lg:py-8 space-y-4">
 
                     {/* ══ HEADER ══ */}
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6">

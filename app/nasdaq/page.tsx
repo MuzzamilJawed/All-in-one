@@ -39,7 +39,7 @@ export default function NasdaqPage() {
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [indexFilter, setIndexFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
-    
+
     // Data State
     const [stocks, setStocks] = useState<Stock[]>([]);
     const [sectors, setSectors] = useState<string[]>([]);
@@ -66,7 +66,7 @@ export default function NasdaqPage() {
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 20;
+    const itemsPerPage = 15;
 
     // Sorting
     const [sortConfig, setSortConfig] = useState<{ key: keyof Stock; direction: 'asc' | 'desc' } | null>(null);
@@ -319,7 +319,7 @@ export default function NasdaqPage() {
             </header>
 
             <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-8 sm:space-y-12">
-                
+
                 {/* Market Intelligence Ribbon */}
                 <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-2xl p-5 sm:p-8 space-y-6 sm:space-y-8 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none group-hover:opacity-[0.05] transition-opacity">
@@ -411,7 +411,7 @@ export default function NasdaqPage() {
                                 + New List
                             </button>
                         </div>
-                        
+
                         <div className="flex items-center gap-4 shrink-0">
                             <button
                                 onClick={() => { setFilter('all'); setCategoryFilter('all'); setSelectedIndex(null); setSearchTerm(""); setActiveWatchlistId(null); }}
@@ -472,27 +472,27 @@ export default function NasdaqPage() {
                 {selectedIndex && (
                     <div className="animate-in slide-in-from-top-4 duration-500">
                         <div className="bg-white dark:bg-[#080808] rounded-[2rem] sm:rounded-[3.5rem] p-6 sm:p-10 border border-zinc-200 dark:border-white/5 shadow-2xl relative overflow-hidden group">
-                           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8 mb-8 sm:mb-12 relative z-10">
-                               <div>
-                                   <div className="flex items-center gap-3 sm:gap-4 mb-2">
-                                       <h2 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-none">{selectedIndex.name}</h2>
-                                       <span className={`px-3 py-0.5 sm:px-4 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-widest ${selectedIndex.change >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                                           Live
-                                       </span>
-                                   </div>
-                                   <p className="text-zinc-500 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.3em]">Master Market Benchmark • US Execution Profile</p>
-                               </div>
-                               <button onClick={() => setSelectedIndex(null)} className="absolute top-0 right-0 sm:relative text-zinc-400 hover:text-white transition-colors text-2xl sm:text-3xl">✕</button>
-                           </div>
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8 mb-8 sm:mb-12 relative z-10">
+                                <div>
+                                    <div className="flex items-center gap-3 sm:gap-4 mb-2">
+                                        <h2 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-none">{selectedIndex.name}</h2>
+                                        <span className={`px-3 py-0.5 sm:px-4 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-widest ${selectedIndex.change >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                            Live
+                                        </span>
+                                    </div>
+                                    <p className="text-zinc-500 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.3em]">Master Market Benchmark • US Execution Profile</p>
+                                </div>
+                                <button onClick={() => setSelectedIndex(null)} className="absolute top-0 right-0 sm:relative text-zinc-400 hover:text-white transition-colors text-2xl sm:text-3xl">✕</button>
+                            </div>
 
-                           <div className="h-[350px] sm:h-[600px] w-full relative z-10 overflow-hidden">
-                               <TradingChart 
-                                   title={`${selectedIndex.name} Performance Roadmap`} 
-                                   data={generateHistory(selectedIndex.value)} 
-                                   currentTimeframe="1D"
-                                   currencySymbol="" seamless={true} 
-                               />
-                           </div>
+                            <div className="h-[350px] sm:h-[600px] w-full relative z-10 overflow-hidden">
+                                <TradingChart
+                                    title={`${selectedIndex.name} Performance Roadmap`}
+                                    data={generateHistory(selectedIndex.value)}
+                                    currentTimeframe="1D"
+                                    currencySymbol="" seamless={true}
+                                />
+                            </div>
                         </div>
                     </div>
                 )}
@@ -610,7 +610,7 @@ export default function NasdaqPage() {
                                         Matrix Segment: {startIndex + 1} TO {Math.min(startIndex + itemsPerPage, filteredStocks.length)} | Total: {filteredStocks.length}
                                     </span>
                                     <div className="flex gap-2">
-                                        <button 
+                                        <button
                                             disabled={currentPage === 1}
                                             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                             className="px-6 py-3 rounded-[1.2rem] bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest disabled:opacity-30 hover:border-blue-500 transition-all"
@@ -620,7 +620,7 @@ export default function NasdaqPage() {
                                         <div className="flex items-center px-4 font-black text-xs text-blue-600 tracking-tighter">
                                             {currentPage} / {Math.ceil(filteredStocks.length / itemsPerPage)}
                                         </div>
-                                        <button 
+                                        <button
                                             disabled={currentPage === Math.ceil(filteredStocks.length / itemsPerPage)}
                                             onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredStocks.length / itemsPerPage), prev + 1))}
                                             className="px-6 py-3 rounded-[1.2rem] bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest disabled:opacity-30 hover:border-blue-500 transition-all"

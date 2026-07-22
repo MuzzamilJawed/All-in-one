@@ -140,7 +140,7 @@ export default function Sidebar() {
                         : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
                       }`}
                     >
-                      <span className="text-xl shrink-0">{item.icon}</span>
+                      <span className="text-xl shrink-0 w-6 text-center inline-flex items-center justify-center">{item.icon}</span>
                       <span className={`font-bold text-sm tracking-tight ${collapsed ? "lg:hidden" : ""}`}>{item.name}</span>
                     </Link>
                   );

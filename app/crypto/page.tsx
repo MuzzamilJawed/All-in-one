@@ -2,79 +2,147 @@
 
 import PageSkeleton from "../components/PageSkeleton";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSettings } from "../context/SettingsContext";
+import { computePivotLevels, nextLevels } from "../lib/levels";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
 
+const PER_PAGE = 20;
+
 export default function CryptoPage() {
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
     const [error, setError] = useState("");
     const [cryptoData, setCryptoData] = useState<any[]>([]);
     const [selectedCoin, setSelectedCoin] = useState<any>(null);
-    const [trendData, setTrendData] = useState<any[]>([]);
-    const [chartTF, setChartTF] = useState("1H");
+    const [trendData, setTrendData] = useState<any[]>([]);   // raw USD candles
+    const [chartLoading, setChartLoading] = useState(false);
+    const [chartTF, setChartTF] = useState("1W");
     const { settings, updateSettings } = useSettings();
     const displayCurrency = settings.currency as 'USD' | 'PKR';
 
-    const loadCrypto = useCallback(async (isManual = true) => {
+    const pageRef = useRef(1);
+    const hasMoreRef = useRef(true);
+    const loadingMoreRef = useRef(false);
+    const listRef = useRef<HTMLDivElement>(null);
+    const sentinelRef = useRef<HTMLDivElement>(null);
+
+    // Fetch one page of coins. mode: 'initial' | 'refresh' | 'more'
+    const loadPage = useCallback(async (pageNum: number, mode: 'initial' | 'refresh' | 'more') => {
+        if (mode === 'more') { setLoadingMore(true); loadingMoreRef.current = true; }
+        else if (mode === 'initial') setLoading(true);
         try {
-            if (isManual) setLoading(true);
-            const res = await fetch('/api/crypto');
+            const res = await fetch(`/api/crypto?page=${pageNum}&per_page=${PER_PAGE}`);
             if (!res.ok) throw new Error("Failed to fetch crypto prices");
             const data = await res.json();
-            setCryptoData(data);
+            if (!Array.isArray(data)) throw new Error("Bad crypto response");
             setError("");
-            if (!selectedCoin && data.length > 0) setSelectedCoin(data[0]);
-        } catch (err) {
-            setError("Unable to load crypto market data");
-        } finally {
-            if (isManual) setLoading(false);
-        }
-    }, [selectedCoin]);
+            const more = data.length === PER_PAGE;
+            setHasMore(more); hasMoreRef.current = more;
 
-    useEffect(() => {
-        loadCrypto(true);
+            setCryptoData(prev => {
+                if (mode === 'refresh') {
+                    // update prices in place, keep any already-appended coins
+                    const map = new Map(prev.map((c: any) => [c.id, c]));
+                    data.forEach((c: any) => map.set(c.id, c));
+                    return Array.from(map.values());
+                }
+                if (mode === 'initial') return data;
+                const ids = new Set(prev.map((c: any) => c.id));
+                return [...prev, ...data.filter((c: any) => !ids.has(c.id))];
+            });
+            setSelectedCoin((prev: any) => prev ? (data.find((c: any) => c.id === prev.id) || prev) : (data[0] || null));
+        } catch {
+            if (mode !== 'more') setError("Unable to load crypto market data");
+        } finally {
+            setLoading(false);
+            setLoadingMore(false); loadingMoreRef.current = false;
+        }
     }, []);
 
+    useEffect(() => { loadPage(1, 'initial'); }, [loadPage]);
+
+    // Auto-refresh keeps the first page's prices live without disturbing scroll.
     useEffect(() => {
         if (!settings.refreshInterval || settings.refreshInterval <= 0) return;
-        const interval = setInterval(() => loadCrypto(false), settings.refreshInterval * 1000);
+        const interval = setInterval(() => loadPage(1, 'refresh'), settings.refreshInterval * 1000);
         return () => clearInterval(interval);
-    }, [settings.refreshInterval, loadCrypto]);
+    }, [settings.refreshInterval, loadPage]);
 
+    // Infinite scroll: load the next page when the sentinel enters the list.
+    // Re-runs once `loading` flips false so it attaches after the real list
+    // (and its refs) mount — the initial render shows a skeleton with null refs.
     useEffect(() => {
-        if (!selectedCoin) return;
-        const count = 75;
-        const basePrice = displayCurrency === 'PKR' ? selectedCoin.pkrPrice : selectedCoin.usdPrice;
-        const data = [];
-        const nowSec = Math.floor(Date.now() / 1000);
-        const interval = chartTF === '1H' ? 3600 : chartTF === '1D' ? 86400 : 604800;
+        if (loading) return;
+        const root = listRef.current;
+        const target = sentinelRef.current;
+        if (!root || !target) return;
+        const io = new IntersectionObserver((entries) => {
+            if (entries[0]?.isIntersecting && hasMoreRef.current && !loadingMoreRef.current) {
+                const next = pageRef.current + 1;
+                pageRef.current = next;
+                loadPage(next, 'more');
+            }
+        }, { root, rootMargin: "150px" });
+        io.observe(target);
+        return () => io.disconnect();
+    }, [loadPage, loading]);
 
-        let lastClose = basePrice;
-        const volatility = chartTF === '1W' ? 0.08 : chartTF === '1D' ? 0.04 : 0.02;
+    // Real OHLC candles for the selected coin + timeframe.
+    useEffect(() => {
+        if (!selectedCoin?.id) { setTrendData([]); return; }
+        let cancelled = false;
+        setChartLoading(true);
+        (async () => {
+            try {
+                const res = await fetch(`/api/crypto-history?id=${encodeURIComponent(selectedCoin.id)}&timeframe=${chartTF}`);
+                const json = await res.json();
+                if (cancelled) return;
+                setTrendData(Array.isArray(json?.data) ? json.data : []);
+            } catch {
+                if (!cancelled) setTrendData([]);
+            } finally {
+                if (!cancelled) setChartLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [selectedCoin?.id, chartTF]);
 
-        for (let i = 0; i < count; i++) {
-            const time = nowSec - i * interval;
-            const change = (Math.random() - 0.5) * volatility;
-            
-            const close = lastClose;
-            const open = close / (1 + change);
-            const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.3));
-            const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.3));
-            
-            data.unshift({ 
-                time, 
-                open: parseFloat(open.toFixed(selectedCoin.symbol === 'BTC' ? 0 : 4)), 
-                high: parseFloat(high.toFixed(selectedCoin.symbol === 'BTC' ? 0 : 4)), 
-                low: parseFloat(low.toFixed(selectedCoin.symbol === 'BTC' ? 0 : 4)), 
-                close: parseFloat(close.toFixed(selectedCoin.symbol === 'BTC' ? 0 : 4)),
-                volume: Math.floor(Math.random() * 5000) + 1000
-            });
-            lastClose = open;
-        }
-        setTrendData(data);
-    }, [selectedCoin, displayCurrency, chartTF]);
+    // USD -> display-currency factor for the selected coin
+    const fx = selectedCoin?.usdPrice ? (selectedCoin.pkrPrice / selectedCoin.usdPrice) : 1;
+    const inDisplay = (usd: number) => displayCurrency === 'PKR' ? usd * fx : usd;
+    const sym = displayCurrency === 'USD' ? '$' : 'Rs.';
+    const fmtLevel = (usd: number | null | undefined) =>
+        usd == null ? '—' : `${sym}${inDisplay(usd).toLocaleString(undefined, { maximumFractionDigits: inDisplay(usd) > 1 ? 2 : 6 })}`;
+    // Compact form for the tight 7-column pivot ladder (e.g. Rs.18.33M, $65.9K)
+    const fmtCompact = (usd: number | null | undefined) => {
+        if (usd == null) return '—';
+        const v = inDisplay(usd);
+        if (v >= 1000) return `${sym}${new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(v)}`;
+        return `${sym}${v.toLocaleString(undefined, { maximumFractionDigits: v > 1 ? 2 : 5 })}`;
+    };
+
+    // Pivot support/resistance from real 24h high/low/close
+    const levels = selectedCoin ? computePivotLevels(selectedCoin.high24h, selectedCoin.low24h, selectedCoin.usdPrice) : null;
+    const nl = (levels && typeof selectedCoin?.usdPrice === 'number')
+        ? nextLevels(selectedCoin.usdPrice, levels)
+        : { nextResistance: null, nextSupport: null };
+
+    // Candles converted to display currency + S/R price lines in the same units
+    const displayTrend = useMemo(() => {
+        if (displayCurrency !== 'PKR') return trendData;
+        return trendData.map((c: any) => ({ ...c, open: c.open * fx, high: c.high * fx, low: c.low * fx, close: c.close * fx }));
+    }, [trendData, displayCurrency, fx]);
+
+    const priceLines = useMemo(() => {
+        const lines: { price: number; color: string; title: string }[] = [];
+        if (nl.nextResistance != null) lines.push({ price: inDisplay(nl.nextResistance), color: '#ef4444', title: 'Resistance' });
+        if (nl.nextSupport != null) lines.push({ price: inDisplay(nl.nextSupport), color: '#22c55e', title: 'Support' });
+        return lines;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nl.nextResistance, nl.nextSupport, displayCurrency, fx]);
 
     const getCoinColor = (symbol: string) => {
         const colors: any = {
@@ -163,45 +231,90 @@ export default function CryptoPage() {
                                     </span>
                                 </div>
                             </div>
-                            <div className="text-left sm:text-right">
-                                <div className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">Risk Assessment</div>
-                                <div className="text-lg font-black text-orange-500 uppercase italic tracking-widest">Volatility High</div>
+                            {/* Next support / resistance (pivot levels from real 24h H/L/C) */}
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20 text-left min-w-[92px]">
+                                    <div className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-[0.15em] mb-0.5">Next Support</div>
+                                    <div className="text-sm font-mono font-black text-green-600 dark:text-green-400 leading-none tabular-nums">{fmtLevel(nl.nextSupport)}</div>
+                                </div>
+                                <div className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-left min-w-[92px]">
+                                    <div className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-[0.15em] mb-0.5">Next Resistance</div>
+                                    <div className="text-sm font-mono font-black text-red-600 dark:text-red-400 leading-none tabular-nums">{fmtLevel(nl.nextResistance)}</div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="h-[300px] sm:h-[450px] w-full">
-                            <TradingChart 
-                                title={`${selectedCoin?.name} Tracking`} 
-                                data={trendData} 
-                                currentTimeframe={chartTF} 
-                                onTimeframeChange={setChartTF} 
-                                currencySymbol={displayCurrency === 'PKR' ? 'Rs.' : '$'} 
-                            />
+                        <div className="h-[400px] sm:h-[520px] w-full relative">
+                            {chartLoading && (
+                                <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-sm rounded-2xl">
+                                    <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                </div>
+                            )}
+                            {!chartLoading && displayTrend.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
+                                    <span className="text-3xl">📉</span>
+                                    <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">No chart data for this coin</p>
+                                </div>
+                            ) : (
+                                <TradingChart
+                                    title={`${selectedCoin?.name || ''} Price`}
+                                    data={displayTrend}
+                                    currentTimeframe={chartTF}
+                                    onTimeframeChange={setChartTF}
+                                    currencySymbol={displayCurrency === 'PKR' ? 'Rs.' : '$'}
+                                    priceLines={priceLines}
+                                    seamless
+                                />
+                            )}
                         </div>
+
+                        {/* Full pivot level ladder */}
+                        {levels && (
+                            <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-white/5">
+                              <div className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3">Pivot Levels · Support / Resistance (24h)</div>
+                              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+                                {[
+                                    { label: 'S3', val: levels.s3, tone: 'text-green-600 dark:text-green-400' },
+                                    { label: 'S2', val: levels.s2, tone: 'text-green-600 dark:text-green-400' },
+                                    { label: 'S1', val: levels.s1, tone: 'text-green-600 dark:text-green-400' },
+                                    { label: 'PIVOT', val: levels.pivot, tone: 'text-zinc-900 dark:text-white' },
+                                    { label: 'R1', val: levels.r1, tone: 'text-red-600 dark:text-red-400' },
+                                    { label: 'R2', val: levels.r2, tone: 'text-red-600 dark:text-red-400' },
+                                    { label: 'R3', val: levels.r3, tone: 'text-red-600 dark:text-red-400' },
+                                ].map(lvl => (
+                                    <div key={lvl.label} title={fmtLevel(lvl.val)} className="bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5 rounded-xl px-2 py-2 text-center">
+                                        <div className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{lvl.label}</div>
+                                        <div className={`text-[10px] sm:text-xs font-mono font-black tabular-nums ${lvl.tone}`}>{fmtCompact(lvl.val)}</div>
+                                    </div>
+                                ))}
+                              </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[3rem] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden h-fit">
-                        <div className="p-5 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+                        <div className="p-5 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between gap-2">
                             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Market Surveillance</h2>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 tabular-nums">{cryptoData.length} coins</span>
                         </div>
-                        <div className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-[400px] lg:max-h-none overflow-y-auto">
+                        <div ref={listRef} className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-[520px] lg:max-h-[760px] overflow-y-auto custom-scrollbar">
                             {cryptoData.map((coin) => (
                                 <div
                                     key={coin.id}
                                     onClick={() => setSelectedCoin(coin)}
-                                    className={`p-4 sm:p-5 cursor-pointer hover:bg-white/[0.02] transition-all flex justify-between items-center ${selectedCoin?.id === coin.id ? 'bg-orange-500/5 dark:bg-orange-900/10' : ''}`}
+                                    className={`p-4 sm:p-5 cursor-pointer hover:bg-white/[0.02] transition-all flex justify-between items-center gap-2 ${selectedCoin?.id === coin.id ? 'bg-orange-500/5 dark:bg-orange-900/10' : ''}`}
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black text-white text-[10px] sm:text-xs tracking-tighter" style={{ backgroundColor: getCoinColor(coin.symbol) }}>
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center font-black text-white text-[10px] sm:text-xs tracking-tighter" style={{ backgroundColor: getCoinColor(coin.symbol) }}>
                                             {coin.symbol[0]}
                                         </div>
-                                        <div>
-                                            <div className="font-black text-zinc-900 dark:text-zinc-50 uppercase italic text-xs sm:text-sm tracking-tighter">{coin.symbol}</div>
-                                            <div className="text-[8px] sm:text-[10px] text-zinc-500 uppercase font-black tracking-widest truncate max-w-[50px] sm:max-w-none">{coin.name}</div>
+                                        <div className="min-w-0">
+                                            <div className="font-black text-zinc-900 dark:text-zinc-50 uppercase italic text-xs sm:text-sm tracking-tighter truncate">{coin.symbol}</div>
+                                            <div className="text-[8px] sm:text-[10px] text-zinc-500 uppercase font-black tracking-widest truncate">{coin.name}</div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="font-mono font-black text-zinc-900 dark:text-white text-xs sm:text-sm tracking-tighter">
+                                    <div className="text-right shrink-0">
+                                        <div className="font-mono font-black text-zinc-900 dark:text-white text-xs sm:text-sm tracking-tighter tabular-nums">
                                             {displayCurrency === 'USD' ? '$' : 'Rs.'}{(displayCurrency === 'USD' ? (coin.usdPrice ?? 0) : (coin.pkrPrice ?? 0)).toLocaleString(undefined, { maximumFractionDigits: (coin.usdPrice ?? 0) > 1 ? 2 : 4 })}
                                         </div>
                                         <div className={`text-[10px] sm:text-xs font-black ${coin.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -210,6 +323,18 @@ export default function CryptoPage() {
                                     </div>
                                 </div>
                             ))}
+
+                            {/* Infinite-scroll sentinel + status */}
+                            <div ref={sentinelRef} className="h-1"></div>
+                            {loadingMore && (
+                                <div className="py-4 flex items-center justify-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Loading more…</span>
+                                </div>
+                            )}
+                            {!hasMore && cryptoData.length > 0 && (
+                                <div className="py-4 text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">— End of market —</div>
+                            )}
                         </div>
                     </div>
                 </div>

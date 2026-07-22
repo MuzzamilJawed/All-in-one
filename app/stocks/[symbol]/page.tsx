@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../../components/TradingChart'), { ssr: false });
 import { useSettings } from "../../context/SettingsContext";
 import StockCard from "../../components/StockCard";
+import { computePivotLevels, nextLevels } from "../../lib/levels";
 
 interface Stock {
     symbol: string;
@@ -254,6 +255,18 @@ export default function StockDetailPage() {
 
     const isPositive = stock.change >= 0;
 
+    // Support / resistance (pivot points) from the session high/low/close
+    const srLevels = computePivotLevels(stock.high, stock.low, stock.currentPrice);
+    const srNext = (srLevels && typeof stock.currentPrice === 'number')
+        ? nextLevels(stock.currentPrice, srLevels)
+        : { nextResistance: null as number | null, nextSupport: null as number | null };
+    const fmtSR = (v: number | null | undefined) =>
+        v == null ? '—' : `Rs.${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const srPriceLines = [
+        ...(srNext.nextResistance != null ? [{ price: srNext.nextResistance, color: '#ef4444', title: 'Resistance' }] : []),
+        ...(srNext.nextSupport != null ? [{ price: srNext.nextSupport, color: '#22c55e', title: 'Support' }] : []),
+    ];
+
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30">
             {/* Header */}
@@ -273,13 +286,23 @@ export default function StockDetailPage() {
                             </p>
                         </div>
                     </div>
-                    <div className="text-right shrink-0">
-                        <p className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter leading-none">
-                            Rs.{stock.currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                        </p>
-                        <p className={`text-[10px] sm:text-sm font-black flex items-center justify-end gap-1 mt-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                            {isPositive ? '▲' : '▼'}{Math.abs(stock.change).toFixed(2)} ({Math.abs(stock.changePercent).toFixed(2)}%)
-                        </p>
+                    <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                        <button
+                            onClick={() => router.push(`/stocks/report/${symbol}?exchange=PSX&from=stock`)}
+                            className="flex items-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95 shrink-0"
+                            title="View full equity research report"
+                        >
+                            <span className="text-xs leading-none">📊</span>
+                            <span className="hidden sm:inline">Full Report</span>
+                        </button>
+                        <div className="text-right shrink-0">
+                            <p className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter leading-none">
+                                Rs.{stock.currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                            </p>
+                            <p className={`text-[10px] sm:text-sm font-black flex items-center justify-end gap-1 mt-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                                {isPositive ? '▲' : '▼'}{Math.abs(stock.change).toFixed(2)} ({Math.abs(stock.changePercent).toFixed(2)}%)
+                            </p>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -300,6 +323,44 @@ export default function StockDetailPage() {
                         </div>
                     ))}
                 </div>
+
+                {/* Support / Resistance */}
+                {srLevels && (
+                    <div className="bg-white dark:bg-zinc-900/50 p-4 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-sm">
+                        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                            <div>
+                                <h2 className="text-base sm:text-xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Support &amp; Resistance</h2>
+                                <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-widest mt-0.5">Pivot Levels · Session High / Low</p>
+                            </div>
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20">
+                                    <span className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest">Next Support</span>
+                                    <span className="text-xs sm:text-sm font-black font-mono text-green-600 dark:text-green-400 tabular-nums">{fmtSR(srNext.nextSupport)}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20">
+                                    <span className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-widest">Next Resistance</span>
+                                    <span className="text-xs sm:text-sm font-black font-mono text-red-600 dark:text-red-400 tabular-nums">{fmtSR(srNext.nextResistance)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
+                            {[
+                                { label: 'S3', val: srLevels.s3, tone: 'text-green-600 dark:text-green-400' },
+                                { label: 'S2', val: srLevels.s2, tone: 'text-green-600 dark:text-green-400' },
+                                { label: 'S1', val: srLevels.s1, tone: 'text-green-600 dark:text-green-400' },
+                                { label: 'PIVOT', val: srLevels.pivot, tone: 'text-zinc-900 dark:text-white' },
+                                { label: 'R1', val: srLevels.r1, tone: 'text-red-600 dark:text-red-400' },
+                                { label: 'R2', val: srLevels.r2, tone: 'text-red-600 dark:text-red-400' },
+                                { label: 'R3', val: srLevels.r3, tone: 'text-red-600 dark:text-red-400' },
+                            ].map((lvl) => (
+                                <div key={lvl.label} className="bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5 rounded-xl px-2 py-2.5 text-center">
+                                    <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-0.5">{lvl.label}</p>
+                                    <p className={`text-[10px] sm:text-xs font-black font-mono tabular-nums truncate ${lvl.tone}`}>{fmtSR(lvl.val)}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Main Technical Terminal */}
                 <div className="bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[3.5rem] p-4 sm:p-10 border border-zinc-200 dark:border-white/5 shadow-xl relative overflow-hidden group">
@@ -330,6 +391,7 @@ export default function StockDetailPage() {
                             onTimeframeChange={setTimeframe}
                             currencySymbol="Rs."
                             seamless={true}
+                            priceLines={srPriceLines}
                         />
                     </div>
                 </div>

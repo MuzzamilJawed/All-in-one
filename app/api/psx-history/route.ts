@@ -33,38 +33,70 @@ export async function GET(request: Request) {
         // This branch ALWAYS returns HTTP 200 (with null high/low on failure) so the
         // client never logs a repeating "failed to load resource" console error.
         if (indexMapping[lookupSymbol]) {
-            try {
-                const psxRes = await fetch(`https://dps.psx.com.pk/timeseries/int/${encodeURIComponent(lookupSymbol)}`, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Cache-Control': 'no-cache',
-                    },
-                    next: { revalidate: 30 },
+            // PSX indices: build REAL candles from PSX's own time-series feed.
+            // Intraday feed powers the 1H view + day high/low; the end-of-day feed
+            // powers the 1D/1W/1M history. The feeds are close-only, so each candle
+            // is open=previous close, close=this close (no synthetic wicks).
+            const psxHeaders = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Cache-Control': 'no-cache',
+            };
+            const toSec = (t: number) => (t > 1e12 ? Math.floor(t / 1000) : Math.floor(t));
+            const toDate = (ts: number) => {
+                const d = new Date(toSec(ts) * 1000);
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            };
+            const parsePoints = (json: any) => {
+                const rows = Array.isArray(json?.data) ? json.data : [];
+                return rows
+                    .map((r: any) => ({ t: Number(Array.isArray(r) ? r[0] : r?.[0]), v: Number(Array.isArray(r) ? r[1] : r?.[1]), vol: Number((Array.isArray(r) ? r[2] : 0) || 0) }))
+                    .filter((p: any) => Number.isFinite(p.t) && Number.isFinite(p.v) && p.v > 0)
+                    .sort((a: any, b: any) => a.t - b.t);
+            };
+            const buildCandles = (pts: any[], intraday: boolean) => {
+                let prev = pts.length ? pts[0].v : 0;
+                return pts.map((p: any) => {
+                    const open = prev; const close = p.v; prev = close;
+                    return { time: intraday ? toSec(p.t) : toDate(p.t), open, high: Math.max(open, close), low: Math.min(open, close), close, volume: p.vol };
                 });
+            };
 
-                if (psxRes.ok) {
-                    const psxJson = await psxRes.json();
-                    // Expected shape: { status: 1, data: [ [unixTs, price, volume], ... ] }
-                    const rows = Array.isArray(psxJson?.data) ? psxJson.data : [];
-                    const prices: number[] = rows
-                        .map((r: any) => Number(Array.isArray(r) ? r[1] : r?.price))
-                        .filter((n: number) => Number.isFinite(n) && n > 0);
+            let dayHigh: number | null = null;
+            let dayLow: number | null = null;
+            let intPts: any[] = [];
 
-                    if (prices.length > 0) {
-                        return NextResponse.json({
-                            success: true,
-                            symbol: lookupSymbol,
-                            dayHigh: Math.max(...prices),
-                            dayLow: Math.min(...prices),
-                            data: [],
-                        });
+            // Intraday (current session) — always fetched for day high/low
+            try {
+                const r = await fetch(`https://dps.psx.com.pk/timeseries/int/${encodeURIComponent(lookupSymbol)}`, { headers: psxHeaders, next: { revalidate: 30 } });
+                if (r.ok) {
+                    intPts = parsePoints(await r.json());
+                    if (intPts.length) {
+                        const vs = intPts.map((p: any) => p.v);
+                        dayHigh = Math.max(...vs);
+                        dayLow = Math.min(...vs);
                     }
                 }
-            } catch {
-                // fall through to graceful empty response
+            } catch { /* ignore */ }
+
+            let data: any[] = [];
+            if (timeframe === '1H') {
+                data = buildCandles(intPts, true);
+            } else {
+                // End-of-day daily history
+                try {
+                    const r = await fetch(`https://dps.psx.com.pk/timeseries/eod/${encodeURIComponent(lookupSymbol)}`, { headers: psxHeaders, next: { revalidate: 3600 } });
+                    if (r.ok) {
+                        let pts = parsePoints(await r.json());
+                        const maxPoints = timeframe === '1M' ? 1500 : timeframe === '1W' ? 750 : 400;
+                        if (pts.length > maxPoints) pts = pts.slice(pts.length - maxPoints);
+                        data = buildCandles(pts, false);
+                    }
+                } catch { /* ignore */ }
+                // Fall back to intraday candles if EOD is unavailable
+                if (data.length === 0 && intPts.length) data = buildCandles(intPts, true);
             }
 
-            return NextResponse.json({ success: true, symbol: lookupSymbol, dayHigh: null, dayLow: null, data: [] });
+            return NextResponse.json({ success: true, symbol: lookupSymbol, dayHigh, dayLow, data });
         }
 
         if (!yahooSymbol.includes('.') && !yahooSymbol.startsWith('^')) {

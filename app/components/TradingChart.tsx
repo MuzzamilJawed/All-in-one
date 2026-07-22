@@ -14,6 +14,12 @@ interface CandleData {
     volume?: number;
 }
 
+interface PriceLine {
+    price: number;
+    color: string;
+    title: string;
+}
+
 interface TradingChartProps {
     data: CandleData[];
     title: string;
@@ -21,6 +27,7 @@ interface TradingChartProps {
     currentTimeframe?: string;
     currencySymbol?: string;
     seamless?: boolean;
+    priceLines?: PriceLine[];
 }
 
 export default function TradingChart({
@@ -29,7 +36,8 @@ export default function TradingChart({
     onTimeframeChange,
     currentTimeframe = "1D",
     currencySymbol = "$",
-    seamless = false
+    seamless = false,
+    priceLines
 }: TradingChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<any>(null);
@@ -38,6 +46,7 @@ export default function TradingChart({
     const sma50SeriesRef = useRef<any>(null);
     const sma200SeriesRef = useRef<any>(null);
     const volumeSeriesRef = useRef<any>(null);
+    const priceLinesRef = useRef<any[]>([]);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [hoverData, setHoverData] = useState<CandleData | null>(null);
     const { resolvedTheme } = useTheme();
@@ -160,6 +169,8 @@ export default function TradingChart({
             color: resolvedTheme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(37, 99, 235, 0.1)',
             priceFormat: { type: 'volume' },
             priceScaleId: '',
+            lastValueVisible: false,
+            priceLineVisible: false,
         });
 
         volumeSeries.priceScale().applyOptions({
@@ -265,6 +276,28 @@ export default function TradingChart({
         }
     }, [data, colors, isFullscreen]);
 
+    // Support / resistance (and any other) horizontal price lines
+    useEffect(() => {
+        const series = seriesRef.current;
+        if (!series) return;
+        priceLinesRef.current.forEach(pl => { try { series.removePriceLine(pl); } catch { /* stale */ } });
+        priceLinesRef.current = [];
+        (priceLines || []).forEach(l => {
+            if (!Number.isFinite(l.price)) return;
+            try {
+                const pl = series.createPriceLine({
+                    price: l.price,
+                    color: l.color,
+                    lineWidth: 1,
+                    lineStyle: 2, // dashed
+                    axisLabelVisible: true,
+                    title: l.title,
+                });
+                priceLinesRef.current.push(pl);
+            } catch { /* series not ready */ }
+        });
+    }, [priceLines, data, colors, isFullscreen]);
+
     useEffect(() => {
         document.body.style.overflow = isFullscreen ? 'hidden' : '';
         
@@ -289,12 +322,12 @@ export default function TradingChart({
                 <div className="flex items-center gap-3 sm:gap-6 min-w-0">
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                            <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] truncate">{title}</h3>
+                            <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] truncate">Price Action</h3>
                             <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase shrink-0 ${currentTimeframe === '1H' ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
                                 {currentTimeframe}
                             </span>
                         </div>
-                        <h4 className="text-lg sm:text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-tight mt-1">Market Vectors</h4>
+                        <h4 className="text-lg sm:text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-tight mt-1 truncate">{title}</h4>
                     </div>
                     {hoverData && (
                         <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl animate-in fade-in slide-in-from-left-4">
@@ -335,26 +368,31 @@ export default function TradingChart({
             {/* Main Chart Container */}
             <div
                 ref={chartContainerRef}
-                className={`flex-1 relative overflow-hidden transition-all duration-300 min-h-[260px] sm:min-h-[380px] ${isFullscreen ? 'rounded-none border-none min-h-0' : 'h-full border border-zinc-100 dark:border-zinc-800/50 rounded-2xl sm:rounded-[2rem]'}`}
+                className={`flex-1 relative overflow-hidden transition-all duration-300 min-h-[200px] sm:min-h-[280px] ${isFullscreen ? 'rounded-none border-none min-h-0' : 'h-full border border-zinc-100 dark:border-zinc-800/50 rounded-2xl sm:rounded-[2rem]'}`}
             />
 
             {/* Footer / Legend */}
             <div className={`flex flex-wrap items-center justify-between gap-2 shrink-0 ${seamless ? 'mt-3' : 'mt-4'}`}>
                 <div className="flex items-center gap-2 sm:gap-6 flex-wrap">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/5 border border-amber-500/10 rounded-lg">
-                        <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                        <span className="text-[9px] text-amber-500 font-black tracking-widest uppercase">SMA 20</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-lg">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                        <span className="text-[9px] text-blue-500 font-black tracking-widest uppercase">SMA 50</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/5 border border-red-500/10 rounded-lg">
-                        <div className="w-2 h-2 bg-red-500 rounded-full" />
-                        <span className="text-[9px] text-red-500 font-black tracking-widest uppercase">SMA 200</span>
-                    </div>
+                    {data.length > 20 && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+                            <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                            <span className="text-[9px] text-amber-500 font-black tracking-widest uppercase">SMA 20</span>
+                        </div>
+                    )}
+                    {data.length > 50 && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                            <span className="text-[9px] text-blue-500 font-black tracking-widest uppercase">SMA 50</span>
+                        </div>
+                    )}
+                    {data.length > 200 && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/5 border border-red-500/10 rounded-lg">
+                            <div className="w-2 h-2 bg-red-500 rounded-full" />
+                            <span className="text-[9px] text-red-500 font-black tracking-widest uppercase">SMA 200</span>
+                        </div>
+                    )}
                 </div>
-                <p className="hidden sm:block text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em] italic">Precision Market Feed v4.51 (SSE Optimized)</p>
             </div>
         </div>
     );

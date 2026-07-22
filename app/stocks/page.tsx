@@ -74,7 +74,7 @@ function StocksContent() {
     const [watchlists, setWatchlists] = useState<any[]>([]);
     const [newWatchlistName, setNewWatchlistName] = useState("");
     const [isCreatingWatchlist, setIsCreatingWatchlist] = useState(false);
-    const itemsPerPage = 20;
+    const itemsPerPage = 15;
 
     const { settings } = useSettings();
     const { success, error } = useToast();
@@ -886,39 +886,39 @@ function StocksContent() {
 
                             {/* Table Pagination */}
                             {filteredStocks.length > itemsPerPage && (
-                            <div className="px-4 sm:px-8 py-6 bg-zinc-50 dark:bg-[#080808] border-t border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
-                                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                                    Displaying {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredStocks.length)} of {filteredStocks.length} Assets
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        disabled={currentPage === 1}
-                                        onClick={() => { setCurrentPage(prev => Math.max(1, prev - 1)); window.scrollTo({ top: 900, behavior: 'smooth' }); }}
-                                        className="p-2 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 disabled:opacity-30 hover:border-blue-500 transition-all font-bold"
-                                    >
-                                        <span className="text-xs">◀</span>
-                                    </button>
-                                    <div className="flex items-center gap-1">
-                                        {getVisiblePages().map((pageNum, i) => (
-                                            <button
-                                                key={i}
-                                                disabled={pageNum === '...'}
-                                                onClick={() => { if (typeof pageNum === 'number') { setCurrentPage(pageNum); window.scrollTo({ top: 900, behavior: 'smooth' }); } }}
-                                                className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : pageNum === '...' ? 'text-zinc-400 cursor-default' : 'bg-white dark:bg-white/5 text-zinc-500 hover:border-blue-500 border border-zinc-200 dark:border-white/5'}`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        ))}
+                                <div className="px-4 sm:px-8 py-6 bg-zinc-50 dark:bg-[#080808] border-t border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
+                                    <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                                        Displaying {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredStocks.length)} of {filteredStocks.length} Assets
                                     </div>
-                                    <button
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => { setCurrentPage(prev => Math.min(totalPages, prev + 1)); window.scrollTo({ top: 900, behavior: 'smooth' }); }}
-                                        className="p-2 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 disabled:opacity-30 hover:border-blue-500 transition-all font-bold"
-                                    >
-                                        <span className="text-xs">▶</span>
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            disabled={currentPage === 1}
+                                            onClick={() => { setCurrentPage(prev => Math.max(1, prev - 1)); window.scrollTo({ top: 900, behavior: 'smooth' }); }}
+                                            className="p-2 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 disabled:opacity-30 hover:border-blue-500 transition-all font-bold"
+                                        >
+                                            <span className="text-xs">◀</span>
+                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            {getVisiblePages().map((pageNum, i) => (
+                                                <button
+                                                    key={i}
+                                                    disabled={pageNum === '...'}
+                                                    onClick={() => { if (typeof pageNum === 'number') { setCurrentPage(pageNum); window.scrollTo({ top: 900, behavior: 'smooth' }); } }}
+                                                    className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : pageNum === '...' ? 'text-zinc-400 cursor-default' : 'bg-white dark:bg-white/5 text-zinc-500 hover:border-blue-500 border border-zinc-200 dark:border-white/5'}`}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button
+                                            disabled={currentPage === totalPages}
+                                            onClick={() => { setCurrentPage(prev => Math.min(totalPages, prev + 1)); window.scrollTo({ top: 900, behavior: 'smooth' }); }}
+                                            className="p-2 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 disabled:opacity-30 hover:border-blue-500 transition-all font-bold"
+                                        >
+                                            <span className="text-xs">▶</span>
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
                             )}
                         </div>
                     )}

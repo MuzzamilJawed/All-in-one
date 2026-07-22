@@ -3,6 +3,7 @@
 import PriceCard from "../components/PriceCard";
 import MetalStatCard from "../components/MetalStatCard";
 import PageSkeleton from "../components/PageSkeleton";
+import { computePivotLevels, nextLevels } from "../lib/levels";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
 import { useState, useEffect, useCallback } from "react";
@@ -429,6 +430,24 @@ export default function MetalsPage() {
 
   if (loading && !rawMarketData) return <PageSkeleton variant="metals" />;
 
+  // Pivot support/resistance for the active metal, from the most recent real
+  // candle (already scaled to the displayed currency, so lines/ladder match the chart).
+  const activeCandles = trendMetal === 'gold' ? goldCandles : silverCandles;
+  const pivotSrc = [...activeCandles].reverse().find((c: any) => c && c.high > c.low) || activeCandles[activeCandles.length - 1];
+  const metalLevels = pivotSrc ? computePivotLevels(pivotSrc.high, pivotSrc.low, pivotSrc.close) : null;
+  const metalNext = (metalLevels && pivotSrc) ? nextLevels(pivotSrc.close, metalLevels) : { nextResistance: null, nextSupport: null };
+  const mSym = tableCurrency === 'PKR' ? 'Rs.' : '$';
+  const fmtLvl = (v?: number | null) => v == null ? '—' : `${mSym}${v.toLocaleString(undefined, { maximumFractionDigits: v > 1 ? 2 : 4 })}`;
+  const fmtCompact = (v?: number | null) => {
+    if (v == null) return '—';
+    if (v >= 1000) return `${mSym}${new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(v)}`;
+    return `${mSym}${v.toLocaleString(undefined, { maximumFractionDigits: v > 1 ? 2 : 4 })}`;
+  };
+  const metalPriceLines = [
+    ...(metalNext.nextResistance != null ? [{ price: metalNext.nextResistance, color: '#ef4444', title: 'Resistance' }] : []),
+    ...(metalNext.nextSupport != null ? [{ price: metalNext.nextSupport, color: '#22c55e', title: 'Support' }] : []),
+  ];
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
@@ -815,15 +834,51 @@ export default function MetalsPage() {
               </div>
             </div>
             <div className="h-[400px] sm:h-[600px] w-full relative z-10">
-              <TradingChart 
-                title={`${trendMetal.toUpperCase()} Snapshot Analysis`} 
-                data={trendMetal === 'gold' ? goldCandles : silverCandles} 
-                currentTimeframe={trendMetal === 'gold' ? goldChartTF : silverChartTF} 
-                onTimeframeChange={trendMetal === 'gold' ? setGoldChartTF : setSilverChartTF} 
-                currencySymbol={tableCurrency === 'PKR' ? 'Rs.' : '$'} 
+              <TradingChart
+                title={`${trendMetal.toUpperCase()} Snapshot Analysis`}
+                data={trendMetal === 'gold' ? goldCandles : silverCandles}
+                currentTimeframe={trendMetal === 'gold' ? goldChartTF : silverChartTF}
+                onTimeframeChange={trendMetal === 'gold' ? setGoldChartTF : setSilverChartTF}
+                currencySymbol={tableCurrency === 'PKR' ? 'Rs.' : '$'}
+                priceLines={metalPriceLines}
                 seamless={true}
               />
             </div>
+
+            {/* Pivot support / resistance ladder */}
+            {metalLevels && (
+              <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-white/5 relative z-10">
+                <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+                  <div className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Pivot Levels · Support / Resistance ({trendMetal === 'gold' ? goldChartTF : silverChartTF})</div>
+                  <div className="flex items-center gap-4 sm:gap-6">
+                    <div>
+                      <span className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest mr-1.5">Next Support</span>
+                      <span className="text-xs font-mono font-black text-green-600 dark:text-green-400 tabular-nums">{fmtLvl(metalNext.nextSupport)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-widest mr-1.5">Next Resistance</span>
+                      <span className="text-xs font-mono font-black text-red-600 dark:text-red-400 tabular-nums">{fmtLvl(metalNext.nextResistance)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+                  {[
+                    { label: 'S3', val: metalLevels.s3, tone: 'text-green-600 dark:text-green-400' },
+                    { label: 'S2', val: metalLevels.s2, tone: 'text-green-600 dark:text-green-400' },
+                    { label: 'S1', val: metalLevels.s1, tone: 'text-green-600 dark:text-green-400' },
+                    { label: 'PIVOT', val: metalLevels.pivot, tone: 'text-zinc-900 dark:text-white' },
+                    { label: 'R1', val: metalLevels.r1, tone: 'text-red-600 dark:text-red-400' },
+                    { label: 'R2', val: metalLevels.r2, tone: 'text-red-600 dark:text-red-400' },
+                    { label: 'R3', val: metalLevels.r3, tone: 'text-red-600 dark:text-red-400' },
+                  ].map(lvl => (
+                    <div key={lvl.label} title={fmtLvl(lvl.val)} className="bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5 rounded-xl px-2 py-2 text-center">
+                      <div className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{lvl.label}</div>
+                      <div className={`text-[10px] sm:text-xs font-mono font-black tabular-nums ${lvl.tone}`}>{fmtCompact(lvl.val)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
