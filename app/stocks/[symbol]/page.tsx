@@ -7,6 +7,7 @@ const TradingChart = dynamic(() => import('../../components/TradingChart'), { ss
 import { useSettings } from "../../context/SettingsContext";
 import StockCard from "../../components/StockCard";
 import { computePivotLevels, nextLevels } from "../../lib/levels";
+import { Radar, AlertTriangle, ArrowLeft, BarChart3, Newspaper, Star } from "lucide-react";
 
 interface Stock {
     symbol: string;
@@ -228,7 +229,7 @@ export default function StockDetailPage() {
                     <div className="relative">
                         <div className="w-20 h-20 border-4 border-blue-600/20 rounded-full"></div>
                         <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-                        <div className="absolute inset-0 flex items-center justify-center text-xl">🛰️</div>
+                        <div className="absolute inset-0 flex items-center justify-center text-blue-600"><Radar className="w-8 h-8" strokeWidth={2} /></div>
                     </div>
                     <div className="text-center">
                         <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] mb-2">Initializing Satellite Link</p>
@@ -244,7 +245,7 @@ export default function StockDetailPage() {
             <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] flex items-center justify-center relative overflow-hidden">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-600/10 blur-[120px] rounded-full"></div>
                 <div className="flex flex-col items-center gap-8 relative z-10 p-8 text-center bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl rounded-[3rem] border border-white/10 shadow-2xl">
-                    <div className="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center text-3xl mb-4">⚠️</div>
+                    <div className="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center mb-4"><AlertTriangle className="w-8 h-8 text-red-500" strokeWidth={2} /></div>
                     <h1 className="text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter mb-2">Terminal Error</h1>
                     <p className="text-zinc-500 mb-8 uppercase text-[10px] tracking-[0.2em] font-black">No market data footprint for {symbol}</p>
                     <button onClick={() => router.push('/stocks')} className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95">Back to Market Explorer</button>
@@ -274,7 +275,7 @@ export default function StockDetailPage() {
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center gap-4">
                     <div className="flex items-center gap-3 sm:gap-6">
                         <button onClick={() => router.push('/stocks')} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group shrink-0">
-                            <span className="text-zinc-500 group-hover:text-blue-500 transition-colors font-bold text-sm sm:text-base">←</span>
+                            <ArrowLeft className="w-5 h-5 text-zinc-500 group-hover:text-blue-500 transition-colors" strokeWidth={2} />
                         </button>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
@@ -292,7 +293,7 @@ export default function StockDetailPage() {
                             className="flex items-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95 shrink-0"
                             title="View full equity research report"
                         >
-                            <span className="text-xs leading-none">📊</span>
+                            <BarChart3 className="w-4 h-4" strokeWidth={2} />
                             <span className="hidden sm:inline">Full Report</span>
                         </button>
                         <div className="text-right shrink-0">
@@ -400,7 +401,7 @@ export default function StockDetailPage() {
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">📊</span>
+                            <BarChart3 className="w-6 h-6 text-blue-500" strokeWidth={2} />
                             <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Market Depth & Fundamentals</h3>
                         </div>
                         {(detailLoading || deepDetails) && (
@@ -603,7 +604,7 @@ export default function StockDetailPage() {
                     {/* Intelligence Section */}
                     <div className="space-y-4 sm:space-y-8">
                         <div className="flex items-center gap-3">
-                            <span className="text-xl sm:text-2xl">📰</span>
+                            <Newspaper className="w-6 h-6 sm:w-7 sm:h-7 text-blue-500" strokeWidth={2} />
                             <h3 className="text-lg sm:text-xl font-black uppercase italic tracking-tighter dark:text-white">Equity Intelligence</h3>
                         </div>
                         <div className="bg-white dark:bg-zinc-900/50 p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 relative overflow-hidden group">
@@ -619,7 +620,7 @@ export default function StockDetailPage() {
                     {/* Stock Card Quick Actions */}
                     <div className="space-y-4 sm:space-y-8">
                         <div className="flex items-center gap-3">
-                            <span className="text-xl sm:text-2xl">⭐</span>
+                            <Star className="w-6 h-6 sm:w-7 sm:h-7 text-amber-400" strokeWidth={2} />
                             <h3 className="text-lg sm:text-xl font-black uppercase italic tracking-tighter dark:text-white">Quick Actions</h3>
                         </div>
                         <div className="w-full">

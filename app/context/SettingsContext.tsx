@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { DEFAULT_MODULES } from '../lib/modules';
 
 interface Settings {
     currency: string;
@@ -8,6 +9,7 @@ interface Settings {
     notifications: boolean;
     soundAlerts: boolean;
     priceAlerts: boolean;
+    modules: Record<string, boolean>;
 }
 
 interface SettingsContextType {
@@ -21,6 +23,7 @@ const defaultSettings: Settings = {
     notifications: true,
     soundAlerts: false,
     priceAlerts: true,
+    modules: DEFAULT_MODULES,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -34,7 +37,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                setSettings({ ...defaultSettings, ...parsed });
+                // Merge modules so any newly-added module defaults to enabled.
+                setSettings({ ...defaultSettings, ...parsed, modules: { ...DEFAULT_MODULES, ...(parsed.modules || {}) } });
             } catch (e) {
                 console.error("Failed to parse settings", e);
             }

@@ -5,6 +5,8 @@
 // NOTE: PSX equities move within a ±7.5% circuit breaker on last day close.
 // We flag "locked" a touch below the exact cap to absorb rounding in the feed.
 
+import { Lock, AlertTriangle, Zap, Target, ChevronUp, ChevronDown, type LucideIcon } from "lucide-react";
+
 export const CIRCUIT_CAP = 7.5;
 const LOCK_THRESHOLD = 7.35;   // treat as fully locked at/above this
 const NEAR_THRESHOLD = 5.5;    // "approaching the cap"
@@ -14,7 +16,7 @@ export type SignalTone = "green" | "red" | "blue" | "amber" | "zinc";
 
 export interface Signal {
     key: string;
-    icon: string;
+    icon: LucideIcon;
     label: string;
     tone: SignalTone;
     title: string; // tooltip / long form
@@ -77,34 +79,34 @@ export const computeSignals = (stock: SignalStock, targetPrice?: number | null):
     const cs = circuitStatus(c);
 
     if (cs === "upper-lock") {
-        out.push({ key: "upper-lock", icon: "🔒", label: "UPPER", tone: "green", title: `Upper circuit — locked near +${CIRCUIT_CAP}%` });
+        out.push({ key: "upper-lock", icon: Lock, label: "UPPER", tone: "green", title: `Upper circuit — locked near +${CIRCUIT_CAP}%` });
     } else if (cs === "lower-lock") {
-        out.push({ key: "lower-lock", icon: "🔒", label: "LOWER", tone: "red", title: `Lower circuit — locked near -${CIRCUIT_CAP}%` });
+        out.push({ key: "lower-lock", icon: Lock, label: "LOWER", tone: "red", title: `Lower circuit — locked near -${CIRCUIT_CAP}%` });
     } else if (cs === "near-upper") {
-        out.push({ key: "near-upper", icon: "⚠️", label: "NEAR CAP", tone: "green", title: "Approaching the upper circuit" });
+        out.push({ key: "near-upper", icon: AlertTriangle, label: "NEAR CAP", tone: "green", title: "Approaching the upper circuit" });
     } else if (cs === "near-lower") {
-        out.push({ key: "near-lower", icon: "⚠️", label: "NEAR CAP", tone: "red", title: "Approaching the lower circuit" });
+        out.push({ key: "near-lower", icon: AlertTriangle, label: "NEAR CAP", tone: "red", title: "Approaching the lower circuit" });
     } else if (c >= BIG_MOVE) {
-        out.push({ key: "surge", icon: "⚡", label: `+${c.toFixed(1)}%`, tone: "green", title: "Strong intraday gain" });
+        out.push({ key: "surge", icon: Zap, label: `+${c.toFixed(1)}%`, tone: "green", title: "Strong intraday gain" });
     } else if (c <= -BIG_MOVE) {
-        out.push({ key: "drop", icon: "⚡", label: `${c.toFixed(1)}%`, tone: "red", title: "Sharp intraday drop" });
+        out.push({ key: "drop", icon: Zap, label: `${c.toFixed(1)}%`, tone: "red", title: "Sharp intraday drop" });
     }
 
     // Target alert (user-set, from localStorage prefs)
     if (targetPrice != null && price != null && targetPrice > 0) {
         if (price >= targetPrice) {
-            out.push({ key: "target-hit", icon: "🎯", label: "TARGET", tone: "blue", title: `Reached your target of ${targetPrice}` });
+            out.push({ key: "target-hit", icon: Target, label: "TARGET", tone: "blue", title: `Reached your target of ${targetPrice}` });
         } else {
             const away = ((targetPrice - price) / price) * 100;
-            if (away <= 2) out.push({ key: "target-near", icon: "🎯", label: `${away.toFixed(1)}%`, tone: "blue", title: `${away.toFixed(1)}% below your target of ${targetPrice}` });
+            if (away <= 2) out.push({ key: "target-near", icon: Target, label: `${away.toFixed(1)}%`, tone: "blue", title: `${away.toFixed(1)}% below your target of ${targetPrice}` });
         }
     }
 
     // Fresh session high / low (only when not already flagged as locked, to reduce clutter)
     if (cs !== "upper-lock" && cs !== "lower-lock" && stock.high != null && price != null && stock.high > 0 && price >= stock.high) {
-        out.push({ key: "day-high", icon: "🔼", label: "HIGH", tone: "green", title: "Trading at the session high" });
+        out.push({ key: "day-high", icon: ChevronUp, label: "HIGH", tone: "green", title: "Trading at the session high" });
     } else if (cs !== "upper-lock" && cs !== "lower-lock" && stock.low != null && price != null && stock.low > 0 && price <= stock.low) {
-        out.push({ key: "day-low", icon: "🔽", label: "LOW", tone: "red", title: "Trading at the session low" });
+        out.push({ key: "day-low", icon: ChevronDown, label: "LOW", tone: "red", title: "Trading at the session low" });
     }
 
     return out;

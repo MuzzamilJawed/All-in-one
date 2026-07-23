@@ -817,14 +817,14 @@ export async function fetchForexRates() {
     const forexData = pairs.map(pair => {
       const usdToPair = rates[pair.code] || 0;
       const pairToPkr = (1 / usdToPair) * pkrRate;
-      
+
       return {
         code: pair.code,
         name: pair.name,
         usdPrice: 1 / usdToPair, // Price of 1 Unit in USD
         pkrPrice: pairToPkr,      // Price of 1 Unit in PKR
-        change: (Math.random() - 0.5) * 0.1, // Placeholder for change
-        changePercent: (Math.random() - 0.5) * 0.5, // Placeholder for change percent
+        change: 0,
+        changePercent: 0,
       };
     });
 
@@ -834,8 +834,19 @@ export async function fetchForexRates() {
       name: "US Dollar",
       usdPrice: 1.0,
       pkrPrice: pkrRate,
-      change: (Math.random() - 0.5) * 0.2,
-      changePercent: (Math.random() - 0.5) * 0.3,
+      change: 0,
+      changePercent: 0,
+    });
+
+    // Enrich with REAL 24h change from Yahoo (batch, cached). USD uses PKR=X
+    // (USD/PKR); everyone else uses <CODE>USD=X. Failures leave change at 0.
+    const changeMap = await fetchYahooFxChange(forexData.map(f => f.code));
+    forexData.forEach(f => {
+      const m = changeMap[f.code];
+      if (m && typeof m.changePercent === 'number') {
+        f.changePercent = m.changePercent;
+        f.change = (f.usdPrice || 0) * (m.changePercent / 100);
+      }
     });
 
     return forexData;
@@ -843,6 +854,30 @@ export async function fetchForexRates() {
     console.error("Error fetching Forex rates:", error);
     return null;
   }
+}
+
+// Real 24h % change per currency code from Yahoo daily chart meta (parallel, cached).
+async function fetchYahooFxChange(codes: string[]): Promise<Record<string, { changePercent: number | null }>> {
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+  const out: Record<string, { changePercent: number | null }> = {};
+  await Promise.all(codes.map(async (code) => {
+    try {
+      const sym = code === 'USD' ? 'PKR=X' : `${code}USD=X`;
+      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`, {
+        headers: { 'User-Agent': UA, 'Accept': 'application/json' },
+        next: { revalidate: 300 },
+      });
+      if (!r.ok) { out[code] = { changePercent: null }; return; }
+      const j = await r.json();
+      const meta = j?.chart?.result?.[0]?.meta || {};
+      const price = meta.regularMarketPrice ?? null;
+      const prev = meta.chartPreviousClose ?? meta.previousClose ?? null;
+      out[code] = { changePercent: (price != null && prev) ? ((price - prev) / prev) * 100 : null };
+    } catch {
+      out[code] = { changePercent: null };
+    }
+  }));
+  return out;
 }
 
 /**

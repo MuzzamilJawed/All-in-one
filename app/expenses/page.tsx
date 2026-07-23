@@ -1,5 +1,7 @@
 "use client";
 
+import { Wallet, Pencil, Plus, PieChart as PieChartIcon, LineChart as LineChartIcon, CreditCard, ClipboardList, Inbox } from "lucide-react";
+
 import { useState, useEffect } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useToast } from "../context/ToastContext";
@@ -181,8 +183,8 @@ export default function ExpensesPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
         <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
-            💰 Expense <span className="text-blue-500 text-xl sm:text-2xl">Tracker</span>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
+            <Wallet className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Expense <span className="text-blue-500 text-xl sm:text-2xl">Tracker</span>
           </h1>
           <p className="text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">
             Spending Intelligence & Analysis
@@ -218,8 +220,12 @@ export default function ExpensesPage() {
           {/* Add Expense Form */}
           <div className="lg:col-span-1 bg-white dark:bg-zinc-900/60 backdrop-blur-sm rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden shadow-sm">
             <div className="px-6 py-5 border-b border-zinc-100 dark:border-white/5">
-              <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">
-                {editingId ? "✏️ Edit Expense" : "➕ Add Expense"}
+              <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white flex items-center gap-2">
+                {editingId ? (
+                  <><Pencil className="w-4 h-4 shrink-0" strokeWidth={2} /> Edit Expense</>
+                ) : (
+                  <><Plus className="w-4 h-4 shrink-0" strokeWidth={2} /> Add Expense</>
+                )}
               </h2>
             </div>
             <form onSubmit={handleAddExpense} className="p-6 space-y-4">
@@ -270,7 +276,7 @@ export default function ExpensesPage() {
             {/* Category Breakdown */}
             {categoryData.length > 0 && (
               <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 shadow-sm">
-                <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4">📊 Spending by Category</h2>
+                <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4 flex items-center gap-2"><PieChartIcon className="w-4 h-4 shrink-0" strokeWidth={2} /> Spending by Category</h2>
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie data={categoryData} cx="50%" cy="50%" labelLine={false} outerRadius={90} dataKey="value">
@@ -285,7 +291,7 @@ export default function ExpensesPage() {
             {/* Daily Trend */}
             {lineChartData.length > 0 && (
               <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 shadow-sm">
-                <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4">📈 Daily Trend</h2>
+                <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4 flex items-center gap-2"><LineChartIcon className="w-4 h-4 shrink-0" strokeWidth={2} /> Daily Trend</h2>
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={lineChartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" className="dark:stroke-zinc-800" />
@@ -301,7 +307,7 @@ export default function ExpensesPage() {
             {/* Payment Method */}
             {paymentMethodData.length > 0 && (
               <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 shadow-sm">
-                <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4">💳 By Payment Method</h2>
+                <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4 flex items-center gap-2"><CreditCard className="w-4 h-4 shrink-0" strokeWidth={2} /> By Payment Method</h2>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={paymentMethodData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
@@ -335,11 +341,11 @@ export default function ExpensesPage() {
         {/* Expenses Table */}
         <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden shadow-sm">
           <div className="px-6 sm:px-8 py-5 border-b border-zinc-100 dark:border-white/5">
-            <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">📋 Recent Expenses</h2>
+            <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white flex items-center gap-2"><ClipboardList className="w-4 h-4 shrink-0" strokeWidth={2} /> Recent Expenses</h2>
           </div>
           {filteredExpenses.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-4xl mb-4">📭</p>
+              <Inbox className="w-10 h-10 mx-auto mb-4 text-zinc-400" strokeWidth={1.5} />
               <p className="text-zinc-400 font-black uppercase tracking-widest text-xs">No expenses found for this period</p>
             </div>
           ) : (

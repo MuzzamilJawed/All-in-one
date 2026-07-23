@@ -4,6 +4,7 @@ import { createChart, ColorType, CandlestickSeries, CrosshairMode, HistogramSeri
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from 'next-themes';
+import { Maximize2, Minimize2 } from 'lucide-react';
 
 interface CandleData {
     time: string | number;
@@ -359,8 +360,8 @@ export default function TradingChart({
                             </button>
                         ))}
                     </div>
-                    <button onClick={() => setIsFullscreen(!isFullscreen)} className="px-3 sm:px-5 py-2 sm:py-2.5 text-[9px] font-black bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all uppercase tracking-widest">
-                        {isFullscreen ? '✕ Exit' : '⛶ Full'}
+                    <button onClick={() => setIsFullscreen(!isFullscreen)} className="px-3 sm:px-5 py-2 sm:py-2.5 text-[9px] font-black bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all uppercase tracking-widest inline-flex items-center gap-1.5">
+                        {isFullscreen ? <><Minimize2 className="w-3 h-3" strokeWidth={2.5} /> Exit</> : <><Maximize2 className="w-3 h-3" strokeWidth={2.5} /> Full</>}
                     </button>
                 </div>
             </div>

@@ -8,11 +8,24 @@
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "npx playwright test",
-    "test:e2e:ui": "npx playwright test --ui"
+    "test:e2e:ui": "npx playwright test --ui",
+    "mobile:add:android": "cap add android",
+    "mobile:add:ios": "cap add ios",
+    "mobile:assets": "capacitor-assets generate --android --ios --iconBackgroundColor #050505 --iconBackgroundColorDark #050505 --splashBackgroundColor #050505 --splashBackgroundColorDark #050505",
+    "mobile:sync": "cap sync",
+    "mobile:open:android": "cap open android",
+    "mobile:open:ios": "cap open ios",
+    "mobile:run:android": "cap run android",
+    "mobile:run:ios": "cap run ios"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "cheerio": "^1.2.0",
     "lightweight-charts": "^5.1.0",
+    "lucide-react": "^1.25.0",
     "mongoose": "^9.2.1",
     "next": "16.1.6",
     "next-themes": "^0.4.6",
@@ -21,6 +34,10 @@
     "recharts": "^3.7.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

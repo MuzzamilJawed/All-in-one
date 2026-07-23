@@ -2,6 +2,7 @@
 
 import { dayRangePosition, circuitStatus } from "../lib/stockSignals";
 import { useSidebar } from "../context/SidebarContext";
+import { Scale, Award, Lock } from "lucide-react";
 
 interface Stock {
     symbol: string;
@@ -59,13 +60,13 @@ export default function CompareTray({ stocks, onRemove, onClear, onOpen }: Compa
 
     return (
         <div
-            className={`fixed bottom-0 left-0 right-0 ${collapsed ? "lg:left-20" : "lg:left-64"} z-[80] px-3 sm:px-6 pb-3 sm:pb-6 pointer-events-none transition-[left] duration-300 ease-in-out`}
+            className={`fixed bottom-0 left-0 right-0 ${collapsed ? "lg:left-20" : "lg:left-64"} z-[80] px-3 sm:px-6 pb-3 sm:pb-6 pb-safe pointer-events-none transition-[left] duration-300 ease-in-out`}
         >
             <div className="max-w-[1600px] mx-auto pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-2xl sm:rounded-[1.75rem] border border-zinc-200 dark:border-white/10 shadow-2xl shadow-black/10 dark:shadow-black/40 overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-2.5 sm:py-3 border-b border-zinc-100 dark:border-white/5 bg-gradient-to-r from-blue-500/[0.04] to-transparent">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="shrink-0 w-7 h-7 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">⚖️</span>
+                        <span className="shrink-0 w-7 h-7 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center"><Scale className="w-4 h-4" strokeWidth={2} /></span>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <span className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white leading-none">Compare</span>
@@ -109,7 +110,7 @@ export default function CompareTray({ stocks, onRemove, onClear, onOpen }: Compa
                                     <button onClick={() => onOpen(s.symbol)} className="min-w-0 text-left group">
                                         <div className="flex items-center gap-1">
                                             <span className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{s.symbol}</span>
-                                            {isBest && <span className="text-[9px]" title="Top performer">🏆</span>}
+                                            {isBest && <span title="Top performer" className="text-amber-500"><Award className="w-3 h-3" strokeWidth={2.5} /></span>}
                                         </div>
                                         <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest truncate">{s.sector || "—"}</p>
                                     </button>
@@ -129,7 +130,7 @@ export default function CompareTray({ stocks, onRemove, onClear, onOpen }: Compa
                                     <p className={`text-[10px] font-black mt-0.5 flex items-center gap-1 ${isPos ? "text-green-500" : "text-red-500"}`}>
                                         <span>{isPos ? "▲" : "▼"}{Math.abs(s.change || 0).toFixed(2)}</span>
                                         <span className="opacity-70">({Math.abs(s.changePercent || 0).toFixed(2)}%)</span>
-                                        {cs?.includes("lock") && <span title="Circuit locked">🔒</span>}
+                                        {cs?.includes("lock") && <span title="Circuit locked" className="inline-flex"><Lock className="w-2.5 h-2.5" strokeWidth={2.5} /></span>}
                                     </p>
                                 </div>
 

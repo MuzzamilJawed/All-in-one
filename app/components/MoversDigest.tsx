@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { TrendingUp, TrendingDown, Flame, Star, type LucideIcon } from "lucide-react";
 
 interface Stock {
     symbol: string;
@@ -56,11 +57,11 @@ function MoverRow({ stock, rank, meta, onSelect }: { stock: Stock; rank: number;
     );
 }
 
-function DigestColumn({ title, emoji, accent, children, empty }: { title: string; emoji: string; accent: string; children: React.ReactNode; empty?: boolean }) {
+function DigestColumn({ title, icon: Icon, tone, accent, children, empty }: { title: string; icon: LucideIcon; tone: string; accent: string; children: React.ReactNode; empty?: boolean }) {
     return (
         <div className="bg-white dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-100 dark:border-white/5">
-                <span className="text-sm">{emoji}</span>
+                <Icon className={`w-4 h-4 shrink-0 ${tone}`} strokeWidth={2.25} />
                 <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-zinc-900 dark:text-white">{title}</h3>
                 <span className={`ml-auto w-1.5 h-1.5 rounded-full ${accent}`}></span>
             </div>
@@ -79,16 +80,16 @@ export default function MoversDigest({ stocks, watchlists = [], loading = false,
     const { gainers, losers, active, watchMovers } = useMemo(() => {
         const valid = (stocks || []).filter(s => s && s.symbol && typeof s.changePercent === "number");
 
-        const gainers = [...valid].sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0)).slice(0, 5);
-        const losers = [...valid].sort((a, b) => (a.changePercent || 0) - (b.changePercent || 0)).slice(0, 5);
-        const active = [...valid].sort((a, b) => parseVol(b.volume) - parseVol(a.volume)).slice(0, 5);
+        const gainers = [...valid].sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0)).slice(0, 3);
+        const losers = [...valid].sort((a, b) => (a.changePercent || 0) - (b.changePercent || 0)).slice(0, 3);
+        const active = [...valid].sort((a, b) => parseVol(b.volume) - parseVol(a.volume)).slice(0, 3);
 
         const watchSymbols = new Set<string>();
         (watchlists || []).forEach(wl => (wl?.symbols || []).forEach((s: string) => watchSymbols.add(s.toUpperCase())));
         const watchMovers = valid
             .filter(s => watchSymbols.has(s.symbol.toUpperCase()))
             .sort((a, b) => Math.abs(b.changePercent || 0) - Math.abs(a.changePercent || 0))
-            .slice(0, 5);
+            .slice(0, 3);
 
         return { gainers, losers, active, watchMovers };
     }, [stocks, watchlists]);
@@ -115,20 +116,20 @@ export default function MoversDigest({ stocks, watchlists = [], loading = false,
 
     return (
         <div className={`grid grid-cols-1 sm:grid-cols-2 ${hasWatch ? "xl:grid-cols-4" : "xl:grid-cols-3"} gap-3 sm:gap-6`}>
-            <DigestColumn title="Top Gainers" emoji="📈" accent="bg-green-500" empty={gainers.length === 0}>
+            <DigestColumn title="Top Gainers" icon={TrendingUp} tone="text-green-500" accent="bg-green-500" empty={gainers.length === 0}>
                 {gainers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onSelect={onSelect} />)}
             </DigestColumn>
 
-            <DigestColumn title="Top Losers" emoji="📉" accent="bg-red-500" empty={losers.length === 0}>
+            <DigestColumn title="Top Losers" icon={TrendingDown} tone="text-red-500" accent="bg-red-500" empty={losers.length === 0}>
                 {losers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onSelect={onSelect} />)}
             </DigestColumn>
 
-            <DigestColumn title="Most Active" emoji="🔥" accent="bg-blue-500" empty={active.length === 0}>
+            <DigestColumn title="Most Active" icon={Flame} tone="text-orange-500" accent="bg-blue-500" empty={active.length === 0}>
                 {active.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} meta={`Vol ${fmtVol(parseVol(s.volume))}`} onSelect={onSelect} />)}
             </DigestColumn>
 
             {hasWatch && (
-                <DigestColumn title="Your Watchlist" emoji="⭐" accent="bg-amber-500">
+                <DigestColumn title="Your Watchlist" icon={Star} tone="text-amber-500" accent="bg-amber-500">
                     {watchMovers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onSelect={onSelect} />)}
                 </DigestColumn>
             )}

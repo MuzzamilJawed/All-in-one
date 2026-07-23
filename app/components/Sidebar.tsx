@@ -5,41 +5,49 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useSidebar } from "../context/SidebarContext";
+import { useSettings } from "../context/SettingsContext";
+import { isModuleEnabled } from "../lib/modules";
+import {
+  LayoutDashboard, TrendingUp, Globe, ArrowRightLeft, Bitcoin, Gem, Fuel,
+  Briefcase, Star, Wallet, Settings, ChevronsLeft, ChevronsRight, X,
+  Sun, Moon, Monitor,
+} from "lucide-react";
 
 const navigationGroups = [
   {
     title: "Overview",
     items: [
-      { name: "Dashboard", href: "/", icon: "📊" },
+      { name: "Dashboard", href: "/", icon: LayoutDashboard },
     ]
   },
   {
     title: "Markets",
     items: [
-      { name: "PSX Stocks", href: "/stocks", icon: "📈" },
-      { name: "NASDAQ Stocks", href: "/nasdaq", icon: "🧭" },
-      { name: "Forex", href: "/forex", icon: "💱" },
-      { name: "Crypto", href: "/crypto", icon: "₿" },
+      { name: "PSX Stocks", href: "/stocks", icon: TrendingUp, module: "stocks" },
+      { name: "NASDAQ Stocks", href: "/nasdaq", icon: Globe, module: "nasdaq" },
+      { name: "Forex", href: "/forex", icon: ArrowRightLeft, module: "forex" },
+      { name: "Crypto", href: "/crypto", icon: Bitcoin, module: "crypto" },
     ]
   },
   {
     title: "Commodities",
     items: [
-      { name: "Gold & Silver", href: "/metals", icon: "💎" },
-      { name: "Oil & Energy", href: "/oil", icon: "🛢️" },
+      { name: "Gold & Silver", href: "/metals", icon: Gem, module: "metals" },
+      { name: "Oil & Energy", href: "/oil", icon: Fuel, module: "oil" },
     ]
   },
   {
     title: "Tools & Personal",
     items: [
-      { name: "Watchlist", href: "/watchlist", icon: "⭐" },
-      { name: "Expenses", href: "/expenses", icon: "💰" },
+      { name: "Portfolio", href: "/portfolio", icon: Briefcase, module: "portfolio" },
+      { name: "Watchlist", href: "/watchlist", icon: Star, module: "watchlist" },
+      { name: "Expenses", href: "/expenses", icon: Wallet, module: "expenses" },
     ]
   },
   {
     title: "Configuration",
     items: [
-      { name: "Settings", href: "/settings", icon: "⚙️" },
+      { name: "Settings", href: "/settings", icon: Settings },
     ]
   },
 ];
@@ -50,7 +58,13 @@ export default function Sidebar() {
   const [currentTime, setCurrentTime] = useState("");
   const { theme, setTheme } = useTheme();
   const { collapsed, toggleCollapsed } = useSidebar();
+  const { settings } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Hide nav items for disabled modules, drop groups that become empty.
+  const visibleGroups = navigationGroups
+    .map(g => ({ ...g, items: g.items.filter((it: any) => !it.module || isModuleEnabled(settings.modules, it.module)) }))
+    .filter(g => g.items.length > 0);
 
   useEffect(() => {
     setMounted(true);
@@ -78,7 +92,7 @@ export default function Sidebar() {
         className="lg:hidden fixed top-2.5 left-3 z-[100] w-11 h-11 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg flex items-center justify-center active:scale-90 transition-transform"
       >
         {isOpen ? (
-          <span className="text-xl leading-none">✕</span>
+          <X className="w-5 h-5" strokeWidth={2.5} />
         ) : (
           <span className="flex flex-col items-center justify-center gap-[3px]">
             <span className="block w-[18px] h-[2px] bg-current rounded-full"></span>
@@ -102,14 +116,14 @@ export default function Sidebar() {
         <div className={`pl-6 pr-2 py-6 ${collapsed ? "lg:pl-2 lg:pr-1 lg:py-3" : ""} border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-2`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className={`w-9 h-9 ${collapsed ? "lg:w-8 lg:h-8" : ""} shrink-0 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25`}>
-              <span className="text-white font-black text-xl italic leading-none">α</span>
+              <span className="text-white font-black text-xl italic leading-none">S</span>
             </div>
             <div className={`min-w-0 ${collapsed ? "lg:hidden" : ""}`}>
-              <h1 className="text-base font-black tracking-tighter italic uppercase leading-none whitespace-nowrap">Alpha<span className="text-blue-500">Bazaar</span></h1>
-              <p className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 uppercase font-bold tracking-widest whitespace-nowrap">Markets &amp; Analysis</p>
+              <h1 className="text-base font-black tracking-tighter italic uppercase leading-none whitespace-nowrap">Solo<span className="text-blue-500">Trackr</span></h1>
+              <p className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 uppercase font-bold tracking-widest whitespace-nowrap">All Markets · One Place</p>
             </div>
           </div>
-          <button onClick={() => setIsOpen(false)} className="lg:hidden text-zinc-500 shrink-0">✕</button>
+          <button onClick={() => setIsOpen(false)} className="lg:hidden text-zinc-500 shrink-0"><X className="w-4 h-4" strokeWidth={2.5} /></button>
           {/* Desktop collapse / expand toggle — same row as logo, on the right */}
           <button
             onClick={toggleCollapsed}
@@ -117,12 +131,12 @@ export default function Sidebar() {
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={`hidden lg:flex shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all ${collapsed ? "w-6 h-8" : "w-8 h-8"}`}
           >
-            <span className="text-lg leading-none">{collapsed ? "»" : "«"}</span>
+            {collapsed ? <ChevronsRight className="w-4 h-4" strokeWidth={2.5} /> : <ChevronsLeft className="w-4 h-4" strokeWidth={2.5} />}
           </button>
         </div>
 
         <nav className="p-4 space-y-6 flex-1">
-          {navigationGroups.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.title} className="space-y-2">
               <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 px-4 mb-2 ${collapsed ? "lg:hidden" : ""}`}>
                 {group.title}
@@ -140,7 +154,7 @@ export default function Sidebar() {
                         : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
                       }`}
                     >
-                      <span className="text-xl shrink-0 w-6 text-center inline-flex items-center justify-center">{item.icon}</span>
+                      <item.icon className="w-5 h-5 shrink-0" strokeWidth={2} />
                       <span className={`font-bold text-sm tracking-tight ${collapsed ? "lg:hidden" : ""}`}>{item.name}</span>
                     </Link>
                   );
@@ -160,7 +174,7 @@ export default function Sidebar() {
                 className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'light' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
                 title="Light Mode"
               >
-                ☀️
+                <Sun className="w-4 h-4" strokeWidth={2} />
               </button>
               <button
                 data-testid="theme-toggle-dark"
@@ -168,14 +182,14 @@ export default function Sidebar() {
                 className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'dark' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
                 title="Dark Mode"
               >
-                🌙
+                <Moon className="w-4 h-4" strokeWidth={2} />
               </button>
               <button
                 onClick={() => setTheme('system')}
                 className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'system' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
                 title="System Auto"
               >
-                💻
+                <Monitor className="w-4 h-4" strokeWidth={2} />
               </button>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-// Branded favicon: a white italic "α" on the AlphaBazaar blue→indigo gradient.
+// Branded favicon: a white italic "S" on the SoloTrackr blue→indigo gradient.
 export default function Icon() {
     return new ImageResponse(
         (
@@ -22,7 +22,7 @@ export default function Icon() {
                     fontStyle: "italic",
                 }}
             >
-                α
+                S
             </div>
         ),
         { ...size }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Gem, AlertTriangle, Award, Circle, Crown } from "lucide-react";
+
 import PriceCard from "../components/PriceCard";
 import MetalStatCard from "../components/MetalStatCard";
 import PageSkeleton from "../components/PageSkeleton";
@@ -455,7 +457,7 @@ export default function MetalsPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
             <div>
               <h1 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase italic tracking-tighter">
-                💎 Precious Metals
+                <Gem className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Precious Metals
                 <span className="bg-blue-500 text-white text-[8px] sm:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
                   Live
                 </span>
@@ -479,7 +481,7 @@ export default function MetalsPage() {
       <div className="p-4 sm:p-8 max-w-[1600px] mx-auto w-full">
         {error && (
           <div className="mb-6 bg-amber-50 dark:bg-amber-900 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
-            <p className="text-amber-800 dark:text-amber-200 text-sm">⚠️ {error}</p>
+            <p className="text-amber-800 dark:text-amber-200 text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 shrink-0" strokeWidth={2} /> {error}</p>
           </div>
         )}
 
@@ -496,7 +498,7 @@ export default function MetalsPage() {
           <MetalStatCard
             metal="GOLD"
             label="Gold 24K"
-            icon="🥇"
+            icon="gold"
             unitLabel="per tola"
             currentPrice={rawMarketData?.gold?.tola24k?.pkrPrice}
             change={rawMarketData?.gold?.tola24k?.change}
@@ -508,7 +510,7 @@ export default function MetalsPage() {
           <MetalStatCard
             metal="SILVER"
             label="Silver 999"
-            icon="🥈"
+            icon="silver"
             unitLabel="per ounce"
             currentPrice={rawMarketData?.silver?.ounce?.pkrPrice}
             change={rawMarketData?.silver?.ounce?.change}
@@ -557,13 +559,13 @@ export default function MetalsPage() {
                           onClick={() => setCalcMetal('gold')}
                           className={`flex items-center justify-center gap-3 p-5 rounded-3xl border-2 transition-all duration-300 font-bold ${calcMetal === 'gold' ? 'bg-amber-500/10 border-amber-500 text-amber-600' : 'bg-zinc-50 dark:bg-zinc-800 border-transparent text-zinc-500'}`}
                         >
-                          <span className="text-xl">🏆</span> Gold (24K)
+                          <Award className="w-5 h-5 shrink-0" strokeWidth={2} /> Gold (24K)
                         </button>
                         <button 
                           onClick={() => setCalcMetal('silver')}
                           className={`flex items-center justify-center gap-3 p-5 rounded-3xl border-2 transition-all duration-300 font-bold ${calcMetal === 'silver' ? 'bg-zinc-500/10 border-zinc-500 text-zinc-600' : 'bg-zinc-50 dark:bg-zinc-800 border-transparent text-zinc-500'}`}
                         >
-                          <span className="text-xl">🔘</span> Silver (999)
+                          <Circle className="w-5 h-5 shrink-0" strokeWidth={2} /> Silver (999)
                         </button>
                       </div>
                     </div>
@@ -692,7 +694,7 @@ export default function MetalsPage() {
               onClick={() => setShowPurity(!showPurity)}
               className={`w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl border transition-all duration-300 font-black uppercase text-[10px] tracking-widest ${showPurity ? 'bg-amber-500 border-amber-500 text-white' : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-amber-600'}`}
             >
-              <span>{showPurity ? '👑' : '💎'}</span>
+              {showPurity ? <Crown className="w-3.5 h-3.5 shrink-0" strokeWidth={2} /> : <Gem className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />}
               {showPurity ? "Hide Purity Guide" : "Analyze Purity"}
             </button>
           </div>

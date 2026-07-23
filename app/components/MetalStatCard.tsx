@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Target, Medal, Gem } from "lucide-react";
 import { dayRangePosition } from "../lib/stockSignals";
 import { getMetalTarget, setMetalTarget, type MetalTarget } from "../lib/stockPrefs";
 
@@ -18,7 +19,7 @@ interface MetalStatCardProps {
 }
 
 export default function MetalStatCard({
-    metal, label, icon, unitLabel, currentPrice, change = 0, changePercent = 0, low52, high52, accent,
+    metal, label, unitLabel, currentPrice, change = 0, changePercent = 0, low52, high52, accent,
 }: MetalStatCardProps) {
     const [target, setTargetState] = useState<MetalTarget | null>(null);
     const [editing, setEditing] = useState(false);
@@ -56,14 +57,16 @@ export default function MetalStatCard({
             <div className="relative z-10">
                 <div className="flex items-start justify-between gap-2 mb-4">
                     <div className="flex items-center gap-2">
-                        <span className="text-xl">{icon}</span>
+                        {metal === "GOLD"
+                            ? <Medal className="w-5 h-5 shrink-0" strokeWidth={2} />
+                            : <Gem className="w-5 h-5 shrink-0" strokeWidth={2} />}
                         <div>
                             <h3 className="text-sm font-black uppercase italic tracking-tighter leading-none">{label}</h3>
                             <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest mt-0.5">{unitLabel}</p>
                         </div>
                     </div>
                     {hit && (
-                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full bg-white text-emerald-600 animate-pulse">🎯 Target hit</span>
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full bg-white text-emerald-600 animate-pulse"><Target className="w-2.5 h-2.5" strokeWidth={2} /> Target hit</span>
                     )}
                 </div>
 
@@ -119,15 +122,15 @@ export default function MetalStatCard({
                     ) : target ? (
                         <button onClick={() => { setInput(String(target.value)); setEditing(true); }} className="w-full flex items-center justify-between gap-2 group">
                             <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/80">
-                                🎯 Target Rs.{fmt(target.value)}
+                                <Target className="w-3 h-3 shrink-0" strokeWidth={2} /> Target Rs.{fmt(target.value)}
                             </span>
                             <span className="text-[10px] font-black tabular-nums text-white/70 group-hover:text-white">
                                 {hit ? 'Reached' : `${awayPct != null ? (awayPct >= 0 ? '+' : '') + awayPct.toFixed(1) + '%' : ''} away`}
                             </span>
                         </button>
                     ) : (
-                        <button onClick={() => { setInput(""); setEditing(true); }} className="w-full text-center text-[10px] font-black uppercase tracking-widest text-white/70 hover:text-white transition-colors">
-                            🎯 Set a price target
+                        <button onClick={() => { setInput(""); setEditing(true); }} className="w-full inline-flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/70 hover:text-white transition-colors">
+                            <Target className="w-3 h-3 shrink-0" strokeWidth={2} /> Set a price target
                         </button>
                     )}
                 </div>

@@ -90,3 +90,32 @@ body {
     animation: none;
   }
 }
+
+/* ── Mobile / native-shell safe areas ──────────────────────────────────────
+   env(safe-area-inset-*) is 0 on desktop and non-notched devices, so these
+   are no-ops there and only take effect inside the Capacitor app / installed
+   PWA on notched phones (status bar, home indicator, rounded corners). */
+:root {
+  --sa-top: env(safe-area-inset-top, 0px);
+  --sa-bottom: env(safe-area-inset-bottom, 0px);
+  --sa-left: env(safe-area-inset-left, 0px);
+  --sa-right: env(safe-area-inset-right, 0px);
+}
+
+/* Keep the app clear of curved screen edges in landscape. */
+@supports (padding: env(safe-area-inset-left)) {
+  body {
+    padding-left: var(--sa-left);
+    padding-right: var(--sa-right);
+  }
+}
+
+/* Utilities for fixed edge UI (toasts, trays, floating buttons). */
+.pb-safe { padding-bottom: max(0.75rem, var(--sa-bottom)); }
+.pt-safe { padding-top: max(0.625rem, var(--sa-top)); }
+
+/* Feels more like a native app: no long-press callouts / text selection flicker
+   on tappable chrome, and no rubber-band overscroll glow. */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: none; }
+}

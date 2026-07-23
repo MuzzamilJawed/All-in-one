@@ -1,9 +1,12 @@
 "use client";
 
+import { Settings } from "lucide-react";
+
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useSettings } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
+import { MODULES, DEFAULT_MODULES, isModuleEnabled } from "../lib/modules";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -39,12 +42,19 @@ export default function SettingsPage() {
       notifications: true,
       soundAlerts: false,
       priceAlerts: true,
+      modules: { ...DEFAULT_MODULES },
     });
     setTheme('system');
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
     info("Settings restored to defaults");
   };
+
+  const toggleModule = (key: string) => {
+    const current = settings.modules || {};
+    updateSettings({ modules: { ...current, [key]: !isModuleEnabled(current, key) } });
+  };
+  const enabledCount = MODULES.filter(m => isModuleEnabled(settings.modules, m.key)).length;
 
   const selectClass = "w-full sm:w-auto px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-700 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
 
@@ -59,8 +69,8 @@ export default function SettingsPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
         <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
-            ⚙️ Configuration <span className="text-blue-500 text-xl sm:text-2xl">Hub</span>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
+            <Settings className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Configuration <span className="text-blue-500 text-xl sm:text-2xl">Hub</span>
           </h1>
           <p className="text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">
             Dashboard Preferences & Controls
@@ -98,9 +108,9 @@ export default function SettingsPage() {
                     <p className="text-xs text-zinc-500 mt-0.5">Light, dark or follow system</p>
                   </div>
                   <select value={mounted ? (theme ?? 'system') : 'system'} onChange={(e) => handleChange("theme", e.target.value)} className={selectClass}>
-                    <option value="light">☀️ Light Mode</option>
-                    <option value="dark">🌙 Dark Mode</option>
-                    <option value="system">💻 System Default</option>
+                    <option value="light">Light Mode</option>
+                    <option value="dark">Dark Mode</option>
+                    <option value="system">System Default</option>
                   </select>
                 </div>
 
@@ -147,6 +157,37 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Modules */}
+            <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-sm rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden shadow-sm">
+              <div className="px-6 sm:px-8 py-5 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base sm:text-lg font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">Modules</h2>
+                  <p className="text-zinc-500 text-xs font-bold mt-0.5">Show or hide sections across the sidebar &amp; dashboard</p>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-600/10 px-2.5 py-1 rounded-full shrink-0">{enabledCount}/{MODULES.length} on</span>
+              </div>
+              <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                {MODULES.map(({ key, label, desc }) => {
+                  const on = isModuleEnabled(settings.modules, key);
+                  return (
+                    <div key={key} className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight truncate">{label}</p>
+                        <p className="text-xs text-zinc-500 mt-0.5 truncate">{desc}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleModule(key)}
+                        aria-label={`${on ? 'Hide' : 'Show'} ${label}`}
+                        className={`relative w-12 h-6 rounded-full transition-all duration-300 shrink-0 ${on ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-700'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${on ? 'translate-x-6' : ''}`}></span>
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

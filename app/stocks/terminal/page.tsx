@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../../components/TradingChart'), { ssr: false });
 import { useSettings } from "../../context/SettingsContext";
 import { computePivotLevels, nextLevels } from "../../lib/levels";
+import { TrendingDown, Activity, ArrowLeft, BarChart3, X, PanelLeft, Search, LineChart, ClipboardList } from "lucide-react";
 
 export default function MarketTerminalPage() {
     return (
@@ -17,7 +18,7 @@ export default function MarketTerminalPage() {
                     <div className="relative">
                         <div className="w-16 h-16 border-4 border-blue-600/20 rounded-full"></div>
                         <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-                        <div className="absolute inset-0 flex items-center justify-center text-xl">📉</div>
+                        <div className="absolute inset-0 flex items-center justify-center text-blue-600"><TrendingDown className="w-6 h-6" strokeWidth={2} /></div>
                     </div>
                     <div className="text-center">
                         <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] mb-2">Initializing Terminal</p>
@@ -36,7 +37,8 @@ function MarketTerminalContent() {
     const searchParams = useSearchParams();
 
     // Read initial state from URL
-    const [viewMode, setViewMode] = useState<'stocks' | 'indices'>((searchParams.get('view') as any) || 'indices');
+    const [viewMode, setViewMode] = useState<'stocks' | 'indices' | 'sectors'>((searchParams.get('view') as any) || 'indices');
+    const [selectedSector, setSelectedSector] = useState<string | null>(null);
     const [selectedSymbol, setSelectedSymbol] = useState<string | null>(searchParams.get('symbol'));
     const [timeframe, setTimeframe] = useState(searchParams.get('tf') || "1D");
     const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || "");
@@ -269,6 +271,37 @@ function MarketTerminalContent() {
         (s.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // ── Sector aggregation: performance per sector for the Sector Watch tab ──
+    const parseVol = (v: any) => { const n = parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10); return isNaN(n) ? 0 : n; };
+    const fmtVol = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : n.toLocaleString();
+    const sectorAgg = useMemo(() => {
+        const map = new Map<string, any[]>();
+        stocks.forEach((s) => {
+            if (!s?.symbol) return;
+            const key = s.sector || 'Other';
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(s);
+        });
+        const out: any[] = [];
+        map.forEach((list, sector) => {
+            let w = 0, ws = 0, adv = 0, dec = 0, unch = 0, vol = 0;
+            list.forEach((s) => {
+                const vv = parseVol(s.volume) || 1;
+                ws += (s.changePercent || 0) * vv; w += vv; vol += parseVol(s.volume);
+                if ((s.changePercent || 0) > 0) adv++; else if ((s.changePercent || 0) < 0) dec++; else unch++;
+            });
+            out.push({
+                sector, count: list.length, avgChange: w > 0 ? ws / w : 0,
+                advancers: adv, decliners: dec, unchanged: unch, totalVolume: vol,
+                stocks: [...list].sort((a, b) => (b.changePercent || 0) - (a.changePercent || 0)),
+            });
+        });
+        return out.sort((a, b) => b.totalVolume - a.totalVolume);
+    }, [stocks]);
+
+    const filteredSectors = sectorAgg.filter(x => !searchTerm || x.sector.toLowerCase().includes(searchTerm.toLowerCase()));
+    const activeSector = sectorAgg.find(x => x.sector === selectedSector) || sectorAgg[0] || null;
+
     // Support / resistance (pivot points) for the selected asset.
     // Stocks use session high/low; indices use the fetched day high/low.
     const srHigh = viewMode === 'indices' ? dayRange.high : selectedAsset?.high;
@@ -295,7 +328,7 @@ function MarketTerminalContent() {
                     <div className="relative">
                         <div className="w-20 h-20 border-4 border-blue-600/20 rounded-full"></div>
                         <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-                        <div className="absolute inset-0 flex items-center justify-center text-3xl">💹</div>
+                        <div className="absolute inset-0 flex items-center justify-center text-blue-600"><Activity className="w-8 h-8" strokeWidth={2} /></div>
                     </div>
                     <div className="text-center">
                         <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] mb-2">Synchronizing Market Data</p>
@@ -319,13 +352,13 @@ function MarketTerminalContent() {
                 <div className="flex items-center gap-3 sm:gap-6">
                     <button
                         onClick={() => router.push('/stocks')}
-                        className="text-zinc-500 hover:text-blue-500 transition-colors text-xl"
+                        className="text-zinc-500 hover:text-blue-500 transition-colors"
                     >
-                        ←
+                        <ArrowLeft className="w-5 h-5" strokeWidth={2} />
                     </button>
                     <div className="w-[1px] h-6 bg-zinc-200 dark:bg-white/10 mx-1 sm:mx-2"></div>
                     <div className="flex items-center gap-2 sm:gap-3">
-                        <span className="text-lg sm:text-xl">📊</span>
+                        <BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 text-blue-500" strokeWidth={2} />
                         <h1 className="text-[10px] sm:text-sm font-black uppercase tracking-widest sm:tracking-[0.3em] text-zinc-900 dark:text-white/90 italic truncate max-w-[120px] sm:max-w-none">
                             Market <span className="text-blue-500">Terminal</span>
                         </h1>
@@ -337,7 +370,7 @@ function MarketTerminalContent() {
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                         className="lg:hidden p-2 rounded-lg bg-blue-600/10 text-blue-600 border border-blue-500/20"
                     >
-                        {isSidebarOpen ? '✕' : '📂'}
+                        {isSidebarOpen ? <X className="w-5 h-5" strokeWidth={2} /> : <PanelLeft className="w-5 h-5" strokeWidth={2} />}
                     </button>
                     <div className="hidden sm:flex items-center gap-3">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -367,32 +400,63 @@ function MarketTerminalContent() {
                         <div className="flex bg-zinc-100 dark:bg-white/5 p-1 rounded-xl border border-zinc-200 dark:border-white/5">
                             <button
                                 onClick={() => { setViewMode('stocks'); setSelectedAsset(stocks[0] || null); }}
-                                className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'stocks' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 dark:text-zinc-500 hover:text-blue-500'}`}
+                                className={`flex-1 py-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'stocks' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 dark:text-zinc-500 hover:text-blue-500'}`}
                             >
-                                Equity Watch
+                                Equity
+                            </button>
+                            <button
+                                onClick={() => { setViewMode('sectors'); setSelectedSector((prev) => prev || sectorAgg[0]?.sector || null); }}
+                                className={`flex-1 py-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'sectors' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 dark:text-zinc-500 hover:text-blue-500'}`}
+                            >
+                                Sectors
                             </button>
                             <button
                                 onClick={() => { setViewMode('indices'); setSelectedAsset(indices[0] || null); }}
-                                className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'indices' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 dark:text-zinc-500 hover:text-blue-500'}`}
+                                className={`flex-1 py-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'indices' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-zinc-500 dark:text-zinc-500 hover:text-blue-500'}`}
                             >
-                                Index Watch
+                                Index
                             </button>
                         </div>
 
                         <div className="relative group">
                             <input
                                 type="text"
-                                placeholder={`Filter ${viewMode === 'stocks' ? 'Equities' : 'Indices'}...`}
+                                placeholder={`Filter ${viewMode === 'stocks' ? 'Equities' : viewMode === 'sectors' ? 'Sectors' : 'Indices'}...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-2xl px-10 py-3 text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-blue-600 transition-all outline-none group-hover:bg-zinc-100 dark:group-hover:bg-white/[0.08] dark:text-white text-zinc-900"
                             />
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-blue-500 transition-colors">🔍</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-blue-500 transition-colors"><Search className="w-4 h-4" strokeWidth={2} /></span>
                         </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-2 pb-12">
-                        {filteredAssets.map((s) => (
+                        {viewMode === 'sectors' ? (
+                            filteredSectors.map((sec) => {
+                                const active = activeSector?.sector === sec.sector;
+                                const pos = sec.avgChange >= 0;
+                                const advPct = (sec.advancers / Math.max(1, sec.advancers + sec.decliners)) * 100;
+                                return (
+                                    <button
+                                        key={sec.sector}
+                                        onClick={() => { setSelectedSector(sec.sector); if (window.innerWidth < 1024) setIsSidebarOpen(false); }}
+                                        className={`w-full text-left p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all mb-1 ${active ? 'bg-blue-600/10 dark:bg-blue-600/20 border border-blue-500/30' : 'hover:bg-zinc-50 dark:hover:bg-white/5 border border-transparent'}`}
+                                    >
+                                        <div className="flex items-center justify-between gap-2 mb-2">
+                                            <p className={`text-[11px] font-black uppercase tracking-tight truncate ${active ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-zinc-200'}`}>{sec.sector}</p>
+                                            <p className={`text-xs font-black font-mono tabular-nums shrink-0 ${pos ? 'text-green-500' : 'text-red-500'}`}>{pos ? '+' : ''}{sec.avgChange.toFixed(2)}%</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[8px] font-black text-green-600 dark:text-green-400">▲{sec.advancers}</span>
+                                            <span className="text-[8px] font-black text-red-600 dark:text-red-400">▼{sec.decliners}</span>
+                                            <div className="flex-1 h-1 rounded-full bg-zinc-200 dark:bg-white/10 overflow-hidden"><div className="h-full bg-green-500" style={{ width: `${advPct}%` }}></div></div>
+                                            <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest shrink-0">{sec.count}</span>
+                                        </div>
+                                    </button>
+                                );
+                            })
+                        ) : (
+                            filteredAssets.map((s) => (
                             <button
                                 key={s.symbol}
                                 data-testid={`stock-card-${s.symbol}`}
@@ -415,14 +479,40 @@ function MarketTerminalContent() {
                                     </p>
                                 </div>
                             </button>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </aside>
 
                 {/* Main Visualization Center */}
                 <main className="flex-1 bg-zinc-50/50 dark:bg-black/40 flex flex-col lg:overflow-hidden relative">
-                    <div className="h-20 lg:h-24 bg-gradient-to-r from-transparent via-blue-900/5 to-transparent border-b border-zinc-200 dark:border-white/5 flex items-center justify-between px-4 sm:px-10 shrink-0">
-                        {selectedAsset && (
+                    <div className="min-h-[5rem] lg:min-h-[6rem] py-3 gap-4 bg-gradient-to-r from-transparent via-blue-900/5 to-transparent border-b border-zinc-200 dark:border-white/5 flex flex-wrap items-center justify-between px-4 sm:px-10 shrink-0">
+                        {viewMode === 'sectors' && activeSector && (
+                            <div className="flex flex-wrap items-center gap-4 lg:gap-10">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <h2 className="text-lg sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">{activeSector.sector}</h2>
+                                        <span className="px-2 py-0.5 sm:px-3 sm:py-1 bg-blue-600/20 text-blue-600 dark:text-blue-400 text-[8px] sm:text-[10px] font-black uppercase tracking-widest rounded sm:rounded-lg border border-blue-500/20">Sector</span>
+                                    </div>
+                                    <p className="text-zinc-500 text-[8px] sm:text-[11px] font-black uppercase tracking-[0.15em]">{activeSector.count} scrips • {fmtVol(activeSector.totalVolume)} volume</p>
+                                </div>
+                                <div className="h-10 w-[1px] bg-zinc-200 dark:bg-white/10 hidden md:block"></div>
+                                <div>
+                                    <p className="text-[8px] sm:text-[9px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-1">Avg Performance</p>
+                                    <p className={`text-xl sm:text-2xl font-black font-mono leading-none ${activeSector.avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>{activeSector.avgChange >= 0 ? '+' : ''}{activeSector.avgChange.toFixed(2)}%</p>
+                                </div>
+                                <div className="h-8 w-[1px] bg-zinc-200 dark:bg-white/10 hidden md:block"></div>
+                                <div>
+                                    <p className="text-[8px] sm:text-[9px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-1">Breadth</p>
+                                    <div className="flex items-center gap-2 text-sm font-black leading-none">
+                                        <span className="text-green-500">▲{activeSector.advancers}</span>
+                                        <span className="text-red-500">▼{activeSector.decliners}</span>
+                                        <span className="text-zinc-400">•{activeSector.unchanged}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {viewMode !== 'sectors' && selectedAsset && (
                             <div className="flex flex-wrap items-center gap-4 lg:gap-10">
                                 <div>
                                     <div className="flex items-center gap-3 sm:gap-4 mb-1">
@@ -503,21 +593,77 @@ function MarketTerminalContent() {
                                     className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-blue-400 dark:hover:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl border border-blue-500/30 hover:border-blue-600 transition-all duration-200 group"
                                     title="Open full stock details"
                                 >
-                                    <span className="text-sm group-hover:scale-110 transition-transform">📈</span>
+                                    <LineChart className="w-4 h-4 group-hover:scale-110 transition-transform" strokeWidth={2} />
                                     <span className="hidden sm:inline">Details</span>
                                 </button>
                                 <button
                                     onClick={() => router.push(`/stocks/report/${selectedAsset.symbol}?exchange=PSX&from=terminal`)}
                                     className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-blue-400 dark:hover:text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl border border-blue-500/30 hover:border-blue-600 transition-all duration-200 group"
                                 >
-                                    <span className="text-sm group-hover:scale-110 transition-transform">📋</span>
+                                    <ClipboardList className="w-4 h-4 group-hover:scale-110 transition-transform" strokeWidth={2} />
                                     <span className="hidden sm:inline">Full Report</span>
                                 </button>
                             </div>
                         )}
                     </div>
 
-                    <div className="flex-1 p-4 lg:p-6 relative min-h-[320px] lg:min-h-[600px]">
+                    <div className="flex-1 p-4 lg:p-6 relative min-h-[320px] lg:min-h-0">
+                        {viewMode === 'sectors' ? (
+                        <div className="absolute inset-0 p-4 lg:p-6 overflow-y-auto custom-scrollbar">
+                            {activeSector ? (
+                                <div className="space-y-4">
+                                    {/* Breadth summary */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                                        <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-3 text-center">
+                                            <p className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest mb-0.5">Advancers</p>
+                                            <p className="text-lg font-black text-green-600 dark:text-green-400 leading-none">{activeSector.advancers}</p>
+                                        </div>
+                                        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-3 text-center">
+                                            <p className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-widest mb-0.5">Decliners</p>
+                                            <p className="text-lg font-black text-red-600 dark:text-red-400 leading-none">{activeSector.decliners}</p>
+                                        </div>
+                                        <div className="bg-zinc-500/10 border border-zinc-500/20 rounded-2xl p-3 text-center">
+                                            <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Unchanged</p>
+                                            <p className="text-lg font-black text-zinc-600 dark:text-zinc-300 leading-none">{activeSector.unchanged}</p>
+                                        </div>
+                                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-3 text-center">
+                                            <p className="text-[8px] font-black text-blue-600/80 dark:text-blue-400/80 uppercase tracking-widest mb-0.5">Volume</p>
+                                            <p className="text-lg font-black text-blue-600 dark:text-blue-400 leading-none">{fmtVol(activeSector.totalVolume)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Constituents · {activeSector.count}</p>
+                                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Click to open chart →</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 pb-4">
+                                        {activeSector.stocks.map((s: any) => {
+                                            const pos = (s.changePercent || 0) >= 0;
+                                            return (
+                                                <button
+                                                    key={s.symbol}
+                                                    onClick={() => { setViewMode('stocks'); setSelectedAsset(s); }}
+                                                    className={`text-left p-3 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-lg ${pos ? 'bg-green-500/[0.06] border-green-500/20 hover:border-green-500/40' : 'bg-red-500/[0.06] border-red-500/20 hover:border-red-500/40'}`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-1 mb-1">
+                                                        <span className="text-xs font-black uppercase tracking-tighter text-zinc-900 dark:text-white truncate">{s.symbol}</span>
+                                                        <span className={`text-[10px] font-black tabular-nums shrink-0 ${pos ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{pos ? '▲' : '▼'}{Math.abs(s.changePercent || 0).toFixed(2)}%</span>
+                                                    </div>
+                                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest truncate mb-1">{s.name || s.symbol}</p>
+                                                    <p className="text-sm font-black font-mono tabular-nums text-zinc-900 dark:text-white">Rs.{(s.currentPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-full flex items-center justify-center">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select a sector</p>
+                                </div>
+                            )}
+                        </div>
+                        ) : (
                         <div className="absolute inset-0 p-4 lg:p-6 flex flex-col">
                             <div className="flex-1 bg-white dark:bg-black/60 rounded-3xl border border-zinc-200 dark:border-white/5 overflow-hidden shadow-[0_0_50px_-12px_rgba(37,99,235,0.15)] transition-all duration-1000 relative">
                                 <div className="h-full w-full relative px-3 sm:px-5 py-2">
@@ -582,6 +728,7 @@ function MarketTerminalContent() {
                                 )}
                             </div>
                         </div>
+                        )}
                     </div>
                 </main>
             </div>

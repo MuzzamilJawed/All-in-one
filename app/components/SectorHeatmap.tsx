@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { Map as MapIcon } from "lucide-react";
 import { parseVolume, formatVolume, heatSolid } from "../lib/stockSignals";
 
 interface Stock {
@@ -143,7 +144,7 @@ export default function SectorHeatmap({ stocks, onSelectSector, onSelectSymbol }
     if (sectors.length === 0) {
         return (
             <div className="py-32 text-center bg-zinc-50 dark:bg-white/5 rounded-[3rem] border border-dashed border-zinc-200 dark:border-white/10">
-                <span className="text-4xl block mb-4">🗺️</span>
+                <MapIcon className="w-10 h-10 mx-auto mb-4 text-zinc-400" strokeWidth={2} />
                 <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">No sector data</p>
             </div>
         );

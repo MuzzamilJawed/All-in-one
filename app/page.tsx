@@ -1,13 +1,17 @@
 "use client";
 
 import StatCard from "./components/StatCard";
+import { Bitcoin, Banknote, Gem, Coins, BarChart3, ArrowRightLeft, Fuel, Briefcase } from "lucide-react";
 import PriceCard from "./components/PriceCard";
 import MoversDigest from "./components/MoversDigest";
 import WatchlistAlerts from "./components/WatchlistAlerts";
+import PortfolioSummary from "./components/PortfolioSummary";
 import PageSkeleton from "./components/PageSkeleton";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchGoldPrice, fetchSilverPrice, fetchForexRates, fetchCryptoPrices, fetchOilPrices } from "./lib/api";
+import { useSettings } from "./context/SettingsContext";
+import { isModuleEnabled } from "./lib/modules";
 
 export default function Home() {
   const [goldData, setGoldData] = useState<any>({ tola: { isLoading: true } });
@@ -22,6 +26,20 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState("");
   const router = useRouter();
+  const { settings } = useSettings();
+  const mod = (k: string) => isModuleEnabled(settings.modules, k);
+
+  // Mobile: tabbed dashboard so each section ≈ one screen. Desktop (lg+) shows
+  // everything in one scroll (the tab bar is hidden and every group is lg:block).
+  type DashTab = "overview" | "movers" | "markets" | "watchlist";
+  const [dashTab, setDashTab] = useState<DashTab>("overview");
+  const dashTabs: { id: DashTab; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    ...(mod("stocks") ? [{ id: "movers" as DashTab, label: "Movers" }] : []),
+    ...(mod("metals") || mod("forex") || mod("oil") || mod("crypto") ? [{ id: "markets" as DashTab, label: "Markets" }] : []),
+    ...(mod("watchlist") || mod("portfolio") ? [{ id: "watchlist" as DashTab, label: "Watchlist" }] : []),
+  ];
+  const tabCls = (id: DashTab) => `${dashTab === id ? "" : "hidden"} lg:block`;
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -92,13 +110,13 @@ export default function Home() {
         <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25">
-              <span className="text-white font-black text-xl sm:text-2xl italic leading-none">α</span>
+              <span className="text-white font-black text-xl sm:text-2xl italic leading-none">S</span>
             </div>
             <div>
               <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
-                Alpha<span className="text-blue-500">Bazaar</span>
+                Solo<span className="text-blue-500">Trackr</span>
               </h1>
-              <p className="text-zinc-500 dark:text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2">Markets &amp; Analysis</p>
+              <p className="text-zinc-500 dark:text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2">All Markets · One Place</p>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -113,28 +131,42 @@ export default function Home() {
       {/* Main Content */}
       <main className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
 
-        <section className="mb-8 sm:mb-12">
+        {/* Mobile tab bar — one section per screen (hidden on desktop) */}
+        <div className="lg:hidden -mt-1 mb-4 flex gap-2 overflow-x-auto no-scrollbar">
+          {dashTabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setDashTab(t.id)}
+              className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${dashTab === t.id ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <section className={`mb-8 sm:mb-12 ${tabCls("overview")}`}>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
-            <StatCard label="Bitcoin / USD" value={`$${cryptoData[0]?.usdPrice?.toLocaleString() || "---"}`} icon="₿" change={cryptoData[0]?.changePercent || 0} changeLabel="Volatility" />
-            <StatCard label="USD / PKR" value={`Rs. ${forexData[0]?.pkrPrice?.toFixed(2) || "---"}`} icon="💵" change={forexData[0]?.changePercent || 0} changeLabel="Forex" />
-            <StatCard label="Gold (Tola)" value={`Rs. ${goldData.tola24k?.pkrPrice?.toLocaleString() || "---"}`} icon="💎" change={goldData.tola24k?.changePercent || 0} changeLabel="Metal" />
-            <StatCard label="Silver (Oz)" value={`Rs. ${silverData.ounce?.pkrPrice?.toLocaleString() || "---"}`} icon="🪙" change={silverData.ounce?.changePercent || 0} changeLabel="Commodity" />
+            {mod('crypto') && <StatCard label="Bitcoin / USD" value={`$${cryptoData[0]?.usdPrice?.toLocaleString() || "---"}`} icon={<Bitcoin className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={cryptoData[0]?.changePercent || 0} changeLabel="Volatility" />}
+            {mod('forex') && <StatCard label="USD / PKR" value={`Rs. ${forexData[0]?.pkrPrice?.toFixed(2) || "---"}`} icon={<Banknote className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={forexData[0]?.changePercent || 0} changeLabel="Forex" />}
+            {mod('metals') && <StatCard label="Gold (Tola)" value={`Rs. ${goldData.tola24k?.pkrPrice?.toLocaleString() || "---"}`} icon={<Gem className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={goldData.tola24k?.changePercent || 0} changeLabel="Metal" />}
+            {mod('metals') && <StatCard label="Silver (Oz)" value={`Rs. ${silverData.ounce?.pkrPrice?.toLocaleString() || "---"}`} icon={<Coins className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={silverData.ounce?.changePercent || 0} changeLabel="Commodity" />}
           </div>
         </section>
 
 
         {/* Today's Movers Digest - Full Width Priority */}
-        <section className="mb-8 sm:mb-12">
+        {mod('stocks') && (
+        <section className={`mb-8 sm:mb-12 ${tabCls("movers")}`}>
           <div className="flex items-end justify-between mb-4 sm:mb-6">
             <div>
-              <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">📊 PSX Today&apos;s Movers</h2>
+              <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> PSX Today&apos;s Movers</h2>
               <p className="text-zinc-500 text-[10px] sm:text-sm mt-1">Gainers, losers &amp; high-volume scrips at a glance</p>
             </div>
             <a href="/stocks" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">All Stocks →</a>
           </div>
           {/* PSX Market Pulse: index ticker + breadth */}
           {(psxIndices.length > 0 || marketStats) && (
-            <section className="mb-8 sm:mb-12">
+            <section className="mb-2 sm:mb-3">
               <div className="bg-white dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden">
                 <div className="flex flex-col lg:flex-row">
                   {/* Index ticker */}
@@ -187,39 +219,18 @@ export default function Home() {
             onSelect={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
           />
         </section>
-
-        {/* Watchlist & Alerts */}
-        <section className="mb-8 sm:mb-12">
-          <div className="flex items-end justify-between mb-4 sm:mb-6">
-            <div>
-              <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">⭐ Your Watchlist</h2>
-              <p className="text-zinc-500 text-[10px] sm:text-sm mt-1">Tracked scrips with target &amp; circuit alerts</p>
-            </div>
-            <a href="/watchlist" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">Manage →</a>
-          </div>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <WatchlistAlerts
-              stocks={psxStocks}
-              watchlists={watchlists}
-              onSelect={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
-            />
-            <div className="hidden xl:flex bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 flex-col justify-center text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -translate-y-10 translate-x-10"></div>
-              <h3 className="text-lg sm:text-2xl font-black italic uppercase tracking-tighter leading-tight relative z-10">Set price targets &amp; catch circuit locks</h3>
-              <p className="text-blue-100 text-xs sm:text-sm font-medium mt-2 mb-5 relative z-10 max-w-md">Open any scrip in Market Explorer, tap 🎯 to set a target, and it will flag here the moment it hits — plus upper/lower circuit and big-move alerts.</p>
-              <a href="/stocks" className="relative z-10 inline-block w-fit bg-white text-blue-600 px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-zinc-100 transition-all">Open Market Explorer</a>
-            </div>
-          </div>
-        </section>
+        )}
 
         {/* Balanced Market Rows */}
-        <div className="space-y-8 sm:space-y-12">
+        <div className={`space-y-8 sm:space-y-12 ${tabCls("markets")}`}>
           {/* Row 1: Metals & Forex */}
+          {(mod('metals') || mod('forex')) && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-12">
             {/* Precious Metals Section */}
+            {mod('metals') && (
             <div className="flex flex-col">
               <div className="flex items-end justify-between mb-6">
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">💎 Commodity Spot Rates</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter flex items-center gap-2.5"><Gem className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Commodity Spot Rates</h2>
                 <a href="/metals" className="shrink-0 text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Warehouse →</a>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 flex-1 xl:auto-rows-fr">
@@ -228,10 +239,13 @@ export default function Home() {
               </div>
             </div>
 
+            )}
+
             {/* Forex Section */}
+            {mod('forex') && (
             <div className="flex flex-col">
               <div className="flex items-end justify-between mb-6">
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">💱 Global Exchange</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><ArrowRightLeft className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Global Exchange</h2>
                 <a href="/forex" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">More →</a>
               </div>
               <div className="flex-1 flex flex-col bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[3rem] border border-zinc-200 dark:border-white/5 overflow-hidden">
@@ -262,14 +276,18 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            )}
           </div>
+          )}
 
           {/* Row 2: Energy & Crypto */}
+          {(mod('oil') || mod('crypto')) && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-12">
             {/* Oil & Energy Section */}
+            {mod('oil') && (
             <div>
               <div className="flex items-end justify-between mb-6">
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">🛢️ Energy Intelligence</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter flex items-center gap-2.5"><Fuel className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Energy Intelligence</h2>
                 <a href="/oil" className="shrink-0 text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Refinery →</a>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -282,10 +300,13 @@ export default function Home() {
               </div>
             </div>
 
+            )}
+
             {/* Crypto pulse */}
+            {mod('crypto') && (
             <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[3rem] p-4 sm:p-8 border border-zinc-200 dark:border-white/5">
               <div className="flex items-end justify-between mb-4 sm:mb-8">
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">₿ Crypto Hub</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><Bitcoin className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 shrink-0" strokeWidth={2} /> Crypto Hub</h2>
                 <span className="text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest italic hidden sm:block">Real-Time</span>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:gap-6">
@@ -326,11 +347,33 @@ export default function Home() {
                 </div>
               )}
             </div>
+            )}
           </div>
+          )}
         </div>
 
-        {/* Tactical Call to Action */}
-        <div className="mt-12 sm:mt-20 relative rounded-[2rem] sm:rounded-[4rem] p-8 sm:p-12 lg:p-20 overflow-hidden group">
+        {/* Watchlist & Portfolio */}
+        {(mod('watchlist') || mod('portfolio')) && (
+        <section className={`mt-8 sm:mb-12 ${tabCls("watchlist")}`}>
+          <div className="mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Watchlist &amp; Portfolio</h2>
+            <p className="text-zinc-500 text-[10px] sm:text-sm mt-1">Your tracked scrips, alerts and live holdings at a glance</p>
+          </div>
+          <div className={`grid grid-cols-1 gap-6 ${mod('watchlist') && mod('portfolio') ? 'xl:grid-cols-2' : ''}`}>
+            {mod('watchlist') && (
+              <WatchlistAlerts
+                stocks={psxStocks}
+                watchlists={watchlists}
+                onSelect={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
+              />
+            )}
+            {mod('portfolio') && <PortfolioSummary />}
+          </div>
+        </section>
+        )}
+
+        {/* Tactical Call to Action (desktop only — keeps the mobile tabs clean) */}
+        <div className="hidden lg:block mt-6 sm:mt-10 relative rounded-[2rem] sm:rounded-[4rem] p-8 sm:p-12 lg:p-20 overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-800 transition-transform duration-700 group-hover:scale-105"></div>
           <div className="absolute top-0 right-0 w-[50%] h-full bg-black/20 skew-x-[30deg] translate-x-32 hidden lg:block"></div>
 
@@ -352,7 +395,7 @@ export default function Home() {
 
       <footer className="mt-20 border-t border-white/5 py-8 sm:py-12 px-4 sm:px-8">
         <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest text-center md:text-left">© 2026 AlphaBazaar. All Rights Reserved.</p>
+          <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest text-center md:text-left">© 2026 SoloTrackr. All Rights Reserved.</p>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
             <a href="#" className="hover:text-white transition-colors">Risk Disclosure</a>
             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>

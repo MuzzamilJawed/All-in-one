@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import StockCard from "../../components/StockCard";
@@ -106,7 +107,7 @@ export default function NasdaqSymbolPage() {
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white p-6">
-            <button onClick={() => router.back()} className="text-blue-600 font-black tracking-widest text-[10px] uppercase hover:underline mb-8 pl-10 lg:pl-0 flex items-center gap-2">← Back to Console</button>
+            <button onClick={() => router.back()} className="text-blue-600 font-black tracking-widest text-[10px] uppercase hover:underline mb-8 pl-10 lg:pl-0 flex items-center gap-2"><ArrowLeft className="w-5 h-5" strokeWidth={2} /> Back to Console</button>
             <div className="max-w-4xl mx-auto space-y-12">
                 <div className="max-w-md">
                     <StockCard {...stock} exchange="NASDAQ" />

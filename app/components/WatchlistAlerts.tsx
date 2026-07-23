@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Star, Target } from "lucide-react";
 import { computeSignals, toneClasses, type Signal } from "../lib/stockSignals";
 import { getTargets } from "../lib/stockPrefs";
 
@@ -69,29 +70,32 @@ export default function WatchlistAlerts({ stocks, watchlists = [], onSelect }: W
     }, [stocks, watchlists, targets]);
 
     return (
-        <div className="bg-white dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden h-full flex flex-col">
-            <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-zinc-100 dark:border-white/5">
+        <div className="bg-white dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-2.5 border-b border-zinc-100 dark:border-white/5">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm">⭐</span>
+                    <Star className="w-4 h-4 text-amber-500 shrink-0" strokeWidth={2.25} />
                     <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white">Watchlist &amp; Alerts</h3>
                 </div>
-                {total > 0 && (
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${alertCount > 0 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'text-zinc-400'}`}>
-                        {alertCount > 0 ? `${alertCount} alert${alertCount > 1 ? 's' : ''}` : `${total} tracked`}
-                    </span>
-                )}
+                <div className="flex items-center gap-2.5 shrink-0">
+                    {total > 0 && (
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${alertCount > 0 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'text-zinc-400'}`}>
+                            {alertCount > 0 ? `${alertCount} alert${alertCount > 1 ? 's' : ''}` : `${total} tracked`}
+                        </span>
+                    )}
+                    <a href="/watchlist" className="text-[9px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest transition-colors">Manage →</a>
+                </div>
             </div>
 
-            <div className="p-1.5 flex-1 overflow-y-auto max-h-[420px]">
+            <div className="p-1.5">
                 {total === 0 ? (
                     <div className="py-16 px-4 text-center">
-                        <span className="text-3xl block mb-3">🎯</span>
+                        <Target className="w-8 h-8 mx-auto mb-3 text-zinc-300 dark:text-zinc-600" strokeWidth={2} />
                         <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px] mb-1">No watchlist symbols</p>
                         <p className="text-zinc-400 text-[10px] leading-relaxed mb-4">Add scrips to a watchlist and set price targets to get circuit &amp; target alerts here.</p>
                         <a href="/stocks" className="inline-block text-[9px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/40">Build a watchlist →</a>
                     </div>
                 ) : (
-                    rows.map(({ stock, signals, alerting }) => {
+                    rows.slice(0, 4).map(({ stock, signals, alerting }) => {
                         const isPos = (stock.changePercent || 0) >= 0;
                         const target = targets[stock.symbol.toUpperCase()];
                         const hasTarget = typeof target === "number" && target > 0;
@@ -102,7 +106,7 @@ export default function WatchlistAlerts({ stocks, watchlists = [], onSelect }: W
                             <button
                                 key={stock.symbol}
                                 onClick={() => onSelect(stock.symbol)}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left ${alerting ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-zinc-100 dark:hover:bg-white/5'}`}
+                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-left ${alerting ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-zinc-100 dark:hover:bg-white/5'}`}
                             >
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-1.5">
@@ -112,12 +116,12 @@ export default function WatchlistAlerts({ stocks, watchlists = [], onSelect }: W
                                                 title={awayPct != null ? `Your target: ${target.toLocaleString()} (${awayPct >= 0 ? awayPct.toFixed(1) + '% to go' : Math.abs(awayPct).toFixed(1) + '% above target'})` : `Your target: ${target.toLocaleString()}`}
                                                 className="inline-flex items-center gap-0.5 text-[7px] font-black uppercase tracking-wide px-1 py-0.5 rounded border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 shrink-0"
                                             >
-                                                🎯 {target.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                                <Target className="w-2 h-2 shrink-0" strokeWidth={2} /> {target.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                             </span>
                                         )}
                                         {signals.filter(s => s.key !== 'target-hit' && s.key !== 'target-near').slice(0, 2).map(sig => (
                                             <span key={sig.key} title={sig.title} className={`hidden sm:inline-flex items-center gap-0.5 text-[7px] font-black uppercase tracking-wide px-1 py-0.5 rounded border ${toneClasses(sig.tone)}`}>
-                                                {sig.icon}{sig.label}
+                                                <sig.icon className="w-2 h-2" strokeWidth={2.5} /> {sig.label}
                                             </span>
                                         ))}
                                     </div>
@@ -131,14 +135,19 @@ export default function WatchlistAlerts({ stocks, watchlists = [], onSelect }: W
                                         {isPos ? '▲' : '▼'}{Math.abs(stock.changePercent || 0).toFixed(2)}%
                                     </p>
                                     {hasTarget && awayPct != null && (
-                                        <p className="text-[8px] font-black text-blue-600 dark:text-blue-400 tabular-nums leading-tight mt-0.5">
-                                            🎯 {awayPct >= 0 ? `${awayPct.toFixed(1)}% to go` : 'hit'}
+                                        <p className="inline-flex items-center gap-0.5 text-[8px] font-black text-blue-600 dark:text-blue-400 tabular-nums leading-tight mt-0.5">
+                                            <Target className="w-2 h-2 shrink-0" strokeWidth={2} /> {awayPct >= 0 ? `${awayPct.toFixed(1)}% to go` : 'hit'}
                                         </p>
                                     )}
                                 </div>
                             </button>
                         );
                     })
+                )}
+                {total > 4 && (
+                    <a href="/watchlist" className="block text-center py-1.5 text-[9px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest">
+                        + {total - 4} more · View all →
+                    </a>
                 )}
             </div>
         </div>

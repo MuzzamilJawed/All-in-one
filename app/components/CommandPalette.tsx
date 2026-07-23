@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { Search, Fuel, BarChart3, Gem, ArrowRightLeft } from "lucide-react";
 
 export default function CommandPalette() {
     const [isOpen, setIsOpen] = useState(false);
@@ -84,7 +85,7 @@ export default function CommandPalette() {
             
             <div className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-8 py-4 sm:py-6 border-b border-zinc-100 dark:border-white/5">
-                    <span className="text-xl shrink-0">🔍</span>
+                    <Search className="w-5 h-5 shrink-0 text-zinc-400" strokeWidth={2} />
                     <input
                         ref={inputRef}
                         type="text"
@@ -139,17 +140,17 @@ export default function CommandPalette() {
                     ) : (
                         <div className="grid grid-cols-2 gap-4 p-4">
                             {[
-                                { label: "Oil & Energy", path: "/oil", icon: "🛢️" },
-                                { label: "PSX Terminal", path: "/stocks/terminal", icon: "📊" },
-                                { label: "Precious Metals", path: "/metals", icon: "💎" },
-                                { label: "Global Forex", path: "/forex", icon: "💱" }
+                                { label: "Oil & Energy", path: "/oil", icon: Fuel },
+                                { label: "PSX Terminal", path: "/stocks/terminal", icon: BarChart3 },
+                                { label: "Precious Metals", path: "/metals", icon: Gem },
+                                { label: "Global Forex", path: "/forex", icon: ArrowRightLeft }
                             ].map(quick => (
                                 <button
                                     key={quick.path}
                                     onClick={() => { setIsOpen(false); router.push(quick.path); }}
                                     className="p-8 bg-zinc-50 dark:bg-white/[0.03] rounded-[2rem] border border-zinc-200 dark:border-white/5 hover:border-blue-500/50 transition-all text-left group"
                                 >
-                                    <span className="text-2xl mb-4 block">{quick.icon}</span>
+                                    <quick.icon className="w-7 h-7 mb-4 text-blue-500 group-hover:text-blue-400 transition-colors" strokeWidth={2} />
                                     <p className="font-black uppercase italic tracking-tighter text-zinc-900 dark:text-white group-hover:text-blue-500 transition-colors">{quick.label}</p>
                                     <p className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Jump to sector</p>
                                 </button>
@@ -169,7 +170,7 @@ export default function CommandPalette() {
                             <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Navigate</span>
                         </div>
                     </div>
-                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">AlphaBazaar v1.0</p>
+                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">SoloTrackr v1.0</p>
                 </div>
             </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import PageSkeleton from "../components/PageSkeleton";
+import { ArrowRightLeft, AlertTriangle, Zap, BarChart3, Droplet } from "lucide-react";
 
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "../context/SettingsContext";
@@ -90,7 +91,7 @@ export default function ForexPage() {
                 <header className="mb-8 sm:mb-12 pl-12 lg:pl-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8">
                     <div>
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                            <h1 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none">💱 Forex Terminal</h1>
+                            <h1 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none inline-flex items-center gap-2"><ArrowRightLeft className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Forex Terminal</h1>
                             <div className="px-2 py-0.5 sm:px-3 sm:py-1 bg-green-500/10 border border-green-500/20 rounded-full">
                                 <span className="text-[8px] sm:text-[10px] text-green-500 font-black uppercase tracking-widest animate-pulse">Syncing</span>
                             </div>
@@ -106,7 +107,7 @@ export default function ForexPage() {
 
                 {error && (
                     <div className="mb-12 p-6 bg-red-500/10 border border-red-500/20 rounded-[2.5rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-                        <span className="text-2xl">⚠️</span>
+                        <AlertTriangle className="w-6 h-6 text-red-500 shrink-0" strokeWidth={2} />
                         <p className="text-red-500 font-black uppercase text-xs tracking-widest">{error}</p>
                     </div>
                 )}
@@ -188,12 +189,12 @@ export default function ForexPage() {
                         {/* Tactical Stats Overlay */}
                         <div className="grid grid-cols-3 gap-3 sm:gap-6">
                             {[
-                                { label: 'Volatility', val: (Math.random() * 0.5 + 0.1).toFixed(2) + '%', color: 'text-blue-500', icon: '⚡' },
-                                { label: 'Spread', val: '0.0001 pts', color: 'text-indigo-500', icon: '📊' },
-                                { label: 'Liquidity', val: '99.9% Depth', color: 'text-purple-500', icon: '⚪' },
+                                { label: 'Volatility', val: (Math.random() * 0.5 + 0.1).toFixed(2) + '%', color: 'text-blue-500', icon: Zap },
+                                { label: 'Spread', val: '0.0001 pts', color: 'text-indigo-500', icon: BarChart3 },
+                                { label: 'Liquidity', val: '99.9% Depth', color: 'text-purple-500', icon: Droplet },
                             ].map(item => (
                                 <div key={item.label} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] flex items-center gap-3 sm:gap-4 hover:shadow-xl transition-all duration-500">
-                                    <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-50 dark:bg-white/5 flex items-center justify-center text-xs sm:text-lg">{item.icon}</div>
+                                    <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-50 dark:bg-white/5 flex items-center justify-center"><item.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${item.color}`} strokeWidth={2} /></div>
                                     <div className="min-w-0">
                                         <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5 sm:mb-1 truncate">{item.label}</p>
                                         <p className={`text-[10px] sm:text-xs font-black uppercase tracking-tighter ${item.color} truncate`}>{item.val}</p>

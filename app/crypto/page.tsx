@@ -1,5 +1,7 @@
 "use client";
 
+import { Bitcoin, AlertTriangle, TrendingDown } from "lucide-react";
+
 import PageSkeleton from "../components/PageSkeleton";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -168,7 +170,7 @@ export default function CryptoPage() {
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2">
-                            ₿ Crypto <span className="text-orange-500">Hub</span>
+                            <Bitcoin className="w-6 h-6 sm:w-7 sm:h-7 text-orange-500 shrink-0" strokeWidth={2} /> Crypto <span className="text-orange-500">Hub</span>
                             <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">Live</span>
                         </h1>
                         <p className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">Global Digital Asset Pulse</p>
@@ -184,7 +186,7 @@ export default function CryptoPage() {
 
                 {error && (
                     <div className="mb-8 p-6 bg-red-500/10 border border-red-500/20 rounded-[2.5rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-                        <span className="text-2xl">⚠️</span>
+                        <AlertTriangle className="w-6 h-6 text-red-500 shrink-0" strokeWidth={2} />
                         <p className="text-red-500 font-black uppercase text-xs tracking-widest">{error}</p>
                     </div>
                 )}
@@ -252,7 +254,7 @@ export default function CryptoPage() {
                             )}
                             {!chartLoading && displayTrend.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
-                                    <span className="text-3xl">📉</span>
+                                    <TrendingDown className="w-8 h-8 text-zinc-400" strokeWidth={2} />
                                     <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">No chart data for this coin</p>
                                 </div>
                             ) : (

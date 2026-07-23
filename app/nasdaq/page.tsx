@@ -1,5 +1,7 @@
 "use client";
 
+import { Globe, Search, SearchX, FolderOpen } from "lucide-react";
+
 import PageSkeleton from "../components/PageSkeleton";
 import StockCard from "../components/StockCard";
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -310,8 +312,8 @@ export default function NasdaqPage() {
             <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center">
                     <div>
-                        <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white">
-                            🇺🇸 NASDAQ <span className="text-blue-500">Terminal</span>
+                        <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white flex items-center gap-2.5">
+                            <Globe className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> NASDAQ <span className="text-blue-500">Terminal</span>
                         </h1>
                         <p className="hidden sm:block text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">Global Tech Hub • High Fidelity Real-Time Hub</p>
                     </div>
@@ -329,7 +331,7 @@ export default function NasdaqPage() {
                     <div className="flex flex-col lg:flex-row gap-8 items-center justify-between relative z-10">
                         {/* Primary Search Container */}
                         <div className="relative w-full lg:flex-1 group">
-                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-lg sm:text-xl group-focus-within:scale-110 transition-transform">🔍</span>
+                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-zinc-400 group-focus-within:scale-110 transition-transform" strokeWidth={2} />
                             <input
                                 type="text"
                                 placeholder="Search Symbol..."
@@ -401,7 +403,7 @@ export default function NasdaqPage() {
                                     onClick={() => setActiveWatchlistId(wl._id)}
                                     className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${activeWatchlistId === wl._id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:text-blue-500'}`}
                                 >
-                                    <span>📂</span> {wl.name}
+                                    <FolderOpen className="w-3.5 h-3.5 shrink-0" strokeWidth={2} /> {wl.name}
                                 </button>
                             ))}
                             <button
@@ -523,7 +525,7 @@ export default function NasdaqPage() {
                                 ))}
                                 {!loading && filteredStocks.length === 0 && (
                                     <div className="col-span-full py-48 text-center bg-white dark:bg-white/5 rounded-[3.5rem] border border-dashed border-zinc-200 dark:border-white/10">
-                                        <span className="text-5xl block mb-6">🛰️</span>
+                                        <SearchX className="w-10 h-10 mx-auto mb-6 text-zinc-400" strokeWidth={1.5} />
                                         <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-xs px-12">Universal market scan complete: No matching footprints detected</p>
                                     </div>
                                 )}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Target, Volume2, StickyNote } from "lucide-react";
 import { computeSignals, dayRangePosition, toneClasses } from "../lib/stockSignals";
 import { getTarget, setTarget, getNote, setNote, type StockNote } from "../lib/stockPrefs";
 import { useToast } from "../context/ToastContext";
@@ -167,7 +168,7 @@ export default function StockCard({
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 ${showMeta || target || note ? 'bg-blue-600 text-white shadow-lg' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                             title="Set target / note"
                         >
-                            <span className="text-[11px] leading-none">🎯</span>
+                            <Target className="w-3.5 h-3.5" strokeWidth={2} />
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); setShowWatchlistMenu(!showWatchlistMenu); setShowMeta(false); }}
@@ -216,7 +217,7 @@ export default function StockCard({
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700`}
                             title="Listen"
                         >
-                            <span className="text-[11px] sm:text-[12px] leading-none">{ttsLoading ? '…' : '🔊'}</span>
+                            {ttsLoading ? <span className="text-[11px] sm:text-[12px] leading-none">…</span> : <Volume2 className="w-3.5 h-3.5" strokeWidth={2} />}
                         </button>
 
                         <span className={`text-[10px] sm:text-xs font-black ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
@@ -343,12 +344,12 @@ export default function StockCard({
                 <div className="flex flex-wrap items-center gap-1 mb-2">
                     {note?.tag && (
                         <span className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" title={note.text || note.tag}>
-                            📝 {note.tag}
+                            <StickyNote className="w-2.5 h-2.5" strokeWidth={2} /> {note.tag}
                         </span>
                     )}
                     {signals.slice(0, 2).map(sig => (
                         <span key={sig.key} title={sig.title} className={`inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded border ${toneClasses(sig.tone)}`}>
-                            {sig.icon} {sig.label}
+                            <sig.icon className="w-2.5 h-2.5" strokeWidth={2.5} /> {sig.label}
                         </span>
                     ))}
                 </div>
@@ -362,7 +363,7 @@ export default function StockCard({
                         {currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                     </p>
                     {effectiveTarget != null && (
-                        <p className="text-[9px] font-bold text-blue-500 mt-0.5 truncate" title="Your target">🎯 {effectiveTarget.toLocaleString()}</p>
+                        <p className="text-[9px] font-bold text-blue-500 mt-0.5 truncate inline-flex items-center gap-0.5" title="Your target"><Target className="w-2.5 h-2.5 shrink-0" strokeWidth={2} /> {effectiveTarget.toLocaleString()}</p>
                     )}
                 </div>
                 <div className="text-right min-w-0">

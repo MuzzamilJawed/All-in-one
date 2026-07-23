@@ -1,23 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ArrowLeft, BarChart3, Target, Bell } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../../components/TradingChart'), { ssr: false });
 import { useSettings } from "../../context/SettingsContext";
+import { useToast } from "../../context/ToastContext";
 import { fetchOilPrices } from "../../lib/api";
+import { type OilAlert, type AlertCondition, loadAlerts, persistAlerts, makeAlertId } from "../../lib/oilAlerts";
 
 export default function OilDetailPage() {
     const params = useParams();
     const router = useRouter();
     const symbol = params.symbol as string;
     const { settings } = useSettings();
+    const { success, info, error: toastError } = useToast();
     const tableCurrency = settings.currency as 'USD' | 'PKR';
 
     const [loading, setLoading] = useState(true);
     const [item, setItem] = useState<any>(null);
     const [candles, setCandles] = useState<any[]>([]);
     const [timeframe, setTimeframe] = useState("1D");
+
+    // Local price alerts (shared with the Energy Markets list)
+    const [alerts, setAlerts] = useState<OilAlert[]>([]);
+    const [alertCondition, setAlertCondition] = useState<AlertCondition>("above");
+    const [alertPrice, setAlertPrice] = useState("");
+
+    useEffect(() => {
+        setAlerts(loadAlerts());
+    }, []);
 
     useEffect(() => {
         const loadDetail = async () => {
@@ -115,6 +128,50 @@ export default function OilDetailPage() {
 
     const currentPrice = tableCurrency === 'PKR' ? item.pkrPrice : item.price;
     const priceSymbol = tableCurrency === 'PKR' ? 'Rs. ' : '$';
+    const rate = item.pkrPrice && item.price ? item.pkrPrice / item.price : 280;
+
+    // Real multi-timeframe performance for this contract
+    const perf = [
+        { label: "24 Hour", value: Number(item.changePercent ?? 0) },
+        { label: "7 Day", value: Number(item.weekly ?? 0) },
+        { label: "30 Day", value: Number(item.monthly ?? 0) },
+        { label: "52 Week", value: Number(item.yearly ?? 0) },
+    ];
+    const perfMaxAbs = Math.max(1, ...perf.map((p) => Math.abs(p.value)));
+
+    // Technical bands derived from live price
+    const support = currentPrice * 0.94;
+    const resistance = currentPrice * 1.07;
+
+    const myAlerts = alerts.filter((a) => a.key === symbol);
+
+    const displayTarget = (al: OilAlert) =>
+        `${priceSymbol}${formatPrice(tableCurrency === 'PKR' ? al.targetUsd * rate : al.targetUsd)}`;
+
+    const handleAddAlert = () => {
+        const parsed = parseFloat(alertPrice.replace(/,/g, ""));
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+            toastError("Enter a valid target price");
+            return;
+        }
+        const targetUsd = tableCurrency === 'PKR' ? parsed / rate : parsed;
+        const triggered = alertCondition === 'above' ? item.price >= targetUsd : item.price <= targetUsd;
+        const next: OilAlert[] = [
+            { id: makeAlertId(), key: symbol, name: item.name, condition: alertCondition, targetUsd, createdAt: Date.now(), triggered },
+            ...alerts,
+        ];
+        setAlerts(next);
+        persistAlerts(next);
+        success(`Alert set — ${item.name} ${alertCondition} ${priceSymbol}${formatPrice(parsed)}`);
+        setAlertPrice("");
+    };
+
+    const handleRemoveAlert = (id: string) => {
+        const next = alerts.filter((a) => a.id !== id);
+        setAlerts(next);
+        persistAlerts(next);
+        info("Alert removed");
+    };
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30">
@@ -123,7 +180,7 @@ export default function OilDetailPage() {
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center">
                     <div className="flex items-center gap-6">
                         <button onClick={() => router.push('/oil')} className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group">
-                            <span className="text-zinc-500 group-hover:text-blue-500 transition-colors">←</span>
+                            <ArrowLeft className="w-5 h-5 text-zinc-500 group-hover:text-blue-500 transition-colors" strokeWidth={2} />
                         </button>
                         <div>
                             <h1 className="text-3xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-none">{item.name}</h1>
@@ -143,7 +200,7 @@ export default function OilDetailPage() {
                         { label: "Execution Price", value: `${priceSymbol}${formatPrice(currentPrice)}`, sub: `${(item.changePercent ?? 0) >= 0 ? '+' : ''}${(item.changePercent ?? 0).toFixed(2)}%`, color: (item.changePercent ?? 0) >= 0 ? 'text-green-500' : 'text-red-500' },
                         { label: "Weekly Momentum", value: `${item.weekly > 0 ? '+' : ''}${item.weekly}%`, sub: "7D Analysis", color: item.weekly >= 0 ? 'text-green-500' : 'text-red-500' },
                         { label: "Monthly Outlook", value: `${item.monthly > 0 ? '+' : ''}${item.monthly}%`, sub: "30D Projection", color: item.monthly >= 0 ? 'text-green-500' : 'text-red-500' },
-                        { label: "Volume Scrip", value: "CONSOLIDATED", sub: "Market Dynamics", color: 'text-blue-500' },
+                        { label: "Yearly Trend", value: `${(item.yearly ?? 0) > 0 ? '+' : ''}${item.yearly ?? 0}%`, sub: "52W Performance", color: (item.yearly ?? 0) >= 0 ? 'text-green-500' : 'text-red-500' },
                     ].map((stat, i) => (
                         <div key={i} className="bg-white dark:bg-zinc-900/50 p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-sm">
                             <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2">{stat.label}</p>
@@ -177,60 +234,136 @@ export default function OilDetailPage() {
                     </div>
                 </div>
 
-                {/* Intelligence & News Section */}
+                {/* Analytics: real performance + levels + working alerts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
-                    <div className="space-y-8">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">📰</span>
-                            <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Active Intelligence Reports</h3>
+                    {/* Left: Performance breakdown + key levels */}
+                    <div className="space-y-6 sm:space-y-8">
+                        <div className="bg-white dark:bg-zinc-900/50 p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5">
+                            <div className="flex items-center gap-3 mb-6">
+                                <BarChart3 className="w-6 h-6 shrink-0 text-blue-500" strokeWidth={2} />
+                                <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Performance Breakdown</h3>
+                            </div>
+                            <div className="space-y-4">
+                                {perf.map((p) => {
+                                    const pos = p.value >= 0;
+                                    const w = (Math.abs(p.value) / perfMaxAbs) * 50;
+                                    return (
+                                        <div key={p.label} className="flex items-center gap-3">
+                                            <span className="w-16 shrink-0 text-[10px] font-black uppercase tracking-widest text-zinc-400">{p.label}</span>
+                                            <div className="flex-1 flex items-center h-5 relative">
+                                                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-zinc-200 dark:bg-zinc-700" />
+                                                <div className="w-1/2 flex justify-end">
+                                                    {!pos && <div className="h-3 rounded-l-md bg-red-500" style={{ width: `${w * 2}%` }} />}
+                                                </div>
+                                                <div className="w-1/2 flex justify-start">
+                                                    {pos && <div className="h-3 rounded-r-md bg-green-500" style={{ width: `${w * 2}%` }} />}
+                                                </div>
+                                            </div>
+                                            <span className={`w-16 shrink-0 text-right text-xs font-black font-mono tabular-nums ${pos ? 'text-green-500' : 'text-red-500'}`}>
+                                                {pos ? '+' : ''}{p.value.toFixed(2)}%
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                        <div className="space-y-6">
-                            {[
-                                { title: "Global Supply Chain Resilience", time: "2H AGO", text: `Detailed analysis of current extraction rates for ${item.name} reveals a robust movement profile despite regional volatility markers.`, tag: "HOT" },
-                                { title: "Satellite Inventory Assessment", time: "5H AGO", text: "New imagery confirms a 1.2% expansion in terminal storage, suggesting a stable flow forecast for the next financial quarter.", tag: "LIVE" }
-                            ].map((news, i) => (
-                                <div key={i} className="bg-white dark:bg-zinc-900/50 p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-6 opacity-10 font-black text-5xl italic uppercase select-none group-hover:scale-110 transition-transform">{news.tag}</div>
-                                    <div className="relative z-10">
-                                        <p className="text-[9px] font-black text-blue-500 mb-2 uppercase tracking-widest">{news.time}</p>
-                                        <h4 className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tight mb-4">{news.title}</h4>
-                                        <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400 font-medium">{news.text}</p>
-                                    </div>
+
+                        <div className="bg-white dark:bg-zinc-900/50 p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5">
+                            <div className="flex items-center gap-3 mb-6">
+                                <Target className="w-6 h-6 shrink-0 text-blue-500" strokeWidth={2} />
+                                <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Key Price Levels</h3>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="bg-green-500/[0.06] border border-green-500/15 p-4 rounded-2xl text-center">
+                                    <p className="text-[8px] font-black text-green-600/70 dark:text-green-400/70 uppercase tracking-widest mb-1">Support</p>
+                                    <p className="text-sm sm:text-base font-black text-green-600 dark:text-green-400 font-mono">{priceSymbol}{formatPrice(support)}</p>
                                 </div>
-                            ))}
+                                <div className="bg-blue-500/[0.06] border border-blue-500/15 p-4 rounded-2xl text-center">
+                                    <p className="text-[8px] font-black text-blue-600/70 dark:text-blue-400/70 uppercase tracking-widest mb-1">Current</p>
+                                    <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-white font-mono">{priceSymbol}{formatPrice(currentPrice)}</p>
+                                </div>
+                                <div className="bg-red-500/[0.05] border border-red-500/15 p-4 rounded-2xl text-center">
+                                    <p className="text-[8px] font-black text-red-600/70 dark:text-red-400/70 uppercase tracking-widest mb-1">Resistance</p>
+                                    <p className="text-sm sm:text-base font-black text-red-600 dark:text-red-400 font-mono">{priceSymbol}{formatPrice(resistance)}</p>
+                                </div>
+                            </div>
+                            {/* Position within the support→resistance band */}
+                            <div className="mt-5">
+                                <div className="relative h-2 rounded-full bg-gradient-to-r from-green-500/40 via-zinc-200 dark:via-zinc-700 to-red-500/40">
+                                    <div
+                                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-blue-600 border-2 border-white dark:border-zinc-900 shadow"
+                                        style={{ left: `${Math.min(100, Math.max(0, ((currentPrice - support) / (resistance - support)) * 100))}%` }}
+                                    />
+                                </div>
+                                <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest text-center mt-2">Technical band (±% of live price)</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="space-y-8">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">🔮</span>
-                            <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Refinery Outlook</h3>
-                        </div>
-                        <div className="bg-zinc-900 rounded-2xl sm:rounded-[3rem] p-5 sm:p-10 border border-white/5 relative overflow-hidden h-full">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px]"></div>
-                            <div className="relative z-10 space-y-10">
-                                <div>
-                                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Sentiment Synthesis</p>
-                                    <div className="text-2xl sm:text-4xl font-black text-white italic uppercase tracking-tighter leading-none mb-4">Strategic <br /> <span className="text-blue-500">Accumulation</span></div>
-                                    <p className="text-zinc-400 text-sm leading-relaxed font-medium">Automated analysis engine indicates that {item.name} is entering a period of technical consolidation with a bullish bias for the Q3 interval.</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="bg-white/5 p-6 rounded-3xl border border-white/10 min-w-0">
-                                        <p className="text-[8px] font-black text-green-500 uppercase tracking-widest mb-2">Technical Support</p>
-                                        <p className="text-lg sm:text-xl font-black text-white font-mono">{priceSymbol}{formatPrice(currentPrice * 0.94)}</p>
-                                    </div>
-                                    <div className="bg-white/5 p-6 rounded-3xl border border-white/10 min-w-0">
-                                        <p className="text-[8px] font-black text-red-500 uppercase tracking-widest mb-2">Resistance Band</p>
-                                        <p className="text-lg sm:text-xl font-black text-white font-mono">{priceSymbol}{formatPrice(currentPrice * 1.07)}</p>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 bg-blue-600/10 rounded-3xl border border-blue-500/20">
-                                    <p className="text-[9px] font-black text-blue-300 uppercase tracking-[0.2em] mb-2 text-center">Analyst Execution Summary</p>
-                                    <p className="text-zinc-300 text-[11px] font-medium leading-relaxed italic text-center italic">"The market scrip for {item.name} shows high resilience at current execution levels. Institutional satellite metrics suggest a low-risk entry profile for long-term holders."</p>
-                                </div>
+                    {/* Right: Working price alerts for this contract */}
+                    <div className="bg-white dark:bg-zinc-900/50 p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 flex flex-col">
+                        <div className="flex items-center gap-3 mb-6">
+                            <Bell className="w-6 h-6 shrink-0 text-blue-500" strokeWidth={2} />
+                            <div>
+                                <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Price Alerts</h3>
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Get notified when {item.name} hits your level</p>
                             </div>
+                        </div>
+
+                        {/* Create */}
+                        <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-white/5 space-y-3">
+                            <div className="flex gap-2">
+                                <div className="flex bg-white dark:bg-zinc-800 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700">
+                                    {(['above', 'below'] as AlertCondition[]).map((c) => (
+                                        <button
+                                            key={c}
+                                            onClick={() => setAlertCondition(c)}
+                                            className={`px-3 py-1.5 text-[10px] font-black rounded-lg uppercase tracking-widest transition-all ${alertCondition === c ? (c === 'above' ? 'bg-green-500 text-white' : 'bg-red-500 text-white') : 'text-zinc-500'}`}
+                                        >
+                                            {c === 'above' ? '≥ Above' : '≤ Below'}
+                                        </button>
+                                    ))}
+                                </div>
+                                <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    value={alertPrice}
+                                    onChange={(e) => setAlertPrice(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddAlert()}
+                                    placeholder={`Target (${tableCurrency})`}
+                                    className="flex-1 min-w-0 bg-white dark:bg-zinc-800 rounded-xl px-3 py-2 text-[11px] font-bold border border-zinc-200 dark:border-zinc-700 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                                />
+                            </div>
+                            <button onClick={handleAddAlert} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-xl transition-all">
+                                Set Alert
+                            </button>
+                        </div>
+
+                        {/* Existing alerts for this contract */}
+                        <div className="mt-4 space-y-3 flex-1">
+                            {myAlerts.length === 0 ? (
+                                <div className="py-8 text-center">
+                                    <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">No alerts on {item.name}</p>
+                                    <p className="text-zinc-400 text-[10px] mt-1">Set one above — it also shows on the Energy Markets screen.</p>
+                                </div>
+                            ) : myAlerts.map((al) => (
+                                <div key={al.id} className={`flex items-center justify-between gap-2 p-4 rounded-2xl border transition-colors ${al.triggered ? 'bg-red-500/5 border-red-500/20' : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-100 dark:border-white/5'}`}>
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] font-black uppercase dark:text-zinc-200 tracking-tight">
+                                            {al.condition === 'above' ? '≥' : '≤'} {displayTarget(al)}
+                                        </p>
+                                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
+                                            {al.triggered ? 'Condition met' : 'Watching live price'}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${al.triggered ? 'bg-red-500 text-white' : 'bg-blue-500/10 text-blue-500'}`}>
+                                            {al.triggered ? 'Triggered' : 'Active'}
+                                        </span>
+                                        <button onClick={() => handleRemoveAlert(al.id)} className="w-6 h-6 rounded-lg flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-500/10 text-[11px] transition-colors" title="Remove alert">✕</button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

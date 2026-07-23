@@ -105,7 +105,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 function ToastViewport({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: number) => void }) {
     return (
-        <div className="fixed z-[200] bottom-4 right-4 left-4 sm:left-auto flex flex-col gap-2 items-stretch sm:items-end pointer-events-none">
+        <div className="fixed z-[200] bottom-0 right-4 left-4 sm:left-auto pb-safe flex flex-col gap-2 items-stretch sm:items-end pointer-events-none">
             {toasts.map((t) => (
                 <div
                     key={t.id}

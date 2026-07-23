@@ -7,6 +7,7 @@ import {
     ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
     ResponsiveContainer, CartesianGrid, Cell,
 } from "recharts";
+import { BookOpen, X, Lightbulb, BarChart3, AlertTriangle, ArrowLeft, Download, TrendingDown, TrendingUp, Search } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -312,12 +313,12 @@ function GlossaryModal({ terms, onClose }: { terms: string[]; onClose: () => voi
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xs font-black uppercase tracking-[0.15em] text-blue-500">📖 Term Glossary</h3>
+                    <h3 className="text-xs font-black uppercase tracking-[0.15em] text-blue-500 inline-flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5" strokeWidth={2} /> Term Glossary</h3>
                     <button
                         onClick={onClose}
                         className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors text-sm font-black"
                     >
-                        ✕
+                        <X className="w-4 h-4" strokeWidth={2} />
                     </button>
                 </div>
                 <div className="space-y-4">
@@ -332,7 +333,7 @@ function GlossaryModal({ terms, onClose }: { terms: string[]; onClose: () => voi
                                     <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mb-1">{g.term}</p>
                                     <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed mb-2">{g.definition}</p>
                                     <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2">
-                                        <p className="text-[10px] font-black text-amber-600 mb-0.5">💡 How to use</p>
+                                        <p className="text-[10px] font-black text-amber-600 mb-0.5 inline-flex items-center gap-1"><Lightbulb className="w-3 h-3" strokeWidth={2} /> How to use</p>
                                         <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">{g.howToUse}</p>
                                     </div>
                                 </div>
@@ -576,7 +577,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                     <div className="relative mx-auto w-14 h-14">
                         <div className="w-14 h-14 border-4 border-blue-600/20 rounded-full" />
                         <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
-                        <div className="absolute inset-0 flex items-center justify-center text-xl">📊</div>
+                        <div className="absolute inset-0 flex items-center justify-center text-blue-600"><BarChart3 className="w-5 h-5" strokeWidth={2} /></div>
                     </div>
                     <div>
                         <p className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white">Generating Report</p>
@@ -591,10 +592,10 @@ function ReportContent({ symbol }: { symbol: string }) {
         return (
             <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] flex items-center justify-center">
                 <div className="text-center space-y-3">
-                    <p className="text-4xl">⚠️</p>
+                    <AlertTriangle className="w-10 h-10 text-red-500 mx-auto" strokeWidth={2} />
                     <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Report unavailable</p>
                     <p className="text-xs text-red-400">{error}</p>
-                    <button onClick={() => router.back()} className="mt-2 text-blue-500 hover:underline text-xs font-bold">← Go Back</button>
+                    <button onClick={() => router.back()} className="mt-2 text-blue-500 hover:underline text-xs font-bold inline-flex items-center gap-1"><ArrowLeft className="w-3.5 h-3.5" strokeWidth={2} /> Go Back</button>
                 </div>
             </div>
         );
@@ -668,7 +669,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                         className="group flex items-center gap-2 pl-1.5 pr-3 sm:pr-3.5 py-1.5 rounded-full bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 transition-all"
                     >
                         <span className="w-6 h-6 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-600 dark:text-zinc-300 group-hover:-translate-x-0.5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all">
-                            <span className="text-sm leading-none">←</span>
+                            <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2} />
                         </span>
                         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
                             <span className="hidden sm:inline">Back to </span>{back ? back.label : "Back"}
@@ -686,7 +687,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                             onClick={() => window.print()}
                             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20"
                         >
-                            ⬇ Download PDF
+                            <Download className="w-3.5 h-3.5" strokeWidth={2} /> Download PDF
                         </button>
                     </div>
                 </div>
@@ -879,7 +880,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                                 </>
                             ) : (
                                 <div className="h-[210px] flex flex-col items-center justify-center text-zinc-400 gap-2">
-                                    <span className="text-3xl">📉</span>
+                                    <TrendingDown className="w-8 h-8" strokeWidth={2} />
                                     <p className="text-xs text-center">Historical financial data not available from data sources.</p>
                                     <p className="text-[10px] text-zinc-300 dark:text-zinc-600 text-center">PSX financials appear in the table below if available.</p>
                                 </div>
@@ -1127,7 +1128,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                                 </>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-28 text-zinc-400 gap-2 mb-2">
-                                    <span className="text-2xl">🔍</span>
+                                    <Search className="w-8 h-8" strokeWidth={2} />
                                     <p className="text-xs text-center">Analyst coverage not available — PSX stocks are typically not covered by Yahoo analyst ratings.</p>
                                     <p className="text-[9px] text-center text-zinc-300 dark:text-zinc-600">Rating derived from technical signal instead.</p>
                                 </div>
@@ -1138,7 +1139,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                                 <SectionTitle num={12} label="Bull vs Bear" color="text-zinc-500" />
                                 <div className="grid grid-cols-2 gap-2">
                                     <div className="p-2 bg-green-50 dark:bg-green-900/10 rounded-xl border border-green-200 dark:border-green-900/30">
-                                        <p className="text-[8px] font-black uppercase text-green-600 mb-1">🐂 Bull Case</p>
+                                        <p className="text-[8px] font-black uppercase text-green-600 mb-1 inline-flex items-center gap-1"><TrendingUp className="w-3 h-3" strokeWidth={2} /> Bull Case</p>
                                         {[
                                             report.metrics.operatingMargin !== null && report.metrics.operatingMargin > 0.1
                                                 ? `Strong ${fmtPct(report.metrics.operatingMargin)} op. margin`
@@ -1154,7 +1155,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                                         ))}
                                     </div>
                                     <div className="p-2 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-900/30">
-                                        <p className="text-[8px] font-black uppercase text-red-600 mb-1">🐻 Bear Case</p>
+                                        <p className="text-[8px] font-black uppercase text-red-600 mb-1 inline-flex items-center gap-1"><TrendingDown className="w-3 h-3" strokeWidth={2} /> Bear Case</p>
                                         {[
                                             report.metrics.debtToEquity !== null && report.metrics.debtToEquity > 100
                                                 ? `High D/E ${fmt(report.metrics.debtToEquity, 0)}%`
@@ -1238,7 +1239,7 @@ function ReportContent({ symbol }: { symbol: string }) {
 
                         <div className="mt-5 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
                             <p className="text-[9px] text-zinc-400 leading-relaxed">
-                                ⚠ <strong>Disclaimer:</strong> This report is auto-generated using publicly available financial data (Yahoo Finance, PSX) and is for educational purposes only.
+<AlertTriangle className="inline w-3 h-3 mr-0.5 -mt-0.5 text-amber-500" strokeWidth={2} /> <strong>Disclaimer:</strong> This report is auto-generated using publicly available financial data (Yahoo Finance, PSX) and is for educational purposes only.
                                 Values showing "N/A", "—", or "Not available" were not returned by the data source for this ticker.
                                 This does not constitute financial advice. Always consult a licensed financial advisor before investing.
                                 Past performance does not guarantee future results.

@@ -1,30 +1,44 @@
 "use client";
 
+import { Star, Folder, Trash2, BarChart3, Plus, X } from "lucide-react";
+
 import PageSkeleton from "../components/PageSkeleton";
 import { useState, useEffect } from "react";
 import StockCard from "../components/StockCard";
 import PriceCard from "../components/PriceCard";
-import { fetchGoldPrice, fetchSilverPrice } from "../lib/api";
 import { useToast } from "../context/ToastContext";
+import { useSettings } from "../context/SettingsContext";
+import WatchlistAddBar from "../components/WatchlistAddBar";
+import { fetchAllPrices, priceKey, type PriceBook, type AssetType } from "../lib/prices";
+
+const TYPE_LABEL: Record<AssetType, string> = {
+  PSX: "PSX Stock", NASDAQ: "NASDAQ", CRYPTO: "Crypto", FOREX: "Forex", COMMODITY: "Metals / Commodity",
+};
+const TYPE_OPTIONS: AssetType[] = ["PSX", "NASDAQ", "CRYPTO", "FOREX", "COMMODITY"];
 
 export default function WatchlistPage() {
   const { success, error } = useToast();
+  const { settings } = useSettings();
+  const displayCur: "PKR" | "USD" = settings.currency === "USD" ? "USD" : "PKR";
   const [watchlists, setWatchlists] = useState<any[]>([]);
   const [selectedWlId, setSelectedWlId] = useState<string | null>(null);
   const [stocksData, setStocksData] = useState<any[]>([]);
+  const [book, setBook] = useState<PriceBook>({ map: {}, rate: 278, updated: "" });
   const [loading, setLoading] = useState(true);
-  const [metalsData, setMetalsData] = useState<any>(null);
+
+  // Create-category form
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState<AssetType>("PSX");
 
   const activeWatchlist = watchlists.find(wl => wl._id === selectedWlId) || watchlists[0];
 
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const [wlRes, stockRes, goldRes, silverRes] = await Promise.all([
+      const [wlRes, stockRes] = await Promise.all([
         fetch('/api/watchlists'),
         fetch('/api/psx-stocks'),
-        fetchGoldPrice(),
-        fetchSilverPrice()
       ]);
 
       const wlJson = await wlRes.json();
@@ -38,7 +52,6 @@ export default function WatchlistPage() {
       }
 
       setStocksData(stockJson.data || []);
-      setMetalsData({ gold: goldRes, silver: silverRes });
     } catch (err) {
       console.error("Failed to load watchlist data", err);
     } finally {
@@ -49,6 +62,17 @@ export default function WatchlistPage() {
   useEffect(() => {
     fetchAllData();
   }, []);
+
+  // Multi-asset price book — powers non-PSX cards and the add-bar's per-type search.
+  useEffect(() => {
+    let active = true;
+    const load = async () => { const b = await fetchAllPrices(); if (active) setBook(b); };
+    load();
+    const iv = settings.refreshInterval && settings.refreshInterval > 0
+      ? setInterval(load, Math.max(30, settings.refreshInterval) * 1000)
+      : null;
+    return () => { active = false; if (iv) clearInterval(iv); };
+  }, [settings.refreshInterval]);
 
   const handleRemoveSymbol = async (watchlistId: string, symbol: string) => {
     const wl = watchlists.find(w => w._id === watchlistId);
@@ -75,18 +99,20 @@ export default function WatchlistPage() {
     }
   };
 
-  const handleAddToWatchlist = async (watchlistId: string, symbol: string) => {
+  const handleAddToWatchlist = async (watchlistId: string, symbol: string, type?: AssetType) => {
     const watchlist = watchlists.find(wl => wl._id === watchlistId);
     if (!watchlist || !symbol) return;
     const currentSymbols = watchlist.symbols || [];
     if (currentSymbols.includes(symbol.toUpperCase())) return;
     const newSymbols = [...currentSymbols, symbol.toUpperCase()];
+    // The first symbol locks the category's market type; later adds keep it.
+    const newType: AssetType = currentSymbols.length === 0 && type ? type : (watchlist.type || 'PSX');
 
     try {
       const res = await fetch(`/api/watchlists/${watchlistId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbols: newSymbols }),
+        body: JSON.stringify({ symbols: newSymbols, type: newType }),
       });
       const json = await res.json();
       if (json.success) {
@@ -98,6 +124,32 @@ export default function WatchlistPage() {
     } catch (err) {
       console.error('Failed to add symbol to watchlist', err);
       error("Network error — couldn't add symbol");
+    }
+  };
+
+  const handleCreateWatchlist = async () => {
+    const name = newName.trim();
+    if (!name) { error("Enter a category name"); return; }
+    try {
+      const res = await fetch('/api/watchlists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type: newType, symbols: [] }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setWatchlists([json.data, ...watchlists]);
+        setSelectedWlId(json.data._id);
+        setNewName("");
+        setNewType("PSX");
+        setShowCreate(false);
+        success(`Category "${name}" created — ${TYPE_LABEL[newType]}`);
+      } else {
+        error(json.error || "Couldn't create category");
+      }
+    } catch (err) {
+      console.error('Failed to create category', err);
+      error("Network error — couldn't create category");
     }
   };
 
@@ -122,17 +174,25 @@ export default function WatchlistPage() {
     }
   };
 
-  // Get current watchlist items with live data
-  const watchlistItems = activeWatchlist?.symbols?.map((sym: string) => {
-    const live = stocksData.find(s => s.symbol.toUpperCase() === sym.toUpperCase());
-    return live ? { ...live, type: 'stock' } : null;
-  }).filter(Boolean) || [];
-
-  // Add specific metals if needed (hardcoded for now as placeholders or based on naming)
-  if (activeWatchlist?.name.toLowerCase().includes('metal')) {
-    if (metalsData?.gold?.tola24k) watchlistItems.push({ ...metalsData.gold.tola24k, title: 'Gold (24K) - Tola', type: 'metal', id: 'gold' });
-    if (metalsData?.silver?.ounce) watchlistItems.push({ ...metalsData.silver.ounce, title: 'Silver - Ounce', type: 'metal', id: 'silver' });
-  }
+  // Each category renders by its market type: PSX as rich StockCards (full OHLC),
+  // every other market as a PriceCard priced from the multi-asset book.
+  const activeType: AssetType = (activeWatchlist?.type || 'PSX') as AssetType;
+  const watchlistItems = (activeWatchlist?.symbols || []).map((sym: string) => {
+    if (activeType === 'PSX') {
+      const live = stocksData.find((s: any) => s.symbol?.toUpperCase() === sym.toUpperCase());
+      if (live) return { kind: 'stock', ...live };
+    }
+    const info = book.map[priceKey(activeType, sym)];
+    return {
+      kind: 'price',
+      symbol: sym,
+      title: info?.name || sym,
+      usdPrice: info?.usd ?? undefined,
+      pkrPrice: info?.pkr ?? undefined,
+      change: info && info.changePct != null ? ((info.usd ?? info.pkr ?? 0) * (info.changePct / 100)) : 0,
+      changePercent: info?.changePct ?? 0,
+    };
+  });
 
   // Calculations
   const totalItems = watchlistItems.length;
@@ -150,8 +210,8 @@ export default function WatchlistPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
         <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
-            ⭐ My <span className="text-blue-500">Watchlists</span>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
+            <Star className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> My <span className="text-blue-500">Watchlists</span>
           </h1>
           <p className="text-zinc-500 dark:text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">
             Personalized Asset Monitoring Engine
@@ -170,44 +230,87 @@ export default function WatchlistPage() {
               : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               }`}
           >
-            📂 {wl.name}
+            <Folder className="w-3.5 h-3.5 shrink-0" strokeWidth={2} /> {wl.name}
+            <span className={`px-1 py-0.5 rounded text-[8px] uppercase tracking-wider ${selectedWlId === wl._id ? 'bg-white/20 text-white' : 'bg-blue-500/10 text-blue-500'}`}>
+              {wl.type || 'PSX'}
+            </span>
             <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${selectedWlId === wl._id ? 'bg-white/20' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
               {wl.symbols?.length || 0}
             </span>
           </button>
         ))}
+        <button
+          onClick={() => setShowCreate(s => !s)}
+          className={`px-3 py-2 rounded-lg text-xs font-black whitespace-nowrap flex items-center gap-1.5 border border-dashed transition-all ${showCreate ? 'bg-blue-600 text-white border-blue-600' : 'text-blue-600 dark:text-blue-400 border-blue-500/40 hover:bg-blue-500/10'}`}
+        >
+          <Plus className="w-3.5 h-3.5" strokeWidth={2.5} /> New
+        </button>
         {watchlists.length > 0 && (
           <button
             onClick={() => handleDeleteWatchlist(selectedWlId!)}
-            className="ml-auto p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-            title="Delete Watchlist"
+            className="ml-auto p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0"
+            title="Delete this category"
           >
-            🗑️
+            <Trash2 className="w-4 h-4" strokeWidth={2} />
           </button>
         )}
       </div>
 
+      {/* Create-category form */}
+      {showCreate && (
+        <div className="bg-white dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-white/5 px-4 sm:px-8 py-3">
+          <div className="max-w-[1600px] mx-auto flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest shrink-0">New Category</span>
+            <input
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCreateWatchlist()}
+              placeholder="Name (e.g. Tech Bets, Metals)"
+              autoFocus
+              className="flex-1 min-w-[160px] px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-bold text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <select value={newType} onChange={e => setNewType(e.target.value as AssetType)} className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-black text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 shrink-0" title="Market type for this category">
+              {TYPE_OPTIONS.map(t => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+            </select>
+            <button onClick={handleCreateWatchlist} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shrink-0">Create</button>
+            <button onClick={() => { setShowCreate(false); setNewName(""); }} className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 shrink-0" title="Cancel"><X className="w-4 h-4" strokeWidth={2} /></button>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="max-w-[1600px] mx-auto p-4 sm:p-8">
+        {/* Add symbols to a chosen watchlist — they render as cards below */}
+        {watchlists.length > 0 && (
+          <div className="mb-6 sm:mb-8">
+            <WatchlistAddBar
+              watchlists={watchlists}
+              activeId={selectedWlId ?? activeWatchlist?._id ?? null}
+              book={book}
+              onAdd={handleAddToWatchlist}
+              onSelectCategory={setSelectedWlId}
+            />
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
         ) : watchlists.length === 0 ? (
           <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-xl p-16 text-center border border-zinc-200 dark:border-zinc-800">
-            <p className="text-5xl mb-6">🏜️</p>
+            <Star className="w-10 h-10 mx-auto mb-6 text-zinc-400" strokeWidth={1.5} />
             <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 mb-3 uppercase tracking-tighter">
-              No Watchlists Found
+              No Categories Yet
             </h2>
             <p className="text-zinc-500 font-medium mb-8 max-w-md mx-auto">
-              You haven't created any watchlists yet. Head over to the stocks page to start organizing your portfolio.
+              Create a watchlist category — pick a market (PSX, Metals, Forex, Crypto, NASDAQ) and add symbols to it. Each category tracks one market.
             </p>
-            <a
-              href="/stocks"
+            <button
+              onClick={() => setShowCreate(true)}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
             >
-              🚀 Go to Stocks
-            </a>
+              <Plus className="w-4 h-4" strokeWidth={2.5} /> Create Category
+            </button>
           </div>
         ) : (
           <div>
@@ -221,7 +324,7 @@ export default function WatchlistPage() {
                   >
                     ✕
                   </button>
-                  {item.type === 'stock' ? (
+                  {item.kind === 'stock' ? (
                     <StockCard
                       {...item}
                       watchlists={watchlists}
@@ -230,14 +333,14 @@ export default function WatchlistPage() {
                       onWatchlistCreated={(newList) => setWatchlists([newList, ...watchlists])}
                     />
                   ) : (
-                    <PriceCard {...item} />
+                    <PriceCard {...item} currency={displayCur} lastUpdated={book.updated || "Live"} />
                   )}
                 </div>
               ))}
               {watchlistItems.length === 0 && (
                 <div className="col-span-full py-16 text-center bg-zinc-100/50 dark:bg-zinc-900/50 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-800">
-                  <p className="text-zinc-400 font-black uppercase tracking-widest text-xs">This watchlist is empty</p>
-                  <p className="text-zinc-500 text-sm mt-1">Add symbols from the market explorer</p>
+                  <p className="text-zinc-400 font-black uppercase tracking-widest text-xs">This {TYPE_LABEL[activeType]} watchlist is empty</p>
+                  <p className="text-zinc-500 text-sm mt-1">Use “Add to Watchlist” above to add {TYPE_LABEL[activeType]} symbols</p>
                 </div>
               )}
             </div>
@@ -248,7 +351,7 @@ export default function WatchlistPage() {
         {watchlistItems.length > 0 && (
           <div className="mt-12 bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-2xl sm:rounded-[3rem] shadow-2xl p-5 sm:p-10 border border-zinc-200 dark:border-white/5">
             <div className="flex items-center gap-3 mb-10">
-              <span className="text-2xl">📊</span>
+              <BarChart3 className="w-6 h-6 text-blue-500 shrink-0" strokeWidth={2} />
               <h2 className="text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">
                 Portfolio <span className="text-blue-500">Intelligence</span>
               </h2>
