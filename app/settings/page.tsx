@@ -89,7 +89,7 @@ export default function SettingsPage() {
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">Display Settings</h2>
                 <p className="text-zinc-500 text-xs font-bold mt-0.5">Visual preferences for the dashboard</p>
               </div>
-              <div className="p-6 sm:p-8 space-y-6">
+              <div className="p-5 sm:p-8 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <label className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">Default Currency</label>
@@ -138,7 +138,7 @@ export default function SettingsPage() {
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white">Alert Settings</h2>
                 <p className="text-zinc-500 text-xs font-bold mt-0.5">Notifications and market alerts</p>
               </div>
-              <div className="p-6 sm:p-8 space-y-5">
+              <div className="p-5 sm:p-8 space-y-5">
                 {[
                   { key: 'notifications', label: 'Enable Notifications', desc: 'System-level push alerts' },
                   { key: 'soundAlerts', label: 'Sound Alerts', desc: 'Audio cues on price events' },
@@ -169,7 +169,7 @@ export default function SettingsPage() {
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-600/10 px-2.5 py-1 rounded-full shrink-0">{enabledCount}/{MODULES.length} on</span>
               </div>
-              <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+              <div className="p-5 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                 {MODULES.map(({ key, label, desc }) => {
                   const on = isModuleEnabled(settings.modules, key);
                   return (

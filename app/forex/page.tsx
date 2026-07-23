@@ -58,17 +58,17 @@ export default function ForexPage() {
         for (let i = 0; i < count; i++) {
             const time = nowSec - i * interval;
             const change = (Math.random() - 0.5) * volatility;
-            
+
             const close = lastClose;
             const open = close / (1 + change);
             const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.2));
             const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.2));
-            
-            data.unshift({ 
-                time, 
-                open: parseFloat(open.toFixed(currency === 'PKR' ? 2 : 4)), 
-                high: parseFloat(high.toFixed(currency === 'PKR' ? 2 : 4)), 
-                low: parseFloat(low.toFixed(currency === 'PKR' ? 2 : 4)), 
+
+            data.unshift({
+                time,
+                open: parseFloat(open.toFixed(currency === 'PKR' ? 2 : 4)),
+                high: parseFloat(high.toFixed(currency === 'PKR' ? 2 : 4)),
+                low: parseFloat(low.toFixed(currency === 'PKR' ? 2 : 4)),
                 close: parseFloat(close.toFixed(currency === 'PKR' ? 2 : 4)),
                 volume: Math.floor(Math.random() * 10000) + 1000
             });
@@ -98,28 +98,24 @@ export default function ForexPage() {
                         </div>
                         <p className="text-zinc-500 dark:text-zinc-500 text-[10px] sm:text-sm font-bold tracking-tight">Real-time cross-currency velocity & volatility synthesis</p>
                     </div>
-
-                    <div className="flex w-full md:w-auto bg-zinc-100 dark:bg-zinc-900/50 backdrop-blur-md rounded-xl sm:rounded-2xl p-1 sm:p-1.5 border border-zinc-200 dark:border-white/5 shadow-xl">
-                        <button onClick={() => updateSettings({ currency: 'PKR' })} className={`flex-1 md:flex-none px-4 sm:px-8 py-2 sm:py-2.5 text-[8px] sm:text-[10px] font-black rounded-lg sm:rounded-xl transition-all uppercase tracking-widest ${currency === 'PKR' ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-300'}`}>PKR View</button>
-                        <button onClick={() => updateSettings({ currency: 'USD' })} className={`flex-1 md:flex-none px-4 sm:px-8 py-2 sm:py-2.5 text-[8px] sm:text-[10px] font-black rounded-lg sm:rounded-xl transition-all uppercase tracking-widest ${currency === 'USD' ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-300'}`}>USD View</button>
-                    </div>
                 </header>
 
                 {error && (
-                    <div className="mb-12 p-6 bg-red-500/10 border border-red-500/20 rounded-[2.5rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+                    <div className="mb-6 sm:mb-12 p-6 bg-red-500/10 border border-red-500/20 rounded-[2.5rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
                         <AlertTriangle className="w-6 h-6 text-red-500 shrink-0" strokeWidth={2} />
                         <p className="text-red-500 font-black uppercase text-xs tracking-widest">{error}</p>
                     </div>
                 )}
 
                 {/* Primary Intelligence Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8 mb-12">
-                    {/* Market Watch Table Sidebar */}
-                    <div className="lg:col-span-1 h-fit max-h-[400px] lg:max-h-none lg:min-h-[800px] bg-white dark:bg-zinc-900/40 rounded-[1.5rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col shadow-2xl">
-                        <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900/50">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-12">
+                    {/* Market Watch Table Sidebar — matches the chart column height, scrolls inside */}
+                    <div className="lg:col-span-1 lg:relative">
+                      <div className="max-h-[400px] lg:max-h-none lg:absolute lg:inset-0 bg-white dark:bg-zinc-900/40 rounded-[1.5rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col shadow-2xl">
+                        <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900/50 shrink-0">
                             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Market Watch</h2>
                         </div>
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                             <table className="w-full text-left border-collapse">
                                 <thead className="sticky top-0 z-20 bg-zinc-50/90 dark:bg-zinc-900/90 backdrop-blur-md">
                                     <tr className="border-b border-zinc-200 dark:border-white/5">
@@ -140,14 +136,13 @@ export default function ForexPage() {
                                         </tr>
                                     )}
                                     {forexRates.map((rate) => (
-                                        <tr 
+                                        <tr
                                             key={rate.code}
                                             onClick={() => setSelectedPair(rate)}
-                                            className={`group cursor-pointer transition-colors duration-200 ${
-                                                selectedPair?.code === rate.code 
-                                                ? 'bg-blue-600/10 dark:bg-blue-600/20' 
-                                                : 'hover:bg-zinc-50 dark:hover:bg-white/5'
-                                            }`}
+                                            className={`group cursor-pointer transition-colors duration-200 ${selectedPair?.code === rate.code
+                                                    ? 'bg-blue-600/10 dark:bg-blue-600/20'
+                                                    : 'hover:bg-zinc-50 dark:hover:bg-white/5'
+                                                }`}
                                         >
                                             <td className="px-4 sm:px-6 py-4 sm:py-5">
                                                 <div className="flex items-center gap-2 sm:gap-3">
@@ -169,6 +164,7 @@ export default function ForexPage() {
                                 </tbody>
                             </table>
                         </div>
+                      </div>
                     </div>
 
                     {/* Main Chart Terminal */}
@@ -176,12 +172,12 @@ export default function ForexPage() {
                         <div className="relative group">
                             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-[3rem] blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
                             <div className="relative">
-                                <TradingChart 
-                                    title={`${selectedPair?.code || 'Market'} Intelligence`} 
-                                    data={trendData} 
-                                    currentTimeframe={chartTF} 
-                                    onTimeframeChange={setChartTF} 
-                                    currencySymbol={currency === 'PKR' ? 'Rs.' : '$'} 
+                                <TradingChart
+                                    title={`${selectedPair?.code || 'Market'} Intelligence`}
+                                    data={trendData}
+                                    currentTimeframe={chartTF}
+                                    onTimeframeChange={setChartTF}
+                                    currencySymbol={currency === 'PKR' ? 'Rs.' : '$'}
                                 />
                             </div>
                         </div>

@@ -813,6 +813,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                         {/* 2 — Financial Snapshot */}
                         <Card glossaryTerms={["Revenue", "Operating Income", "Net Income (PAT)", "Free Cash Flow", "Total Assets", "Total Equity"]}>
                             <SectionTitle num={2} label="Financial Snapshot (Latest Fiscal Year)" />
+                            <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b border-zinc-100 dark:border-zinc-800">
@@ -845,6 +846,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                                     ))}
                                 </tbody>
                             </table>
+                            </div>
                         </Card>
                     </div>
 

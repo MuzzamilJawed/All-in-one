@@ -175,10 +175,6 @@ export default function CryptoPage() {
                         </h1>
                         <p className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">Global Digital Asset Pulse</p>
                     </div>
-                    <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700">
-                        <button onClick={() => updateSettings({ currency: 'USD' })} className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 text-[10px] sm:text-xs font-black rounded-lg transition-all uppercase tracking-widest ${displayCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-orange-500' : 'text-zinc-500'}`}>USD View</button>
-                        <button onClick={() => updateSettings({ currency: 'PKR' })} className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 text-[10px] sm:text-xs font-black rounded-lg transition-all uppercase tracking-widest ${displayCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600' : 'text-zinc-500'}`}>PKR View</button>
-                    </div>
                 </div>
             </header>
 
@@ -198,7 +194,7 @@ export default function CryptoPage() {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-8">
                     {cryptoData.slice(0, 5).map((coin) => (
                         <div key={coin.id} onClick={() => setSelectedCoin(coin)} className="cursor-pointer group">
                             <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all ${selectedCoin?.id === coin.id ? 'bg-white dark:bg-zinc-900 border-orange-500/50 shadow-xl' : 'bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 hover:border-zinc-700'}`}>
@@ -273,23 +269,23 @@ export default function CryptoPage() {
                         {/* Full pivot level ladder */}
                         {levels && (
                             <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-white/5">
-                              <div className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3">Pivot Levels · Support / Resistance (24h)</div>
-                              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
-                                {[
-                                    { label: 'S3', val: levels.s3, tone: 'text-green-600 dark:text-green-400' },
-                                    { label: 'S2', val: levels.s2, tone: 'text-green-600 dark:text-green-400' },
-                                    { label: 'S1', val: levels.s1, tone: 'text-green-600 dark:text-green-400' },
-                                    { label: 'PIVOT', val: levels.pivot, tone: 'text-zinc-900 dark:text-white' },
-                                    { label: 'R1', val: levels.r1, tone: 'text-red-600 dark:text-red-400' },
-                                    { label: 'R2', val: levels.r2, tone: 'text-red-600 dark:text-red-400' },
-                                    { label: 'R3', val: levels.r3, tone: 'text-red-600 dark:text-red-400' },
-                                ].map(lvl => (
-                                    <div key={lvl.label} title={fmtLevel(lvl.val)} className="bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5 rounded-xl px-2 py-2 text-center">
-                                        <div className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{lvl.label}</div>
-                                        <div className={`text-[10px] sm:text-xs font-mono font-black tabular-nums ${lvl.tone}`}>{fmtCompact(lvl.val)}</div>
-                                    </div>
-                                ))}
-                              </div>
+                                <div className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3">Pivot Levels · Support / Resistance (24h)</div>
+                                <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+                                    {[
+                                        { label: 'S3', val: levels.s3, tone: 'text-green-600 dark:text-green-400' },
+                                        { label: 'S2', val: levels.s2, tone: 'text-green-600 dark:text-green-400' },
+                                        { label: 'S1', val: levels.s1, tone: 'text-green-600 dark:text-green-400' },
+                                        { label: 'PIVOT', val: levels.pivot, tone: 'text-zinc-900 dark:text-white' },
+                                        { label: 'R1', val: levels.r1, tone: 'text-red-600 dark:text-red-400' },
+                                        { label: 'R2', val: levels.r2, tone: 'text-red-600 dark:text-red-400' },
+                                        { label: 'R3', val: levels.r3, tone: 'text-red-600 dark:text-red-400' },
+                                    ].map(lvl => (
+                                        <div key={lvl.label} title={fmtLevel(lvl.val)} className="bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5 rounded-xl px-2 py-2 text-center">
+                                            <div className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{lvl.label}</div>
+                                            <div className={`text-[10px] sm:text-xs font-mono font-black tabular-nums ${lvl.tone}`}>{fmtCompact(lvl.val)}</div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Search, SearchX, FolderOpen } from "lucide-react";
+import { Globe, Search, SearchX, FolderOpen, SlidersHorizontal } from "lucide-react";
 
 import PageSkeleton from "../components/PageSkeleton";
 import StockCard from "../components/StockCard";
@@ -41,6 +41,7 @@ export default function NasdaqPage() {
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [indexFilter, setIndexFilter] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const [showFilters, setShowFilters] = useState(false); // mobile: collapse the filter panel
 
     // Data State
     const [stocks, setStocks] = useState<Stock[]>([]);
@@ -329,20 +330,30 @@ export default function NasdaqPage() {
                     </div>
 
                     <div className="flex flex-col lg:flex-row gap-8 items-center justify-between relative z-10">
-                        {/* Primary Search Container */}
-                        <div className="relative w-full lg:flex-1 group">
-                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-zinc-400 group-focus-within:scale-110 transition-transform" strokeWidth={2} />
-                            <input
-                                type="text"
-                                placeholder="Search Symbol..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl sm:rounded-[2rem] pl-14 sm:pl-16 pr-8 py-4 sm:py-5 text-xs sm:text-sm font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-inner placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
-                            />
+                        {/* Primary Search Container — search always visible; a Filters button toggles the dropdowns on mobile */}
+                        <div className="flex gap-2 sm:gap-3 w-full lg:flex-1">
+                            <div className="relative flex-1 w-full group">
+                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-zinc-400 group-focus-within:scale-110 transition-transform" strokeWidth={2} />
+                                <input
+                                    type="text"
+                                    placeholder="Search Symbol..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl sm:rounded-[2rem] pl-14 sm:pl-16 pr-8 py-4 sm:py-5 text-xs sm:text-sm font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-inner placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+                                />
+                            </div>
+                            <button
+                                onClick={() => setShowFilters(v => !v)}
+                                className={`lg:hidden shrink-0 flex items-center gap-2 px-4 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500'}`}
+                            >
+                                <SlidersHorizontal className="w-4 h-4" strokeWidth={2.5} /> Filters
+                            </button>
                         </div>
 
                         {/* Analysis Filters */}
                         <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 sm:gap-4 w-full lg:w-auto">
+                            {/* Dropdowns — collapsible on mobile, always shown on desktop */}
+                            <div className={`${showFilters ? 'flex' : 'hidden'} lg:flex flex-col sm:flex-row flex-wrap items-center gap-3 sm:gap-4 w-full lg:w-auto`}>
                             <div className="relative group/select w-full sm:w-auto">
                                 <select
                                     value={categoryFilter}
@@ -368,8 +379,9 @@ export default function NasdaqPage() {
                                 </select>
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 group-hover/select:translate-y-[2px] transition-transform text-[10px]">▼</div>
                             </div>
+                            </div>
 
-                            {/* View Switcher Toggle */}
+                            {/* View Switcher Toggle — stays visible on mobile */}
                             <div className="flex w-full sm:w-auto bg-zinc-100 dark:bg-white/10 p-1 rounded-2xl border border-zinc-200 dark:border-white/5 shadow-inner">
                                 <button
                                     onClick={() => setViewType('card')}
@@ -387,8 +399,8 @@ export default function NasdaqPage() {
                         </div>
                     </div>
 
-                    {/* Integrated Watchlist Bar */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-zinc-100 dark:border-white/5">
+                    {/* Integrated Watchlist Bar — collapsible on mobile, always shown on desktop */}
+                    <div className={`${showFilters ? 'flex' : 'hidden'} lg:flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-zinc-100 dark:border-white/5`}>
                         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2 w-full lg:w-auto">
                             <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em] whitespace-nowrap">Watchlist Monitor:</span>
                             <button
@@ -500,7 +512,7 @@ export default function NasdaqPage() {
                 )}
 
                 {/* Explorer Results Area */}
-                <div className="space-y-8 sm:space-y-12 min-h-[800px]">
+                <div className="space-y-8 sm:space-y-12 min-h-[400px] sm:min-h-[800px]">
                     {viewType === 'card' ? (
                         <div className="space-y-8 sm:space-y-12 animate-in fade-in duration-500">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-8 px-1">
@@ -566,38 +578,41 @@ export default function NasdaqPage() {
                                 </div>
                             </div>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left text-[11px] border-collapse min-w-[800px]">
+                                <table className="w-full text-left text-[11px] border-collapse">
                                     <thead>
                                         <tr className="bg-zinc-100/50 dark:bg-black uppercase tracking-widest text-zinc-400 font-black">
                                             <th onClick={() => requestSort('symbol')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors">Ticker Symbol</th>
-                                            <th onClick={() => requestSort('name')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors">Organization Name</th>
+                                            <th onClick={() => requestSort('name')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors hidden sm:table-cell">Organization Name</th>
                                             <th onClick={() => requestSort('currentPrice')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Execution Price</th>
                                             <th onClick={() => requestSort('changePercent')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Momentum Delta</th>
-                                            <th onClick={() => requestSort('volume')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Market Fluidity</th>
-                                            <th className="p-3 sm:p-8 text-center">Strategic Analysis</th>
+                                            <th onClick={() => requestSort('volume')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right hidden md:table-cell">Market Fluidity</th>
+                                            <th className="p-3 sm:p-8 text-center hidden sm:table-cell">Strategic Analysis</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                                         {paginatedStocks.map((stock) => (
-                                            <tr key={stock.symbol} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-all group">
+                                            <tr key={stock.symbol} onClick={() => router.push(`/nasdaq/${stock.symbol.toLowerCase()}`)} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-all group cursor-pointer">
                                                 <td className="p-3 sm:p-8">
-                                                    <span className="px-4 py-2 bg-zinc-100 dark:bg-white/5 rounded-xl font-black group-hover:text-blue-600 group-hover:scale-105 transition-all inline-block shadow-sm">
-                                                        {stock.symbol}
-                                                    </span>
+                                                    <div className="flex flex-col gap-1 min-w-0">
+                                                        <span className="w-fit px-2.5 py-1 sm:px-4 sm:py-2 bg-zinc-100 dark:bg-white/5 rounded-xl font-black group-hover:text-blue-600 group-hover:scale-105 transition-all shadow-sm">
+                                                            {stock.symbol}
+                                                        </span>
+                                                        <span className="sm:hidden text-[9px] font-bold text-zinc-400 dark:text-zinc-500 truncate max-w-[130px]">{stock.name}</span>
+                                                    </div>
                                                 </td>
-                                                <td className="p-3 sm:p-8 font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-xs">{stock.name}</td>
+                                                <td className="p-3 sm:p-8 font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-xs hidden sm:table-cell">{stock.name}</td>
                                                 <td className="p-3 sm:p-8 font-mono font-black text-right text-sm">
                                                     {displayCurrency === 'USD' ? '$' : 'Rs.'}
                                                     {(displayCurrency === 'USD' ? stock.currentPrice : (stock.pkrPrice || stock.currentPrice * exchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </td>
                                                 <td className="p-3 sm:p-8 text-right">
-                                                    <span className={`px-4 py-1.5 rounded-xl font-black ${stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-600'}`}>
+                                                    <span className={`px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-xl font-black ${stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-600'}`}>
                                                         {stock.changePercent >= 0 ? '▲' : '▼'}{Math.abs(stock.changePercent)?.toFixed(2)}%
                                                     </span>
                                                 </td>
-                                                <td className="p-3 sm:p-8 font-mono text-zinc-400 text-right font-black uppercase">{stock.volume}</td>
-                                                <td className="p-3 sm:p-8 text-center">
-                                                    <button onClick={() => router.push(`/nasdaq/${stock.symbol.toLowerCase()}`)} className="text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white px-6 py-3 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-600/30">Detailed Audit</button>
+                                                <td className="p-3 sm:p-8 font-mono text-zinc-400 text-right font-black uppercase hidden md:table-cell">{stock.volume}</td>
+                                                <td className="p-3 sm:p-8 text-center hidden sm:table-cell">
+                                                    <button onClick={(e) => { e.stopPropagation(); router.push(`/nasdaq/${stock.symbol.toLowerCase()}`); }} className="text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white px-6 py-3 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-600/30">Detailed Audit</button>
                                                 </td>
                                             </tr>
                                         ))}

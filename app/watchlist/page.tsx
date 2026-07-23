@@ -297,7 +297,7 @@ export default function WatchlistPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
         ) : watchlists.length === 0 ? (
-          <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-xl p-16 text-center border border-zinc-200 dark:border-zinc-800">
+          <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-xl p-8 sm:p-16 text-center border border-zinc-200 dark:border-zinc-800">
             <Star className="w-10 h-10 mx-auto mb-6 text-zinc-400" strokeWidth={1.5} />
             <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 mb-3 uppercase tracking-tighter">
               No Categories Yet
@@ -349,16 +349,16 @@ export default function WatchlistPage() {
 
         {/* Stats & Insights */}
         {watchlistItems.length > 0 && (
-          <div className="mt-12 bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-2xl sm:rounded-[3rem] shadow-2xl p-5 sm:p-10 border border-zinc-200 dark:border-white/5">
-            <div className="flex items-center gap-3 mb-10">
+          <div className="mt-8 sm:mt-12 bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-2xl sm:rounded-[3rem] shadow-2xl p-5 sm:p-10 border border-zinc-200 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-6 sm:mb-10">
               <BarChart3 className="w-6 h-6 text-blue-500 shrink-0" strokeWidth={2} />
               <h2 className="text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter">
                 Portfolio <span className="text-blue-500">Intelligence</span>
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
-              <div className="bg-zinc-100 dark:bg-white/5 p-8 rounded-[2rem] border border-zinc-200 dark:border-white/5 group hover:bg-zinc-200 dark:hover:bg-white/[0.08] transition-all">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8">
+              <div className="bg-zinc-100 dark:bg-white/5 p-4 sm:p-8 rounded-[2rem] border border-zinc-200 dark:border-white/5 group hover:bg-zinc-200 dark:hover:bg-white/[0.08] transition-all">
                 <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-3">Active Monitors</p>
                 <div className="flex items-end gap-2">
                   <p className="text-3xl sm:text-5xl font-black text-zinc-900 dark:text-white tracking-tighter italic">{watchlistItems.length}</p>
@@ -366,7 +366,7 @@ export default function WatchlistPage() {
                 </div>
               </div>
 
-              <div className="bg-zinc-100 dark:bg-white/5 p-8 rounded-[2rem] border border-zinc-200 dark:border-white/5 group hover:bg-zinc-200 dark:hover:bg-white/[0.08] transition-all">
+              <div className="bg-zinc-100 dark:bg-white/5 p-4 sm:p-8 rounded-[2rem] border border-zinc-200 dark:border-white/5 group hover:bg-zinc-200 dark:hover:bg-white/[0.08] transition-all">
                 <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-3">Session Alpha</p>
                 <div className="flex items-end gap-1">
                   <p className={`text-3xl sm:text-5xl font-black tracking-tighter italic ${avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -376,7 +376,7 @@ export default function WatchlistPage() {
               </div>
 
               {bestPerformer && (
-                <div className="bg-green-500/5 p-8 rounded-[2rem] border border-green-500/10 group hover:bg-green-500/10 transition-all">
+                <div className="bg-green-500/5 p-4 sm:p-8 rounded-[2rem] border border-green-500/10 group hover:bg-green-500/10 transition-all">
                   <p className="text-[10px] font-black text-green-500/70 uppercase tracking-[0.2em] mb-3">Alpha Leader</p>
                   <p className="text-2xl font-black text-green-400 truncate tracking-tight uppercase italic">{bestPerformer.symbol}</p>
                   <p className="text-lg font-black text-green-500 font-mono mt-1">+{bestPerformer.changePercent?.toFixed(2)}%</p>
@@ -384,7 +384,7 @@ export default function WatchlistPage() {
               )}
 
               {worstPerformer && (
-                <div className="bg-red-500/5 p-8 rounded-[2rem] border border-red-500/10 group hover:bg-red-500/10 transition-all">
+                <div className="bg-red-500/5 p-4 sm:p-8 rounded-[2rem] border border-red-500/10 group hover:bg-red-500/10 transition-all">
                   <p className="text-[10px] font-black text-red-500/70 uppercase tracking-[0.2em] mb-3">Session Laggard</p>
                   <p className="text-2xl font-black text-red-400 truncate tracking-tight uppercase italic">{worstPerformer.symbol}</p>
                   <p className="text-lg font-black text-red-500 font-mono mt-1">{worstPerformer.changePercent?.toFixed(2)}%</p>

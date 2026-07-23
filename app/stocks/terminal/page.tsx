@@ -360,7 +360,7 @@ function MarketTerminalContent() {
                     <div className="flex items-center gap-2 sm:gap-3">
                         <BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 text-blue-500" strokeWidth={2} />
                         <h1 className="text-[10px] sm:text-sm font-black uppercase tracking-widest sm:tracking-[0.3em] text-zinc-900 dark:text-white/90 italic truncate max-w-[120px] sm:max-w-none">
-                            Market <span className="text-blue-500">Terminal</span>
+                            Trade <span className="text-blue-500">Analytics</span>
                         </h1>
                     </div>
                 </div>
@@ -395,7 +395,7 @@ function MarketTerminalContent() {
                 <aside
                     data-testid="equity-watch-list"
                     className={`fixed lg:relative inset-y-0 left-0 w-[300px] sm:w-[380px] h-full border-r border-zinc-200 dark:border-white/5 bg-white dark:bg-[#080808] lg:bg-white/40 lg:dark:bg-black/20 backdrop-blur-3xl lg:backdrop-blur-md flex flex-col shrink-0 overflow-hidden transform transition-transform duration-300 ease-in-out z-50 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                    <div className="p-6 border-b border-zinc-200 dark:border-white/5 space-y-6">
+                    <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-white/5 space-y-6">
                         {/* Global View Selector */}
                         <div className="flex bg-zinc-100 dark:bg-white/5 p-1 rounded-xl border border-zinc-200 dark:border-white/5">
                             <button

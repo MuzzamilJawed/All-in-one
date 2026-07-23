@@ -108,7 +108,7 @@ export default function NasdaqSymbolPage() {
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white p-6">
             <button onClick={() => router.back()} className="text-blue-600 font-black tracking-widest text-[10px] uppercase hover:underline mb-8 pl-10 lg:pl-0 flex items-center gap-2"><ArrowLeft className="w-5 h-5" strokeWidth={2} /> Back to Console</button>
-            <div className="max-w-4xl mx-auto space-y-12">
+            <div className="max-w-4xl mx-auto space-y-6 sm:space-y-12">
                 <div className="max-w-md">
                     <StockCard {...stock} exchange="NASDAQ" />
                 </div>
@@ -118,7 +118,7 @@ export default function NasdaqSymbolPage() {
                         <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                             <span className="text-[12rem] font-black italic text-blue-500 uppercase select-none">{stock.symbol}</span>
                         </div>
-                        <div className="flex justify-between items-center mb-12 relative z-10">
+                        <div className="flex justify-between items-center mb-6 sm:mb-12 relative z-10">
                             <div>
                                 <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Satellite Velocity Terminal</h2>
                                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Institutional Technical Feed: {stock.symbol} / {displayCurrency}</p>

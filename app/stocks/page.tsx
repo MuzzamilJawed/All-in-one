@@ -1,9 +1,9 @@
 "use client";
 
-import { CandlestickChart, Gauge, LayoutGrid, Table, Grid3x3, Search, SearchX, Folder, Scale, Download, RotateCcw, X } from "lucide-react";
+import { CandlestickChart, Gauge, LayoutGrid, Table, Grid3x3, Search, SearchX, Folder, Scale, Download, RotateCcw, X, SlidersHorizontal } from "lucide-react";
 
 import StockCard from "../components/StockCard";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSettings } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
@@ -77,6 +77,10 @@ function StocksContent() {
     const [newWatchlistName, setNewWatchlistName] = useState("");
     const [isCreatingWatchlist, setIsCreatingWatchlist] = useState(false);
     const itemsPerPage = 15;
+    const [showFilters, setShowFilters] = useState(false); // mobile: collapse the filter panel
+    const PAGE_SIZE = 24; // infinite-scroll: how many rows/cards to reveal per step
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+    const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
     const { settings } = useSettings();
     const { success, error } = useToast();
@@ -389,35 +393,25 @@ function StocksContent() {
         setCurrentPage(1);
     }, [filter, categoryFilter, indexFilter, searchTerm, activeWatchlistId]);
 
-    const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedStocks = filteredStocks.slice(startIndex, startIndex + itemsPerPage);
+    // Infinite scroll: reveal the first PAGE_SIZE, then grow as the sentinel scrolls
+    // into view. Reset back to the first page whenever the result set changes.
+    useEffect(() => {
+        setVisibleCount(PAGE_SIZE);
+    }, [filter, categoryFilter, indexFilter, searchTerm, activeWatchlistId, sortConfig, viewType]);
 
-    const getVisiblePages = () => {
-        const delta = 2;
-        const left = currentPage - delta;
-        const right = currentPage + delta + 1;
-        const range = [];
-        const rangeWithDots = [];
-        let l;
-
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= left && i < right)) {
-                range.push(i);
+    useEffect(() => {
+        const el = loadMoreRef.current;
+        if (!el) return;
+        const io = new IntersectionObserver((entries) => {
+            if (entries[0]?.isIntersecting) {
+                setVisibleCount((v) => Math.min(v + PAGE_SIZE, filteredStocks.length));
             }
-        }
+        }, { rootMargin: "600px 0px" });
+        io.observe(el);
+        return () => io.disconnect();
+    }, [filteredStocks.length, viewType, visibleCount]);
 
-        for (let i of range) {
-            if (l) {
-                if (i - l === 2) rangeWithDots.push(l + 1);
-                else if (i - l !== 1) rangeWithDots.push('...');
-            }
-            rangeWithDots.push(i);
-            l = i;
-        }
-
-        return rangeWithDots;
-    };
+    const paginatedStocks = filteredStocks.slice(0, visibleCount);
 
     const SortIcon = ({ column }: { column: keyof Stock }) => {
         const isActive = sortConfig?.key === column;
@@ -448,16 +442,6 @@ function StocksContent() {
                         </h1>
                         <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1">Real-Time Terminal</p>
                     </div>
-                    <button
-                        onClick={() => router.push('/stocks/terminal')}
-                        className="group relative px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl sm:rounded-2xl overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-xl shadow-blue-500/20 w-full sm:w-auto"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 opacity-0 group-hover:opacity-20 transition-opacity"></div>
-                        <div className="flex items-center justify-center gap-3 relative z-10">
-                            <Gauge className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
-                            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white">Advanced Terminal</span>
-                        </div>
-                    </button>
                 </div>
             </header>
 
@@ -496,7 +480,7 @@ function StocksContent() {
                 <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 w-full">
                     <div className="max-w-7xl mx-auto px-4 sm:px-8">
                         <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-100 dark:divide-zinc-800">
-                            <div className="flex-1 py-4 md:pr-8 flex items-center justify-between">
+                            <div className="flex-1 py-3 sm:py-4 md:pr-8 flex items-center justify-between">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
                                         <span className={`w-2 h-2 rounded-full ${marketStats.status.toLowerCase().includes('open') ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
@@ -518,25 +502,25 @@ function StocksContent() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex-1 py-4 md:pl-8 flex items-center justify-between">
+                            <div className="flex-1 py-3 sm:py-4 md:pl-8 flex items-center justify-between">
                                 <div className="space-y-1 w-full">
                                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Market Breadth (Symbol Statistics)</p>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                        <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-100/50 dark:border-green-800/30 p-2 rounded-xl text-center">
-                                            <p className="text-[8px] font-black text-green-600/80 uppercase mb-0.5">Advanced</p>
-                                            <p className="text-sm font-black text-green-600 leading-none">{marketStats.advanced}</p>
+                                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                                        <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-100/50 dark:border-green-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
+                                            <p className="text-[7px] sm:text-[8px] font-black text-green-600/80 uppercase mb-0.5">Adv</p>
+                                            <p className="text-xs sm:text-sm font-black text-green-600 leading-none">{marketStats.advanced}</p>
                                         </div>
-                                        <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100/50 dark:border-red-800/30 p-2 rounded-xl text-center">
-                                            <p className="text-[8px] font-black text-red-600/80 uppercase mb-0.5">Declined</p>
-                                            <p className="text-sm font-black text-red-600 leading-none">{marketStats.declined}</p>
+                                        <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100/50 dark:border-red-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
+                                            <p className="text-[7px] sm:text-[8px] font-black text-red-600/80 uppercase mb-0.5">Dec</p>
+                                            <p className="text-xs sm:text-sm font-black text-red-600 leading-none">{marketStats.declined}</p>
                                         </div>
-                                        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30 p-2 rounded-xl text-center">
-                                            <p className="text-[8px] font-black text-blue-600/80 uppercase mb-0.5">Unchanged</p>
-                                            <p className="text-sm font-black text-blue-600 leading-none">{marketStats.unchanged}</p>
+                                        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
+                                            <p className="text-[7px] sm:text-[8px] font-black text-blue-600/80 uppercase mb-0.5">Unch</p>
+                                            <p className="text-xs sm:text-sm font-black text-blue-600 leading-none">{marketStats.unchanged}</p>
                                         </div>
-                                        <div className="bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-zinc-700/30 p-2 rounded-xl text-center">
-                                            <p className="text-[8px] font-black text-zinc-500 uppercase mb-0.5">Total</p>
-                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 leading-none">{marketStats.total}</p>
+                                        <div className="bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-zinc-700/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
+                                            <p className="text-[7px] sm:text-[8px] font-black text-zinc-500 uppercase mb-0.5">Total</p>
+                                            <p className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-50 leading-none">{marketStats.total}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -586,12 +570,12 @@ function StocksContent() {
                 </div>
             )}
 
-            <div className={`px-4 sm:px-8 py-10 max-w-[1700px] mx-auto w-full space-y-10 ${compareStocks.length > 0 ? 'pb-64' : ''}`}>
+            <div className={`px-4 sm:px-8 py-5 sm:py-10 max-w-[1700px] mx-auto w-full space-y-5 sm:space-y-10 ${compareStocks.length > 0 ? 'pb-64' : ''}`}>
                 {/* Unified Market Control Ribbon */}
-                <div className="bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 shadow-2xl space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                <div className="bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 shadow-2xl space-y-5 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                         <div className="flex-1 space-y-6 w-full">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <div className="space-y-1">
                                     <h2 className="text-lg sm:text-2xl font-black italic uppercase tracking-tighter text-zinc-900 dark:text-white leading-none">Market Intelligence</h2>
                                     <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
@@ -599,40 +583,52 @@ function StocksContent() {
                                         Monitoring {filteredStocks.length} Real-Time Assets
                                     </p>
                                 </div>
-                                <div className="flex h-fit bg-zinc-100 dark:bg-white/5 p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/10 w-full sm:w-auto">
-                                    <button
-                                        onClick={() => setViewType('card')}
-                                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'card' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
-                                    >
-                                        <LayoutGrid className="w-3.5 h-3.5" strokeWidth={2.5} /> Card
-                                    </button>
-                                    <button
-                                        onClick={() => setViewType('table')}
-                                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'table' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
-                                    >
-                                        <Table className="w-3.5 h-3.5" strokeWidth={2.5} /> Table
-                                    </button>
-                                    <button
-                                        onClick={() => setViewType('heatmap')}
-                                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'heatmap' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
-                                    >
-                                        <Grid3x3 className="w-3.5 h-3.5" strokeWidth={2.5} /> Heatmap
-                                    </button>
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <div className="flex flex-1 sm:flex-none h-fit bg-zinc-100 dark:bg-white/5 p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/10">
+                                        <button
+                                            onClick={() => setViewType('card')}
+                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'card' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                        >
+                                            <LayoutGrid className="w-3.5 h-3.5" strokeWidth={2.5} /> Card
+                                        </button>
+                                        <button
+                                            onClick={() => setViewType('table')}
+                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'table' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                        >
+                                            <Table className="w-3.5 h-3.5" strokeWidth={2.5} /> Table
+                                        </button>
+                                        <button
+                                            onClick={() => setViewType('heatmap')}
+                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'heatmap' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                        >
+                                            <Grid3x3 className="w-3.5 h-3.5" strokeWidth={2.5} /> Heatmap
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div className="relative group">
+                            {/* Search — always visible; on mobile a Filters button toggles the dropdowns */}
+                            <div className="flex gap-2 sm:gap-3">
+                                <div className="relative group flex-1">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" strokeWidth={2.5} />
                                     <input
                                         type="text"
                                         placeholder="Search Symbol..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl pl-12 pr-4 py-4 text-xs font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-zinc-500"
+                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl pl-12 pr-4 py-3.5 sm:py-4 text-xs font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-zinc-500"
                                     />
                                 </div>
+                                <button
+                                    onClick={() => setShowFilters(v => !v)}
+                                    className={`lg:hidden shrink-0 flex items-center gap-2 px-4 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500'}`}
+                                >
+                                    <SlidersHorizontal className="w-4 h-4" strokeWidth={2.5} /> Filters
+                                </button>
+                            </div>
 
+                            {/* Filter dropdowns — collapsible on mobile, always shown on desktop */}
+                            <div className={`${showFilters ? 'grid' : 'hidden'} lg:grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4`}>
                                 <div className="relative group">
                                     <select
                                         value={indexFilter || "all"}
@@ -642,7 +638,7 @@ function StocksContent() {
                                             const idxObj = indices.find(i => i.name === val);
                                             setSelectedIndex(idxObj || null);
                                         }}
-                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
+                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 sm:px-6 py-3.5 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
                                     >
                                         <option value="all">Index: All Market</option>
                                         {indices.map(idx => (
@@ -656,7 +652,7 @@ function StocksContent() {
                                     <select
                                         value={filter}
                                         onChange={(e) => setFilter(e.target.value)}
-                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
+                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 sm:px-6 py-3.5 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
                                     >
                                         <option value="all">Sectors: Global</option>
                                         {sectors.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
@@ -664,11 +660,11 @@ function StocksContent() {
                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[10px]">▼</div>
                                 </div>
 
-                                <div className="relative group">
+                                <div className="relative group col-span-2 lg:col-span-1">
                                     <select
                                         value={categoryFilter}
                                         onChange={(e) => setCategoryFilter(e.target.value)}
-                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
+                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 sm:px-6 py-3.5 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
                                     >
                                         <option value="all">Market View: General</option>
                                         <option value="gainers">Top Performers</option>
@@ -681,7 +677,7 @@ function StocksContent() {
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-zinc-100 dark:border-white/5">
+                    <div className={`${showFilters ? 'flex' : 'hidden'} lg:flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 pt-5 sm:pt-6 border-t border-zinc-100 dark:border-white/5`}>
                         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2 w-full lg:w-auto">
                             <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] whitespace-nowrap">Watchlist Monitor:</span>
                             <button
@@ -748,7 +744,7 @@ function StocksContent() {
                 </div>
 
                 {/* Explorer Results Area */}
-                <div className="space-y-12 min-h-[800px]">
+                <div className="space-y-6 sm:space-y-12 min-h-[400px] sm:min-h-[800px]">
                     {viewType === 'heatmap' ? (
                         <SectorHeatmap
                             stocks={filteredStocks}
@@ -756,8 +752,8 @@ function StocksContent() {
                             onSelectSymbol={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
                         />
                     ) : viewType === 'card' ? (
-                        <div className="space-y-12 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-1">
+                        <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6 px-1">
                                 {paginatedStocks.map((stock) => (
                                     <StockCard
                                         key={stock.symbol}
@@ -782,40 +778,17 @@ function StocksContent() {
                                 )}
                             </div>
 
-                            {/* Card Pagination */}
-                            {filteredStocks.length > itemsPerPage && (
-                                <div className="flex flex-col sm:flex-row justify-between items-center gap-6 pt-8 border-t border-zinc-200 dark:border-white/5">
-                                    <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                                        Displaying {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredStocks.length)} of {filteredStocks.length} Assets
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            disabled={currentPage === 1}
-                                            onClick={() => { setCurrentPage(prev => Math.max(1, prev - 1)); window.scrollTo({ top: 900, behavior: 'smooth' }); }}
-                                            className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 disabled:opacity-20 hover:border-blue-500 transition-all shadow-sm"
-                                        >
-                                            <span className="text-xs">◀</span>
-                                        </button>
-                                        <div className="flex items-center gap-2">
-                                            {getVisiblePages().map((pageNum, i) => (
-                                                <button
-                                                    key={i}
-                                                    disabled={pageNum === '...'}
-                                                    onClick={() => { if (typeof pageNum === 'number') { setCurrentPage(pageNum); window.scrollTo({ top: 900, behavior: 'smooth' }); } }}
-                                                    className={`w-12 h-12 rounded-xl text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20' : pageNum === '...' ? 'text-zinc-400 cursor-default' : 'bg-white dark:bg-zinc-900 text-zinc-500 hover:border-blue-500 border border-zinc-200 dark:border-zinc-800'}`}
-                                                >
-                                                    {pageNum}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <button
-                                            disabled={currentPage === totalPages}
-                                            onClick={() => { setCurrentPage(prev => Math.min(totalPages, prev + 1)); window.scrollTo({ top: 900, behavior: 'smooth' }); }}
-                                            className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 disabled:opacity-20 hover:border-blue-500 transition-all shadow-sm"
-                                        >
-                                            <span className="text-xs">▶</span>
-                                        </button>
-                                    </div>
+                            {/* Infinite scroll sentinel + counter */}
+                            {filteredStocks.length > 0 && (
+                                <div ref={loadMoreRef} className="pt-6 flex flex-col items-center gap-2">
+                                    {visibleCount < filteredStocks.length ? (
+                                        <>
+                                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Loading more · {Math.min(visibleCount, filteredStocks.length)} / {filteredStocks.length}</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">All {filteredStocks.length} assets loaded</p>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -826,20 +799,25 @@ function StocksContent() {
                                     <thead>
                                         <tr className="bg-zinc-50 dark:bg-white/5 text-zinc-500">
                                             <th onClick={() => requestSort('symbol')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors">Symbol <SortIcon column="symbol" /></th>
-                                            <th onClick={() => requestSort('name')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors">Company <SortIcon column="name" /></th>
+                                            <th onClick={() => requestSort('name')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors hidden sm:table-cell">Company <SortIcon column="name" /></th>
                                             <th onClick={() => requestSort('currentPrice')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Price <SortIcon column="currentPrice" /></th>
                                             <th onClick={() => requestSort('changePercent')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Change <SortIcon column="changePercent" /></th>
                                             <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-center hidden md:table-cell">Signal</th>
                                             <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-center hidden lg:table-cell">Day Range</th>
-                                            <th onClick={() => requestSort('volume')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Volume <SortIcon column="volume" /></th>
-                                            <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-right">Action</th>
+                                            <th onClick={() => requestSort('volume')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right hidden sm:table-cell">Volume <SortIcon column="volume" /></th>
+                                            <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-right hidden sm:table-cell">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                                         {paginatedStocks.map((stock) => (
-                                            <tr key={stock.symbol} className="hover:bg-blue-500/5 transition-all group">
-                                                <td className="p-3 sm:p-6"><span className="px-3 py-1.5 bg-zinc-100 dark:bg-white/10 rounded-lg font-black group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">{stock.symbol}</span></td>
-                                                <td className="p-3 sm:p-6 font-black truncate max-w-[250px] dark:text-zinc-300 group-hover:text-blue-600 transition-colors">{stock.name}</td>
+                                            <tr key={stock.symbol} onClick={() => router.push(`/stocks/${stock.symbol.toLowerCase()}`)} className="hover:bg-blue-500/5 transition-all group cursor-pointer">
+                                                <td className="p-3 sm:p-6">
+                                                    <div className="flex flex-col gap-1 min-w-0">
+                                                        <span className="w-fit px-2.5 py-1 sm:px-3 sm:py-1.5 bg-zinc-100 dark:bg-white/10 rounded-lg font-black group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">{stock.symbol}</span>
+                                                        <span className="sm:hidden text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tight truncate max-w-[130px]">{stock.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-3 sm:p-6 font-black truncate max-w-[250px] dark:text-zinc-300 group-hover:text-blue-600 transition-colors hidden sm:table-cell">{stock.name}</td>
                                                 <td className="p-3 sm:p-6 font-mono font-black text-right text-sm">{stock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                 <td className={`p-3 sm:p-6 font-black text-right text-sm ${stock.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                                     {stock.changePercent >= 0 ? '▲' : '▼'}{Math.abs(stock.changePercent).toFixed(2)}%
@@ -868,9 +846,9 @@ function StocksContent() {
                                                         );
                                                     })()}
                                                 </td>
-                                                <td className="p-3 sm:p-6 font-mono text-zinc-500 dark:text-zinc-500 text-right group-hover:text-zinc-300">{stock.volume}</td>
-                                                <td className="p-3 sm:p-6 text-right">
-                                                    <button onClick={() => router.push(`/stocks/${stock.symbol.toLowerCase()}`)} className="text-[10px] font-black uppercase bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-600/20">Analyze</button>
+                                                <td className="p-3 sm:p-6 font-mono text-zinc-500 dark:text-zinc-500 text-right group-hover:text-zinc-300 hidden sm:table-cell">{stock.volume}</td>
+                                                <td className="p-3 sm:p-6 text-right hidden sm:table-cell">
+                                                    <button onClick={(e) => { e.stopPropagation(); router.push(`/stocks/${stock.symbol.toLowerCase()}`); }} className="text-[10px] font-black uppercase bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-600/20">Analyze</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -886,40 +864,17 @@ function StocksContent() {
                                 </table>
                             </div>
 
-                            {/* Table Pagination */}
-                            {filteredStocks.length > itemsPerPage && (
-                                <div className="px-4 sm:px-8 py-6 bg-zinc-50 dark:bg-[#080808] border-t border-zinc-200 dark:border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
-                                    <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                                        Displaying {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredStocks.length)} of {filteredStocks.length} Assets
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            disabled={currentPage === 1}
-                                            onClick={() => { setCurrentPage(prev => Math.max(1, prev - 1)); window.scrollTo({ top: 900, behavior: 'smooth' }); }}
-                                            className="p-2 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 disabled:opacity-30 hover:border-blue-500 transition-all font-bold"
-                                        >
-                                            <span className="text-xs">◀</span>
-                                        </button>
-                                        <div className="flex items-center gap-1">
-                                            {getVisiblePages().map((pageNum, i) => (
-                                                <button
-                                                    key={i}
-                                                    disabled={pageNum === '...'}
-                                                    onClick={() => { if (typeof pageNum === 'number') { setCurrentPage(pageNum); window.scrollTo({ top: 900, behavior: 'smooth' }); } }}
-                                                    className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : pageNum === '...' ? 'text-zinc-400 cursor-default' : 'bg-white dark:bg-white/5 text-zinc-500 hover:border-blue-500 border border-zinc-200 dark:border-white/5'}`}
-                                                >
-                                                    {pageNum}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <button
-                                            disabled={currentPage === totalPages}
-                                            onClick={() => { setCurrentPage(prev => Math.min(totalPages, prev + 1)); window.scrollTo({ top: 900, behavior: 'smooth' }); }}
-                                            className="p-2 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 disabled:opacity-30 hover:border-blue-500 transition-all font-bold"
-                                        >
-                                            <span className="text-xs">▶</span>
-                                        </button>
-                                    </div>
+                            {/* Infinite scroll sentinel + counter */}
+                            {filteredStocks.length > 0 && (
+                                <div ref={loadMoreRef} className="px-4 sm:px-8 py-6 bg-zinc-50 dark:bg-[#080808] border-t border-zinc-200 dark:border-white/5 flex flex-col items-center gap-2">
+                                    {visibleCount < filteredStocks.length ? (
+                                        <>
+                                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Loading more · {Math.min(visibleCount, filteredStocks.length)} / {filteredStocks.length}</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">All {filteredStocks.length} assets loaded</p>
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -372,12 +372,12 @@ export default function StockCard({
                 </div>
             </div>
 
-            {/* Day range position bar */}
+            {/* Day range position bar — carries Low/High so a separate O/H/L grid is redundant */}
             {rangePos != null && (
                 <div className="mt-2.5">
                     <div className="flex items-center justify-between text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-1">
                         <span>L {low?.toFixed(1)}</span>
-                        <span className="text-zinc-500">Day Range</span>
+                        <span className="text-zinc-500">O {open?.toFixed(1)}</span>
                         <span>H {high?.toFixed(1)}</span>
                     </div>
                     <div className="relative h-1.5 rounded-full bg-gradient-to-r from-red-500/30 via-zinc-300 dark:via-zinc-700 to-green-500/30">
@@ -389,22 +389,6 @@ export default function StockCard({
                     </div>
                 </div>
             )}
-
-            {/* Technical Quick View */}
-            <div className="mt-3 grid grid-cols-3 gap-1 border-t border-zinc-100 dark:border-zinc-800 pt-3">
-                <div>
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">Open</p>
-                    <p className="text-xs font-bold text-zinc-900 dark:text-zinc-50">{open?.toFixed(1)}</p>
-                </div>
-                <div className="text-center">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">High</p>
-                    <p className="text-xs font-bold text-zinc-900 dark:text-zinc-50">{high?.toFixed(1)}</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">Low</p>
-                    <p className="text-xs font-bold text-zinc-900 dark:text-zinc-50">{low?.toFixed(1)}</p>
-                </div>
-            </div>
         </div>
     );
 }

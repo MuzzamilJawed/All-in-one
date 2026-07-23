@@ -91,6 +91,28 @@ body {
   }
 }
 
+/* ── Launch splash entrance animations ─────────────────────────────────────── */
+@keyframes splash-pop {
+  0%   { opacity: 0; transform: scale(0.82); }
+  60%  { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes splash-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes splash-glow {
+  0%, 100% { opacity: 0.45; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 0.9;  transform: translate(-50%, -50%) scale(1.18); }
+}
+.splash-stage { animation: splash-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.splash-word  { animation: splash-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both; }
+.splash-glow  { animation: splash-glow 3s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-stage, .splash-word, .splash-glow { animation: none; }
+}
+
 /* ── Mobile / native-shell safe areas ──────────────────────────────────────
    env(safe-area-inset-*) is 0 on desktop and non-notched devices, so these
    are no-ops there and only take effect inside the Capacitor app / installed

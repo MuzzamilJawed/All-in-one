@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "./components/AppShell";
 import CommandPalette from "./components/CommandPalette";
+import Splash from "./components/Splash";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SettingsProvider } from "./context/SettingsContext";
 import { SidebarProvider } from "./context/SidebarContext";
@@ -70,6 +71,7 @@ export default function RootLayout({
               <ToastProvider>
                 <AppShell>{children}</AppShell>
                 <CommandPalette />
+                <Splash />
               </ToastProvider>
             </SidebarProvider>
           </ThemeProvider>

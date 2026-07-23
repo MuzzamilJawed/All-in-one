@@ -228,7 +228,7 @@ export default function ExpensesPage() {
                 )}
               </h2>
             </div>
-            <form onSubmit={handleAddExpense} className="p-6 space-y-4">
+            <form onSubmit={handleAddExpense} className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className={labelClass}>Description</label>
                 <input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="e.g., Lunch at café" className={inputClass} />
@@ -275,7 +275,7 @@ export default function ExpensesPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Category Breakdown */}
             {categoryData.length > 0 && (
-              <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 shadow-sm">
+              <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-4 sm:p-6 shadow-sm">
                 <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4 flex items-center gap-2"><PieChartIcon className="w-4 h-4 shrink-0" strokeWidth={2} /> Spending by Category</h2>
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
@@ -290,7 +290,7 @@ export default function ExpensesPage() {
 
             {/* Daily Trend */}
             {lineChartData.length > 0 && (
-              <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 shadow-sm">
+              <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-4 sm:p-6 shadow-sm">
                 <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4 flex items-center gap-2"><LineChartIcon className="w-4 h-4 shrink-0" strokeWidth={2} /> Daily Trend</h2>
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={lineChartData}>
@@ -306,7 +306,7 @@ export default function ExpensesPage() {
 
             {/* Payment Method */}
             {paymentMethodData.length > 0 && (
-              <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-6 shadow-sm">
+              <div className="bg-white dark:bg-zinc-900/60 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-4 sm:p-6 shadow-sm">
                 <h2 className="text-base font-black uppercase tracking-tighter italic text-zinc-900 dark:text-white mb-4 flex items-center gap-2"><CreditCard className="w-4 h-4 shrink-0" strokeWidth={2} /> By Payment Method</h2>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={paymentMethodData}>
@@ -353,27 +353,31 @@ export default function ExpensesPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-zinc-100 dark:border-white/5">
-                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Description</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Category</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-right">Amount</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Date</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Method</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-center">Actions</th>
+                    <th className="px-4 sm:px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Description</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] hidden sm:table-cell">Category</th>
+                    <th className="px-4 sm:px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-right">Amount</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] hidden sm:table-cell">Date</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] hidden md:table-cell">Method</th>
+                    <th className="px-4 sm:px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                   {filteredExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((exp) => (
                     <tr key={exp.id} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-4 text-sm font-bold text-zinc-900 dark:text-zinc-50">{exp.description}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 truncate max-w-[160px] sm:max-w-none">{exp.description}</p>
+                        {/* Category + date fold under description on mobile */}
+                        <p className="sm:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-wide mt-0.5">{exp.category} · {new Date(exp.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                      </td>
+                      <td className="px-6 py-4 hidden sm:table-cell">
                         <span className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-black text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">{exp.category}</span>
                       </td>
-                      <td className="px-6 py-4 text-right font-mono font-black text-zinc-900 dark:text-white text-sm">PKR {exp.amount.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
-                      <td className="px-6 py-4 text-xs font-bold text-zinc-500">{new Date(exp.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4 text-right font-mono font-black text-zinc-900 dark:text-white text-sm whitespace-nowrap">PKR {exp.amount.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                      <td className="px-6 py-4 text-xs font-bold text-zinc-500 hidden sm:table-cell">{new Date(exp.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                      <td className="px-6 py-4 hidden md:table-cell">
                         <span className="text-xs font-black text-zinc-500 uppercase tracking-wide">{exp.paymentMethod}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4">
                         <div className="flex gap-2 justify-center">
                           <button onClick={() => handleEditExpense(exp)} className="px-2 py-2 text-xs font-black text-blue-500 hover:text-blue-600 transition-colors uppercase tracking-wide">Edit</button>
                           <button onClick={() => handleDeleteExpense(exp.id)} className="px-2 py-2 text-xs font-black text-red-500 hover:text-red-600 transition-colors uppercase tracking-wide">Delete</button>

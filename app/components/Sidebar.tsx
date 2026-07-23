@@ -10,7 +10,7 @@ import { isModuleEnabled } from "../lib/modules";
 import {
   LayoutDashboard, TrendingUp, Globe, ArrowRightLeft, Bitcoin, Gem, Fuel,
   Briefcase, Star, Wallet, Settings, ChevronsLeft, ChevronsRight, X,
-  Sun, Moon, Monitor,
+  Sun, Moon, Monitor, CandlestickChart, LineChart,
 } from "lucide-react";
 
 const navigationGroups = [
@@ -23,7 +23,12 @@ const navigationGroups = [
   {
     title: "Markets",
     items: [
-      { name: "PSX Stocks", href: "/stocks", icon: TrendingUp, module: "stocks" },
+      {
+        name: "PSX Stocks", href: "/stocks", icon: TrendingUp, module: "stocks",
+        children: [
+          { name: "Trade Analytics", href: "/stocks/terminal", icon: CandlestickChart },
+        ],
+      },
       { name: "NASDAQ Stocks", href: "/nasdaq", icon: Globe, module: "nasdaq" },
       { name: "Forex", href: "/forex", icon: ArrowRightLeft, module: "forex" },
       { name: "Crypto", href: "/crypto", icon: Bitcoin, module: "crypto" },
@@ -32,12 +37,17 @@ const navigationGroups = [
   {
     title: "Commodities",
     items: [
-      { name: "Gold & Silver", href: "/metals", icon: Gem, module: "metals" },
+      {
+        name: "Gold & Silver", href: "/metals", icon: Gem, module: "metals",
+        children: [
+          { name: "Graph Analysis", href: "/metals/analysis", icon: LineChart },
+        ],
+      },
       { name: "Oil & Energy", href: "/oil", icon: Fuel, module: "oil" },
     ]
   },
   {
-    title: "Tools & Personal",
+    title: "Management",
     items: [
       { name: "Portfolio", href: "/portfolio", icon: Briefcase, module: "portfolio" },
       { name: "Watchlist", href: "/watchlist", icon: Star, module: "watchlist" },
@@ -142,21 +152,46 @@ export default function Sidebar() {
                 {group.title}
               </h2>
               <div className="space-y-1">
-                {group.items.map((item) => {
+                {group.items.map((item: any) => {
                   const isActive = pathname === item.href;
+                  const children = item.children as { name: string; href: string; icon?: any }[] | undefined;
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      title={item.name}
-                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${collapsed ? "lg:justify-center lg:px-0" : ""} ${isActive
-                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
-                      }`}
-                    >
-                      <item.icon className="w-5 h-5 shrink-0" strokeWidth={2} />
-                      <span className={`font-bold text-sm tracking-tight ${collapsed ? "lg:hidden" : ""}`}>{item.name}</span>
-                    </Link>
+                    <div key={item.href}>
+                      <Link
+                        href={item.href}
+                        title={item.name}
+                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${collapsed ? "lg:justify-center lg:px-0" : ""} ${isActive
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
+                        }`}
+                      >
+                        <item.icon className="w-5 h-5 shrink-0" strokeWidth={2} />
+                        <span className={`font-bold text-sm tracking-tight ${collapsed ? "lg:hidden" : ""}`}>{item.name}</span>
+                      </Link>
+
+                      {/* Nested submenu (e.g. PSX → Trade Analytics) */}
+                      {children && children.length > 0 && (
+                        <div className={`mt-1 ml-[26px] pl-3 border-l border-zinc-200 dark:border-zinc-800 space-y-1 ${collapsed ? "lg:hidden" : ""}`}>
+                          {children.map((child) => {
+                            const childActive = pathname === child.href;
+                            return (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                title={child.name}
+                                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold tracking-tight transition-all duration-300 ${childActive
+                                  ? "bg-blue-600 text-white shadow shadow-blue-600/20"
+                                  : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
+                                }`}
+                              >
+                                {child.icon && <child.icon className="w-4 h-4 shrink-0" strokeWidth={2} />}
+                                <span>{child.name}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>

@@ -328,18 +328,11 @@ export default function OilPage() {
                 {loading ? "Synchronizing satellite Feeds..." : `Terminal Active - ${new Date().toLocaleTimeString()}`}
               </p>
             </div>
-
-            <div className="flex w-full sm:w-auto items-center gap-4">
-              <div className="flex flex-1 sm:flex-none bg-zinc-100 dark:bg-zinc-800 rounded-xl sm:rounded-2xl p-1 border border-zinc-200 dark:border-zinc-700">
-                <button onClick={() => updateSettings({ currency: 'PKR' })} className={`flex-1 sm:flex-none px-4 py-2 text-[10px] font-black rounded-lg sm:rounded-xl transition-all ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}>PKR View</button>
-                <button onClick={() => updateSettings({ currency: 'USD' })} className={`flex-1 sm:flex-none px-4 py-2 text-[10px] font-black rounded-lg sm:rounded-xl transition-all ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow-lg text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}>USD View</button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
-      <div className="p-4 sm:p-8 pb-32 max-w-[1600px] mx-auto w-full space-y-12">
+      <div className="p-4 sm:p-8 pb-32 max-w-[1600px] mx-auto w-full space-y-6 sm:space-y-12">
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-6 flex items-center gap-4">
             <AlertTriangle className="w-6 h-6 text-red-500 shrink-0" strokeWidth={2} />

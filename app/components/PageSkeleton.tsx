@@ -10,6 +10,7 @@ type Variant =
     | "detail"     // symbol pages: chart + side stats
     | "terminal"
     | "report"
+    | "portfolio"  // summary cards + analytics + holdings table
     | "form";      // settings, expenses
 
 const Box = ({ className = "" }: { className?: string }) => (
@@ -28,8 +29,8 @@ const Header = () => (
     </div>
 );
 
-const StatRow = ({ n = 4 }: { n?: number }) => (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+const StatRow = ({ n = 4, cols = "grid-cols-2 lg:grid-cols-4" }: { n?: number; cols?: string }) => (
+    <div className={`grid ${cols} gap-3 sm:gap-6`}>
         {Array.from({ length: n }).map((_, i) => (
             <div key={i} className="bg-white dark:bg-zinc-900/40 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-6 border border-zinc-200 dark:border-white/5 space-y-4">
                 <div className="flex justify-between items-start">
@@ -111,7 +112,7 @@ function Body({ variant }: { variant: Variant }) {
         case "dashboard":
             return (
                 <div className="space-y-8 sm:space-y-12">
-                    <StatRow n={4} />
+                    <StatRow n={5} cols="grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" />
                     <Box className="h-16 rounded-[1.5rem] sm:rounded-[2rem]" />
                     <div className="space-y-4">
                         <Box className="h-8 w-56" />
@@ -192,6 +193,30 @@ function Body({ variant }: { variant: Variant }) {
                             </div>
                         </div>
                     ))}
+                </div>
+            );
+        case "portfolio":
+            return (
+                <div className="space-y-6 sm:space-y-8">
+                    {/* Summary metric cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[1.75rem] p-4 sm:p-5 border border-zinc-200 dark:border-white/5 space-y-2.5">
+                                <Box className="h-2.5 w-16" />
+                                <Box className="h-6 w-24" />
+                            </div>
+                        ))}
+                    </div>
+                    {/* Analytics panel */}
+                    <div className="bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 p-4 sm:p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <Box className="h-5 w-40" />
+                            <Box className="h-8 w-56 rounded-xl" />
+                        </div>
+                        <Box className="h-[280px] w-full rounded-2xl" />
+                    </div>
+                    {/* Holdings table */}
+                    <TableBlock rows={5} colsHead={6} />
                 </div>
             );
         case "form":

@@ -1,7 +1,7 @@
 "use client";
 
 import StatCard from "./components/StatCard";
-import { Bitcoin, Banknote, Gem, Coins, BarChart3, ArrowRightLeft, Fuel, Briefcase } from "lucide-react";
+import { Bitcoin, Banknote, Gem, BarChart3, ArrowRightLeft, Fuel, Briefcase, Globe } from "lucide-react";
 import PriceCard from "./components/PriceCard";
 import MoversDigest from "./components/MoversDigest";
 import WatchlistAlerts from "./components/WatchlistAlerts";
@@ -23,6 +23,7 @@ export default function Home() {
   const [psxStocks, setPsxStocks] = useState<any[]>([]);
   const [psxIndices, setPsxIndices] = useState<any[]>([]);
   const [marketStats, setMarketStats] = useState<any>(null);
+  const [nasdaqIdx, setNasdaqIdx] = useState<{ value: number | null; changePercent: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState("");
   const router = useRouter();
@@ -31,11 +32,11 @@ export default function Home() {
 
   // Mobile: tabbed dashboard so each section ≈ one screen. Desktop (lg+) shows
   // everything in one scroll (the tab bar is hidden and every group is lg:block).
-  type DashTab = "overview" | "movers" | "markets" | "watchlist";
+  type DashTab = "overview" | "psx" | "markets" | "watchlist";
   const [dashTab, setDashTab] = useState<DashTab>("overview");
   const dashTabs: { id: DashTab; label: string }[] = [
     { id: "overview", label: "Overview" },
-    ...(mod("stocks") ? [{ id: "movers" as DashTab, label: "Movers" }] : []),
+    ...(mod("stocks") ? [{ id: "psx" as DashTab, label: "PSX" }] : []),
     ...(mod("metals") || mod("forex") || mod("oil") || mod("crypto") ? [{ id: "markets" as DashTab, label: "Markets" }] : []),
     ...(mod("watchlist") || mod("portfolio") ? [{ id: "watchlist" as DashTab, label: "Watchlist" }] : []),
   ];
@@ -57,6 +58,8 @@ export default function Home() {
           }),
           fetchOilPrices()
         ]);
+
+        fetch('/api/nasdaq-index').then(r => r.json()).then(j => { if (j?.success) setNasdaqIdx({ value: j.value, changePercent: j.changePercent }); }).catch(() => { });
 
         if (gold) setGoldData(gold);
         if (silver) setSilverData(silver);
@@ -145,231 +148,247 @@ export default function Home() {
         </div>
 
         <section className={`mb-8 sm:mb-12 ${tabCls("overview")}`}>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3 sm:gap-6">
+            {mod('stocks') && (psxIndices.length > 0 || marketStats) && (() => {
+              const kse = psxIndices.find((i: any) => /100/.test(i.name)) || psxIndices[0];
+              const isPos = (kse?.change ?? 0) >= 0;
+              return (
+                <a href="/stocks" className="group bg-white dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl p-4 sm:p-6 border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 flex flex-col">
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 group-hover:scale-110 transition-transform duration-300">
+                      <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    </div>
+                    {kse && (
+                      <div className={`px-3 py-1 rounded-full text-xs font-black tracking-tighter ${isPos ? 'bg-green-500/10 text-green-600 dark:text-green-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}>
+                        {isPos ? '↑' : '↓'} {Math.abs(kse?.changePercent ?? 0).toFixed(2)}%
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 flex flex-col">
+                    <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">PSX · {kse?.name || 'KSE'}</p>
+                    <p className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono italic break-words">{kse ? Number(kse.value).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '---'}</p>
+                    {marketStats ? (
+                      <div className="mt-2 flex items-center gap-2.5 text-[10px] font-black tabular-nums">
+                        <span className="text-green-600 dark:text-green-400">▲{marketStats.advanced}</span>
+                        <span className="text-red-600 dark:text-red-400">▼{marketStats.declined}</span>
+                        <span className="text-blue-600 dark:text-blue-400">={marketStats.unchanged}</span>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] font-bold text-zinc-400 mt-2 flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-blue-500"></span> PSX Pulse</p>
+                    )}
+                  </div>
+                </a>
+              );
+            })()}
             {mod('crypto') && <StatCard label="Bitcoin / USD" value={`$${cryptoData[0]?.usdPrice?.toLocaleString() || "---"}`} icon={<Bitcoin className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={cryptoData[0]?.changePercent || 0} changeLabel="Volatility" />}
             {mod('forex') && <StatCard label="USD / PKR" value={`Rs. ${forexData[0]?.pkrPrice?.toFixed(2) || "---"}`} icon={<Banknote className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={forexData[0]?.changePercent || 0} changeLabel="Forex" />}
-            {mod('metals') && <StatCard label="Gold (Tola)" value={`Rs. ${goldData.tola24k?.pkrPrice?.toLocaleString() || "---"}`} icon={<Gem className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={goldData.tola24k?.changePercent || 0} changeLabel="Metal" />}
-            {mod('metals') && <StatCard label="Silver (Oz)" value={`Rs. ${silverData.ounce?.pkrPrice?.toLocaleString() || "---"}`} icon={<Coins className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={silverData.ounce?.changePercent || 0} changeLabel="Commodity" />}
+            {mod('metals') && (
+              <a href="/metals" className="group bg-white dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl p-4 sm:p-6 border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 flex flex-col">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 group-hover:scale-110 transition-transform duration-300 mb-4">
+                  <Gem className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                </div>
+                <div className="grid grid-cols-2 divide-x divide-zinc-200/70 dark:divide-white/10 flex-1">
+                  {[
+                    { label: "Gold · Tola", price: goldData.tola24k?.pkrPrice, chg: goldData.tola24k?.changePercent ?? 0, pad: "pr-3 sm:pr-4" },
+                    { label: "Silver · Oz", price: silverData.ounce?.pkrPrice, chg: silverData.ounce?.changePercent ?? 0, pad: "pl-3 sm:pl-4" },
+                  ].map((m) => {
+                    const up = (m.chg || 0) >= 0;
+                    return (
+                      <div key={m.label} className={`${m.pad} flex flex-col justify-center`}>
+                        <p className="text-[8px] sm:text-[9px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.15em] mb-1.5 truncate">{m.label}</p>
+                        <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono italic leading-none truncate">Rs.{m.price?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || "---"}</p>
+                        <p className={`mt-1.5 text-[10px] font-black ${up ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>{up ? "▲" : "▼"} {Math.abs(m.chg || 0).toFixed(2)}%</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] font-bold text-zinc-400 mt-3 flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-blue-500"></span> Metals</p>
+              </a>
+            )}
+            {mod('oil') && (
+              <a href="/oil" className="block">
+                <StatCard
+                  label="Crude Oil · WTI"
+                  value={oilData?.crudeOil?.price != null ? `$${Number(oilData.crudeOil.price).toFixed(2)}` : "---"}
+                  icon={<Fuel className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />}
+                  change={oilData?.crudeOil?.changePercent ?? 0}
+                  changeLabel="Energy · Oil & Gas"
+                />
+              </a>
+            )}
+            {mod('nasdaq') && <StatCard label="NASDAQ · IXIC" value={nasdaqIdx?.value != null ? nasdaqIdx.value.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "---"} icon={<Globe className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={nasdaqIdx?.changePercent ?? 0} changeLabel="US Stock Index" />}
           </div>
         </section>
 
 
         {/* Today's Movers Digest - Full Width Priority */}
         {mod('stocks') && (
-        <section className={`mb-8 sm:mb-12 ${tabCls("movers")}`}>
-          <div className="flex items-end justify-between mb-4 sm:mb-6">
-            <div>
-              <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> PSX Today&apos;s Movers</h2>
-              <p className="text-zinc-500 text-[10px] sm:text-sm mt-1">Gainers, losers &amp; high-volume scrips at a glance</p>
-            </div>
-            <a href="/stocks" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">All Stocks →</a>
-          </div>
-          {/* PSX Market Pulse: index ticker + breadth */}
-          {(psxIndices.length > 0 || marketStats) && (
-            <section className="mb-2 sm:mb-3">
-              <div className="bg-white dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden">
-                <div className="flex flex-col lg:flex-row">
-                  {/* Index ticker */}
-                  <div className="flex-1 min-w-0 flex items-center gap-4 sm:gap-8 px-4 sm:px-6 py-4 overflow-x-auto no-scrollbar">
-                    <div className="flex items-center gap-2 shrink-0 border-r border-zinc-200 dark:border-white/10 pr-4 sm:pr-6">
-                      <span className={`w-2 h-2 rounded-full ${marketStats?.status?.toLowerCase().includes('open') ? 'bg-green-500 animate-pulse' : 'bg-blue-600 animate-pulse'}`}></span>
-                      <span className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic whitespace-nowrap">PSX Pulse</span>
-                    </div>
-                    {psxIndices.length === 0 && <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Loading indices…</span>}
-                    {psxIndices.map((idx: any) => {
-                      const isPos = (idx.change || 0) >= 0;
-                      return (
-                        <a key={idx.name} href={`/stocks?idx=${encodeURIComponent(idx.name)}`} className="flex items-center gap-2 shrink-0 group">
-                          <span className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 group-hover:text-blue-600 transition-colors">{idx.name}</span>
-                          <span className="text-xs font-mono font-black text-zinc-900 dark:text-zinc-50">{Number(idx.value).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                          <span className={`text-[10px] font-bold ${isPos ? 'text-green-600' : 'text-red-600'}`}>{isPos ? '▲' : '▼'}{Math.abs(idx.changePercent || 0).toFixed(2)}%</span>
-                        </a>
-                      );
-                    })}
-                  </div>
-                  {/* Breadth chips */}
-                  {marketStats && (
-                    <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-t lg:border-t-0 lg:border-l border-zinc-100 dark:border-white/5 shrink-0">
-                      <div className="text-center px-2">
-                        <p className="text-[8px] font-black text-green-600/80 uppercase tracking-widest">Adv</p>
-                        <p className="text-sm font-black text-green-600 leading-none">{marketStats.advanced}</p>
-                      </div>
-                      <div className="text-center px-2">
-                        <p className="text-[8px] font-black text-red-600/80 uppercase tracking-widest">Dec</p>
-                        <p className="text-sm font-black text-red-600 leading-none">{marketStats.declined}</p>
-                      </div>
-                      <div className="text-center px-2">
-                        <p className="text-[8px] font-black text-blue-600/80 uppercase tracking-widest">Unch</p>
-                        <p className="text-sm font-black text-blue-600 leading-none">{marketStats.unchanged}</p>
-                      </div>
-                      <div className="hidden sm:block text-center px-2 border-l border-zinc-100 dark:border-white/5 ml-1 pl-3">
-                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Value</p>
-                        <p className="text-xs font-black text-zinc-900 dark:text-zinc-50 font-mono leading-none">{marketStats.value}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+          <section className={`mb-8 sm:mb-12 ${tabCls("psx")}`}>
+            <div className="flex items-end justify-between mb-4 sm:mb-6">
+              <div>
+                <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> PSX Today&apos;s Movers</h2>
+                <p className="text-zinc-500 text-[10px] sm:text-sm mt-1">Gainers, losers &amp; high-volume scrips at a glance</p>
               </div>
-            </section>
-          )}
-          <MoversDigest
-            stocks={psxStocks}
-            watchlists={watchlists}
-            loading={loading && (!psxStocks || psxStocks.length === 0)}
-            onSelect={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
-          />
-        </section>
+              <a href="/stocks" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">All Stocks →</a>
+            </div>
+            <MoversDigest
+              stocks={psxStocks}
+              watchlists={watchlists}
+              loading={loading && (!psxStocks || psxStocks.length === 0)}
+              onSelect={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
+            />
+          </section>
         )}
 
         {/* Balanced Market Rows */}
-        <div className={`space-y-8 sm:space-y-12 ${tabCls("markets")}`}>
+        <div className={`space-y-6 sm:space-y-12 ${tabCls("markets")}`}>
           {/* Row 1: Metals & Forex */}
           {(mod('metals') || mod('forex')) && (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-12">
-            {/* Precious Metals Section */}
-            {mod('metals') && (
-            <div className="flex flex-col">
-              <div className="flex items-end justify-between mb-6">
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter flex items-center gap-2.5"><Gem className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Commodity Spot Rates</h2>
-                <a href="/metals" className="shrink-0 text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Warehouse →</a>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 flex-1 xl:auto-rows-fr">
-                <PriceCard title="Gold (24K) - Tola" usdPrice={goldData.tola24k?.usdPrice} pkrPrice={goldData.tola24k?.pkrPrice} change={goldData.tola24k?.change} changePercent={goldData.tola24k?.changePercent} error={goldData.tola24k?.error} lastUpdated={currentTime} isLoading={loading} />
-                <PriceCard title="Silver - per Ounce" usdPrice={silverData.ounce?.usdPrice} pkrPrice={silverData.ounce?.pkrPrice} change={silverData.ounce?.change} changePercent={silverData.ounce?.changePercent} error={silverData.ounce?.error} lastUpdated={currentTime} isLoading={loading} />
-              </div>
-            </div>
-
-            )}
-
-            {/* Forex Section */}
-            {mod('forex') && (
-            <div className="flex flex-col">
-              <div className="flex items-end justify-between mb-6">
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><ArrowRightLeft className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Global Exchange</h2>
-                <a href="/forex" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">More →</a>
-              </div>
-              <div className="flex-1 flex flex-col bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[3rem] border border-zinc-200 dark:border-white/5 overflow-hidden">
-                <div className="flex-1 overflow-x-auto no-scrollbar">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-zinc-200 dark:border-white/5 text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">
-                        <th className="px-4 sm:px-8 py-3 sm:py-5">Currency</th>
-                        <th className="px-4 sm:px-8 py-3 sm:py-5 text-right">Rate</th>
-                        <th className="px-4 sm:px-8 py-3 sm:py-5 text-center">∆%</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
-                      {["USD", "EUR", "GBP", "SAR", "AED"]
-                        .map(code => forexData.find(r => r.code === code))
-                        .filter(Boolean)
-                        .map(rate => (
-                          <tr key={rate.code} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group">
-                            <td className="px-4 sm:px-8 py-3 sm:py-4 font-black text-zinc-900 dark:text-white tracking-tight uppercase italic text-[10px] sm:text-sm whitespace-nowrap">{rate.code} / {rate.name}</td>
-                            <td className="px-4 sm:px-8 py-3 sm:py-4 text-right font-mono font-black text-blue-600 dark:text-blue-400 text-[10px] sm:text-base">Rs.{rate.pkrPrice.toFixed(2)}</td>
-                            <td className={`px-4 sm:px-8 py-3 sm:py-4 text-center text-[8px] sm:text-[10px] font-black ${rate.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {rate.changePercent >= 0 ? '▲' : '▼'}{Math.abs(rate.changePercent).toFixed(1)}%
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-12">
+              {/* Precious Metals Section */}
+              {mod('metals') && (
+                <div className="flex flex-col">
+                  <div className="flex items-end justify-between mb-4 sm:mb-6">
+                    <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter flex items-center gap-2.5"><Gem className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Commodity Spot Rates</h2>
+                    <a href="/metals" className="shrink-0 text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Warehouse →</a>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-6 flex-1 xl:auto-rows-fr">
+                    <PriceCard title="Gold (24K) - Tola" usdPrice={goldData.tola24k?.usdPrice} pkrPrice={goldData.tola24k?.pkrPrice} change={goldData.tola24k?.change} changePercent={goldData.tola24k?.changePercent} error={goldData.tola24k?.error} lastUpdated={currentTime} isLoading={loading} />
+                    <PriceCard title="Silver - per Ounce" usdPrice={silverData.ounce?.usdPrice} pkrPrice={silverData.ounce?.pkrPrice} change={silverData.ounce?.change} changePercent={silverData.ounce?.changePercent} error={silverData.ounce?.error} lastUpdated={currentTime} isLoading={loading} />
+                  </div>
                 </div>
-              </div>
+
+              )}
+
+              {/* Forex Section */}
+              {mod('forex') && (
+                <div className="flex flex-col">
+                  <div className="flex items-end justify-between mb-4 sm:mb-6">
+                    <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><ArrowRightLeft className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Global Exchange</h2>
+                    <a href="/forex" className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">More →</a>
+                  </div>
+                  <div className="flex-1 flex flex-col bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[3rem] border border-zinc-200 dark:border-white/5 overflow-hidden">
+                    <div className="flex-1 overflow-x-auto no-scrollbar">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="border-b border-zinc-200 dark:border-white/5 text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                            <th className="px-4 sm:px-8 py-3 sm:py-5">Currency</th>
+                            <th className="px-4 sm:px-8 py-3 sm:py-5 text-right">Rate</th>
+                            <th className="px-4 sm:px-8 py-3 sm:py-5 text-center">∆%</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
+                          {["USD", "EUR", "GBP", "SAR", "AED"]
+                            .map(code => forexData.find(r => r.code === code))
+                            .filter(Boolean)
+                            .map(rate => (
+                              <tr key={rate.code} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group">
+                                <td className="px-4 sm:px-8 py-3 sm:py-4 font-black text-zinc-900 dark:text-white tracking-tight uppercase italic text-[10px] sm:text-sm whitespace-nowrap">{rate.code} / {rate.name}</td>
+                                <td className="px-4 sm:px-8 py-3 sm:py-4 text-right font-mono font-black text-blue-600 dark:text-blue-400 text-[10px] sm:text-base">Rs.{rate.pkrPrice.toFixed(2)}</td>
+                                <td className={`px-4 sm:px-8 py-3 sm:py-4 text-center text-[8px] sm:text-[10px] font-black ${rate.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  {rate.changePercent >= 0 ? '▲' : '▼'}{Math.abs(rate.changePercent).toFixed(1)}%
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            )}
-          </div>
           )}
 
           {/* Row 2: Energy & Crypto */}
           {(mod('oil') || mod('crypto')) && (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-12">
-            {/* Oil & Energy Section */}
-            {mod('oil') && (
-            <div>
-              <div className="flex items-end justify-between mb-6">
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter flex items-center gap-2.5"><Fuel className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Energy Intelligence</h2>
-                <a href="/oil" className="shrink-0 text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Refinery →</a>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div onClick={() => router.push('/oil/crudeOil')} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95">
-                  <PriceCard title="Crude Oil (WTI)" usdPrice={oilData?.crudeOil?.usdPrice} pkrPrice={oilData?.crudeOil?.pkrPrice} change={oilData?.crudeOil?.change} changePercent={oilData?.crudeOil?.changePercent} error={oilData?.crudeOil?.error} lastUpdated={currentTime} isLoading={loading} currency="USD" />
-                </div>
-                <div onClick={() => router.push('/oil/brentOil')} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95">
-                  <PriceCard title="Brent Crude" usdPrice={oilData?.brentOil?.usdPrice} pkrPrice={oilData?.brentOil?.pkrPrice} change={oilData?.brentOil?.change} changePercent={oilData?.brentOil?.changePercent} error={oilData?.brentOil?.error} lastUpdated={currentTime} isLoading={loading} currency="USD" />
-                </div>
-              </div>
-            </div>
-
-            )}
-
-            {/* Crypto pulse */}
-            {mod('crypto') && (
-            <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[3rem] p-4 sm:p-8 border border-zinc-200 dark:border-white/5">
-              <div className="flex items-end justify-between mb-4 sm:mb-8">
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><Bitcoin className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 shrink-0" strokeWidth={2} /> Crypto Hub</h2>
-                <span className="text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest italic hidden sm:block">Real-Time</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:gap-6">
-                {cryptoData.slice(0, 2).map(coin => (
-                  <div key={coin.id} className="bg-white dark:bg-white/5 hover:bg-zinc-50 dark:hover:bg-white/[0.08] p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all group cursor-pointer overflow-hidden">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 sm:mb-4">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-orange-500/10 flex items-center justify-center font-black text-orange-500 text-xs sm:text-base">
-                          {coin.symbol[0]}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-black text-zinc-900 dark:text-white uppercase text-[10px] sm:text-sm tracking-tight truncate">{coin.name}</p>
-                        </div>
-                      </div>
-                      <div className={`px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-black ${coin.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                        {coin.changePercent >= 0 ? '+' : ''}{coin.changePercent.toFixed(1)}%
-                      </div>
-                    </div>
-                    <div className="text-lg sm:text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter group-hover:translate-x-1 transition-transform italic">${coin.usdPrice?.toLocaleString()}</div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-12">
+              {/* Oil & Energy Section */}
+              {mod('oil') && (
+                <div>
+                  <div className="flex items-end justify-between mb-4 sm:mb-6">
+                    <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter flex items-center gap-2.5"><Fuel className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Energy Intelligence</h2>
+                    <a href="/oil" className="shrink-0 text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Refinery →</a>
                   </div>
-                ))}
-              </div>
-
-              {/* Secondary coins — smaller cards below the two majors */}
-              {cryptoData.length > 2 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-2 sm:mt-3">
-                  {cryptoData.slice(2, 6).map(coin => (
-                    <div key={coin.id} className="bg-white dark:bg-white/5 hover:bg-zinc-50 dark:hover:bg-white/[0.08] p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/5 transition-all cursor-pointer overflow-hidden">
-                      <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="font-black text-zinc-900 dark:text-white uppercase text-[10px] sm:text-xs tracking-tight truncate">{coin.symbol}</span>
-                        <span className={`text-[8px] sm:text-[9px] font-black shrink-0 ${(coin.changePercent ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {(coin.changePercent ?? 0) >= 0 ? '+' : ''}{(coin.changePercent ?? 0).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="text-[11px] sm:text-sm font-black text-zinc-900 dark:text-white font-mono tracking-tighter truncate">${(coin.usdPrice ?? 0).toLocaleString()}</div>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-6">
+                    <div onClick={() => router.push('/oil/crudeOil')} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95">
+                      <PriceCard title="Crude Oil (WTI)" usdPrice={oilData?.crudeOil?.usdPrice} pkrPrice={oilData?.crudeOil?.pkrPrice} change={oilData?.crudeOil?.change} changePercent={oilData?.crudeOil?.changePercent} error={oilData?.crudeOil?.error} lastUpdated={currentTime} isLoading={loading} currency="USD" />
                     </div>
-                  ))}
+                    <div onClick={() => router.push('/oil/brentOil')} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95">
+                      <PriceCard title="Brent Crude" usdPrice={oilData?.brentOil?.usdPrice} pkrPrice={oilData?.brentOil?.pkrPrice} change={oilData?.brentOil?.change} changePercent={oilData?.brentOil?.changePercent} error={oilData?.brentOil?.error} lastUpdated={currentTime} isLoading={loading} currency="USD" />
+                    </div>
+                  </div>
+                </div>
+
+              )}
+
+              {/* Crypto pulse */}
+              {mod('crypto') && (
+                <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[3rem] p-4 sm:p-8 border border-zinc-200 dark:border-white/5">
+                  <div className="flex items-end justify-between mb-4 sm:mb-8">
+                    <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><Bitcoin className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 shrink-0" strokeWidth={2} /> Crypto Hub</h2>
+                    <span className="text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest italic hidden sm:block">Real-Time</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-6">
+                    {cryptoData.slice(0, 2).map(coin => (
+                      <div key={coin.id} className="bg-white dark:bg-white/5 hover:bg-zinc-50 dark:hover:bg-white/[0.08] p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 transition-all group cursor-pointer overflow-hidden">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 sm:mb-4">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-orange-500/10 flex items-center justify-center font-black text-orange-500 text-xs sm:text-base">
+                              {coin.symbol[0]}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-black text-zinc-900 dark:text-white uppercase text-[10px] sm:text-sm tracking-tight truncate">{coin.name}</p>
+                            </div>
+                          </div>
+                          <div className={`px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-black ${coin.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                            {coin.changePercent >= 0 ? '+' : ''}{coin.changePercent.toFixed(1)}%
+                          </div>
+                        </div>
+                        <div className="text-lg sm:text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter group-hover:translate-x-1 transition-transform italic">${coin.usdPrice?.toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Secondary coins — smaller cards below the two majors */}
+                  {cryptoData.length > 2 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-2 sm:mt-3">
+                      {cryptoData.slice(2, 6).map(coin => (
+                        <div key={coin.id} className="bg-white dark:bg-white/5 hover:bg-zinc-50 dark:hover:bg-white/[0.08] p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/5 transition-all cursor-pointer overflow-hidden">
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="font-black text-zinc-900 dark:text-white uppercase text-[10px] sm:text-xs tracking-tight truncate">{coin.symbol}</span>
+                            <span className={`text-[8px] sm:text-[9px] font-black shrink-0 ${(coin.changePercent ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {(coin.changePercent ?? 0) >= 0 ? '+' : ''}{(coin.changePercent ?? 0).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="text-[11px] sm:text-sm font-black text-zinc-900 dark:text-white font-mono tracking-tighter truncate">${(coin.usdPrice ?? 0).toLocaleString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            )}
-          </div>
           )}
         </div>
 
         {/* Watchlist & Portfolio */}
         {(mod('watchlist') || mod('portfolio')) && (
-        <section className={`mt-8 sm:mb-12 ${tabCls("watchlist")}`}>
-          <div className="mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Watchlist &amp; Portfolio</h2>
-            <p className="text-zinc-500 text-[10px] sm:text-sm mt-1">Your tracked scrips, alerts and live holdings at a glance</p>
-          </div>
-          <div className={`grid grid-cols-1 gap-6 ${mod('watchlist') && mod('portfolio') ? 'xl:grid-cols-2' : ''}`}>
-            {mod('watchlist') && (
-              <WatchlistAlerts
-                stocks={psxStocks}
-                watchlists={watchlists}
-                onSelect={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
-              />
-            )}
-            {mod('portfolio') && <PortfolioSummary />}
-          </div>
-        </section>
+          <section className={`mt-8 sm:mb-12 ${tabCls("watchlist")}`}>
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Watchlist &amp; Portfolio</h2>
+              <p className="text-zinc-500 text-[10px] sm:text-sm mt-1">Your tracked scrips, alerts and live holdings at a glance</p>
+            </div>
+            <div className={`grid grid-cols-1 gap-6 ${mod('watchlist') && mod('portfolio') ? 'xl:grid-cols-2' : ''}`}>
+              {mod('watchlist') && (
+                <WatchlistAlerts
+                  stocks={psxStocks}
+                  watchlists={watchlists}
+                  onSelect={(symbol) => router.push(`/stocks/${symbol.toLowerCase()}`)}
+                />
+              )}
+              {mod('portfolio') && <PortfolioSummary />}
+            </div>
+          </section>
         )}
 
         {/* Tactical Call to Action (desktop only — keeps the mobile tabs clean) */}

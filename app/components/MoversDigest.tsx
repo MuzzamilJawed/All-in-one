@@ -57,9 +57,9 @@ function MoverRow({ stock, rank, meta, onSelect }: { stock: Stock; rank: number;
     );
 }
 
-function DigestColumn({ title, icon: Icon, tone, accent, children, empty }: { title: string; icon: LucideIcon; tone: string; accent: string; children: React.ReactNode; empty?: boolean }) {
+function DigestColumn({ title, icon: Icon, tone, accent, children, empty, className = "" }: { title: string; icon: LucideIcon; tone: string; accent: string; children: React.ReactNode; empty?: boolean; className?: string }) {
     return (
-        <div className="bg-white dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col">
+        <div className={`bg-white dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col ${className}`}>
             <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-100 dark:border-white/5">
                 <Icon className={`w-4 h-4 shrink-0 ${tone}`} strokeWidth={2.25} />
                 <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-zinc-900 dark:text-white">{title}</h3>
@@ -98,7 +98,7 @@ export default function MoversDigest({ stocks, watchlists = [], loading = false,
 
     if (loading) {
         return (
-            <div className={`grid grid-cols-1 sm:grid-cols-2 ${hasWatch ? "xl:grid-cols-4" : "xl:grid-cols-3"} gap-3 sm:gap-6`}>
+            <div className={`grid grid-cols-2 ${hasWatch ? "xl:grid-cols-4" : "xl:grid-cols-3"} gap-3 sm:gap-6`}>
                 {Array.from({ length: hasWatch ? 4 : 3 }).map((_, i) => (
                     <div key={i} className="bg-white dark:bg-zinc-900/40 rounded-[2rem] border border-zinc-200 dark:border-white/5 p-4 animate-pulse">
                         <div className="h-3 bg-zinc-200 dark:bg-zinc-800 rounded w-24 mb-4"></div>
@@ -115,7 +115,7 @@ export default function MoversDigest({ stocks, watchlists = [], loading = false,
     }
 
     return (
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${hasWatch ? "xl:grid-cols-4" : "xl:grid-cols-3"} gap-3 sm:gap-6`}>
+        <div className={`grid grid-cols-2 ${hasWatch ? "xl:grid-cols-4" : "xl:grid-cols-3"} gap-3 sm:gap-6`}>
             <DigestColumn title="Top Gainers" icon={TrendingUp} tone="text-green-500" accent="bg-green-500" empty={gainers.length === 0}>
                 {gainers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onSelect={onSelect} />)}
             </DigestColumn>
@@ -124,7 +124,7 @@ export default function MoversDigest({ stocks, watchlists = [], loading = false,
                 {losers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onSelect={onSelect} />)}
             </DigestColumn>
 
-            <DigestColumn title="Most Active" icon={Flame} tone="text-orange-500" accent="bg-blue-500" empty={active.length === 0}>
+            <DigestColumn title="Most Active" icon={Flame} tone="text-orange-500" accent="bg-blue-500" empty={active.length === 0} className={hasWatch ? "" : "col-span-2 xl:col-span-1"}>
                 {active.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} meta={`Vol ${fmtVol(parseVol(s.volume))}`} onSelect={onSelect} />)}
             </DigestColumn>
 

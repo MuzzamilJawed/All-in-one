@@ -30,6 +30,7 @@ export default function PortfolioPage() {
     const [book, setBook] = useState<PriceBook>({ map: {}, rate: 278, updated: "" });
     const [pricesLoading, setPricesLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
+    const [portTab, setPortTab] = useState<"analytics" | "holdings" | "history">("holdings");
     const [from, setFrom] = useState("");
     const [to, setTo] = useState("");
     const [chartView, setChartView] = useState<"alloc" | "perf" | "timeline">("alloc");
@@ -309,7 +310,25 @@ export default function PortfolioPage() {
                     ))}
                 </div>
 
+                {/* Section sub-navigation */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                    {[
+                        { id: "analytics" as const, label: "Analytics" },
+                        { id: "holdings" as const, label: "Holdings", count: rows.length },
+                        { id: "history" as const, label: "History", count: ledger.length },
+                    ].map(t => (
+                        <button
+                            key={t.id}
+                            onClick={() => setPortTab(t.id)}
+                            className={`px-4 sm:px-5 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${portTab === t.id ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "bg-white dark:bg-white/5 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 border border-zinc-200 dark:border-white/10"}`}
+                        >
+                            {t.label}{"count" in t && t.count != null ? ` · ${t.count}` : ""}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Interactive analytics */}
+                {portTab === "analytics" && (
                 <div className="bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden">
                     <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <h2 className="text-sm font-black uppercase tracking-tighter italic flex items-center gap-2"><BarChart3 className="w-4 h-4 shrink-0" strokeWidth={2} /> Portfolio Analytics</h2>
@@ -418,8 +437,10 @@ export default function PortfolioPage() {
                         )}
                     </div>
                 </div>
+                )}
 
                 {/* Current holdings */}
+                {portTab === "holdings" && (
                 <div className="bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden">
                     <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between gap-2">
                         <h2 className="text-sm font-black uppercase tracking-tighter italic">Current Holdings</h2>
@@ -434,16 +455,16 @@ export default function PortfolioPage() {
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[860px]">
+                            <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5">
                                         <th className="px-3 sm:px-6 py-3">Asset</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right">Qty</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right">Avg Cost</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right">Current</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right">Invested</th>
+                                        <th className="px-3 sm:px-4 py-3 text-right hidden sm:table-cell">Qty</th>
+                                        <th className="px-3 sm:px-4 py-3 text-right hidden lg:table-cell">Avg Cost</th>
+                                        <th className="px-3 sm:px-4 py-3 text-right hidden md:table-cell">Current</th>
+                                        <th className="px-3 sm:px-4 py-3 text-right hidden lg:table-cell">Invested</th>
                                         <th className="px-3 sm:px-4 py-3 text-right">Value</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right">Day P/L</th>
+                                        <th className="px-3 sm:px-4 py-3 text-right hidden md:table-cell">Day P/L</th>
                                         <th className="px-3 sm:px-6 py-3 text-right">Total P/L</th>
                                     </tr>
                                 </thead>
@@ -459,12 +480,12 @@ export default function PortfolioPage() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums">{r.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500">{fmt(r.avgCost, r.currency)}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums">{fmt(r.current, r.currency)}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500">{fmt(r.invested, r.currency)}</td>
+                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell">{r.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
+                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500 hidden lg:table-cell">{fmt(r.avgCost, r.currency)}</td>
+                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden md:table-cell">{fmt(r.current, r.currency)}</td>
+                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500 hidden lg:table-cell">{fmt(r.invested, r.currency)}</td>
                                             <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums font-black">{fmt(r.value, r.currency)}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right">
+                                            <td className="px-3 sm:px-4 py-3 text-right hidden md:table-cell">
                                                 <div className={`font-mono text-xs font-black tabular-nums ${r.dayPnl == null ? "text-zinc-400" : r.dayPnl >= 0 ? "text-green-500" : "text-red-500"}`}>{signed(r.dayPnl, r.currency)}</div>
                                                 {r.dayPct != null && <div className={`text-[9px] font-black ${r.dayPct >= 0 ? "text-green-500" : "text-red-500"}`}>{r.dayPct >= 0 ? "▲" : "▼"} {Math.abs(r.dayPct).toFixed(2)}%</div>}
                                             </td>
@@ -479,8 +500,10 @@ export default function PortfolioPage() {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Trade ledger (previous trading) with date filter */}
+                {portTab === "history" && (
                 <div className="bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden">
                     <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <h2 className="text-sm font-black uppercase tracking-tighter italic">Trade History <span className="text-zinc-400">· {ledger.length}</span></h2>
@@ -496,14 +519,14 @@ export default function PortfolioPage() {
                         <div className="py-14 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest">No trades {from || to ? "in this date range" : "yet"}</div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[640px]">
+                            <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5">
-                                        <th className="px-3 sm:px-6 py-3">Date</th>
+                                        <th className="px-3 sm:px-6 py-3 hidden sm:table-cell">Date</th>
                                         <th className="px-3 sm:px-4 py-3">Type</th>
                                         <th className="px-3 sm:px-4 py-3">Asset</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right">Qty</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right">Price</th>
+                                        <th className="px-3 sm:px-4 py-3 text-right hidden md:table-cell">Qty</th>
+                                        <th className="px-3 sm:px-4 py-3 text-right hidden sm:table-cell">Price</th>
                                         <th className="px-3 sm:px-4 py-3 text-right">Value</th>
                                         <th className="px-3 sm:px-6 py-3"></th>
                                     </tr>
@@ -511,11 +534,14 @@ export default function PortfolioPage() {
                                 <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                                     {ledger.map(t => (
                                         <tr key={t.id} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02]">
-                                            <td className="px-3 sm:px-6 py-3 font-mono text-[11px] tabular-nums text-zinc-500">{t.date}</td>
+                                            <td className="px-3 sm:px-6 py-3 font-mono text-[11px] tabular-nums text-zinc-500 hidden sm:table-cell">{t.date}</td>
                                             <td className="px-3 sm:px-4 py-3"><span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${t.type === "BUY" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>{t.type}</span></td>
-                                            <td className="px-3 sm:px-4 py-3"><span className="text-xs font-black">{t.symbol}</span> <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded ${typeBadge(t.assetType)}`}>{t.assetType}</span></td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums">{fmt(t.price, t.currency)}</td>
+                                            <td className="px-3 sm:px-4 py-3">
+                                                <span className="text-xs font-black">{t.symbol}</span> <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded ${typeBadge(t.assetType)}`}>{t.assetType}</span>
+                                                <span className="sm:hidden block text-[9px] font-mono text-zinc-400 tabular-nums mt-0.5">{t.date}</span>
+                                            </td>
+                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden md:table-cell">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
+                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell">{fmt(t.price, t.currency)}</td>
                                             <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums font-black">{fmt(t.quantity * t.price, t.currency)}</td>
                                             <td className="px-3 sm:px-6 py-3 text-right"><button onClick={() => remove(t)} className="text-zinc-400 hover:text-red-500 text-sm px-2" title="Delete">✕</button></td>
                                         </tr>
@@ -531,6 +557,7 @@ export default function PortfolioPage() {
                         </div>
                     )}
                 </div>
+                )}
             </main>
         </div>
     );

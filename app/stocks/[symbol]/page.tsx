@@ -594,7 +594,7 @@ export default function StockDetailPage() {
                         </div>
                         </>
                     ) : (
-                        <div className="p-12 bg-zinc-50 dark:bg-white/[0.02] rounded-[2.5rem] border border-dashed border-zinc-200 dark:border-white/10 text-center">
+                        <div className="p-6 sm:p-12 bg-zinc-50 dark:bg-white/[0.02] rounded-[2.5rem] border border-dashed border-zinc-200 dark:border-white/10 text-center">
                             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">Detailed Analytics for {symbol} currently offline</p>
                         </div>
                     )}
@@ -635,7 +635,7 @@ export default function StockDetailPage() {
 
                 {/* Related Stocks Section */}
                 {relatedStocks.length > 0 && (
-                    <section className="space-y-6 pt-12 border-t border-zinc-200 dark:border-white/5">
+                    <section className="space-y-6 pt-6 sm:pt-12 border-t border-zinc-200 dark:border-white/5">
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                             <h2 className="text-lg sm:text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Sector Corollaries: {stock.sector}</h2>
                             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Comparison Analytics</p>

@@ -35,6 +35,21 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# Capacitor / native mobile build artifacts (keep android/ & ios/ source, ignore builds)
+/android/app/build/
+/android/build/
+/android/.gradle/
+/android/captures/
+/android/local.properties
+/android/app/release/
+/ios/App/build/
+/ios/App/Pods/
+/ios/App/output/
+DerivedData/
+*.keystore
+!debug.keystore
 
 # vercel
 .vercel

@@ -216,7 +216,7 @@ export default function OilDetailPage() {
                         <span className="text-[12rem] font-black italic text-blue-500 uppercase select-none">{symbol}</span>
                     </div>
 
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 relative z-10">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-6 sm:mb-12 relative z-10">
                         <div>
                             <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Satellite Technical Analysis</h2>
                             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">High-Precision Candlestick Feed / SMA (20)</p>
