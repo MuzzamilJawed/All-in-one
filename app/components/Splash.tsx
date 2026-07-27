@@ -94,7 +94,7 @@ export default function Splash() {
 
     return (
         <div
-            className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#050505] transition-opacity duration-500 ${leaving ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+            className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-zinc-50 dark:bg-[#050505] transition-opacity duration-500 ${leaving ? "opacity-0 pointer-events-none" : "opacity-100"}`}
             style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
         >
             {/* ambient glow — breathes */}
@@ -116,7 +116,7 @@ export default function Splash() {
                 {/* wordmark in the center */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="splash-word text-center select-none">
-                        <p className="text-2xl font-black italic uppercase tracking-tighter text-white leading-none">
+                        <p className="text-2xl font-black italic uppercase tracking-tighter text-zinc-900 dark:text-white leading-none">
                             Solo<span className="text-blue-500">Trackr</span>
                         </p>
                         <p className="text-[8px] font-black uppercase tracking-[0.3em] text-zinc-500 mt-2">All Markets · One Place</p>

@@ -1,11 +1,12 @@
 "use client";
 
 import StatCard from "./components/StatCard";
-import { Bitcoin, Banknote, Gem, BarChart3, ArrowRightLeft, Fuel, Briefcase, Globe } from "lucide-react";
+import { Bitcoin, Banknote, Gem, BarChart3, ArrowRightLeft, Fuel, Briefcase, Globe, Star } from "lucide-react";
 import PriceCard from "./components/PriceCard";
 import MoversDigest from "./components/MoversDigest";
 import WatchlistAlerts from "./components/WatchlistAlerts";
 import PortfolioSummary from "./components/PortfolioSummary";
+import PortfolioStatCard from "./components/PortfolioStatCard";
 import PageSkeleton from "./components/PageSkeleton";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -148,7 +149,7 @@ export default function Home() {
         </div>
 
         <section className={`mb-8 sm:mb-12 ${tabCls("overview")}`}>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {mod('stocks') && (psxIndices.length > 0 || marketStats) && (() => {
               const kse = psxIndices.find((i: any) => /100/.test(i.name)) || psxIndices[0];
               const isPos = (kse?.change ?? 0) >= 0;
@@ -217,6 +218,20 @@ export default function Home() {
               </a>
             )}
             {mod('nasdaq') && <StatCard label="NASDAQ · IXIC" value={nasdaqIdx?.value != null ? nasdaqIdx.value.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "---"} icon={<Globe className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={nasdaqIdx?.changePercent ?? 0} changeLabel="US Stock Index" />}
+            {mod('watchlist') && (() => {
+              const symbols = Array.from(new Set(watchlists.flatMap((wl: any) => (wl.symbols || []).map((s: string) => String(s).toUpperCase()))));
+              return (
+                <a href="/watchlist" className="block">
+                  <StatCard
+                    label="Watchlist"
+                    value={String(symbols.length)}
+                    icon={<Star className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />}
+                    changeLabel={`${watchlists.length} List${watchlists.length === 1 ? '' : 's'} · Tracked`}
+                  />
+                </a>
+              );
+            })()}
+            {mod('portfolio') && <PortfolioStatCard />}
           </div>
         </section>
 

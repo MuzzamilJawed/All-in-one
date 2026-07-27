@@ -6,16 +6,20 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await dbConnect();
   const { id } = await params;
   try {
+    await dbConnect();
     const watchlist = await Watchlist.findById(id);
     if (!watchlist) {
       return NextResponse.json({ success: false, error: 'Watchlist not found' }, { status: 404 });
     }
     return NextResponse.json({ success: true, data: watchlist });
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'Invalid ID' }, { status: 400 });
+    console.error('[watchlists] GET by id failed:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Invalid ID' },
+      { status: 500 }
+    );
   }
 }
 
@@ -23,9 +27,9 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await dbConnect();
   const { id } = await params;
   try {
+    await dbConnect();
     const body = await request.json();
     const watchlist = await Watchlist.findByIdAndUpdate(id, body, {
       new: true,
@@ -36,7 +40,11 @@ export async function PUT(
     }
     return NextResponse.json({ success: true, data: watchlist });
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'Update failed' }, { status: 400 });
+    console.error('[watchlists] PUT failed:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Update failed' },
+      { status: 500 }
+    );
   }
 }
 
@@ -44,15 +52,19 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await dbConnect();
   const { id } = await params;
   try {
+    await dbConnect();
     const deletedWatchlist = await Watchlist.deleteOne({ _id: id });
     if (!deletedWatchlist) {
       return NextResponse.json({ success: false, error: 'Watchlist not found' }, { status: 404 });
     }
     return NextResponse.json({ success: true, data: {} });
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'Delete failed' }, { status: 400 });
+    console.error('[watchlists] DELETE failed:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Delete failed' },
+      { status: 500 }
+    );
   }
 }

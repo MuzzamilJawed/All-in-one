@@ -10,7 +10,7 @@ import { isModuleEnabled } from "../lib/modules";
 import {
   LayoutDashboard, TrendingUp, Globe, ArrowRightLeft, Bitcoin, Gem, Fuel,
   Briefcase, Star, Wallet, Settings, ChevronsLeft, ChevronsRight, X,
-  Sun, Moon, Monitor, CandlestickChart, LineChart,
+  Sun, Moon, Monitor, CandlestickChart, LineChart, ChevronDown,
 } from "lucide-react";
 
 const navigationGroups = [
@@ -70,6 +70,10 @@ export default function Sidebar() {
   const { collapsed, toggleCollapsed } = useSidebar();
   const { settings } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+
+  const toggleMenu = (href: string) =>
+    setOpenMenus((prev) => ({ ...prev, [href]: !prev[href] }));
 
   // Hide nav items for disabled modules, drop groups that become empty.
   const visibleGroups = navigationGroups
@@ -90,6 +94,18 @@ export default function Sidebar() {
   // Handle closing on navigation for mobile
   useEffect(() => {
     setIsOpen(false);
+  }, [pathname]);
+
+  // Auto-expand the submenu that contains the active route.
+  useEffect(() => {
+    navigationGroups.forEach((group) => {
+      group.items.forEach((item: any) => {
+        const children = item.children as { href: string }[] | undefined;
+        if (children?.some((c) => c.href === pathname)) {
+          setOpenMenus((prev) => ({ ...prev, [item.href]: true }));
+        }
+      });
+    });
   }, [pathname]);
 
   return (
@@ -155,24 +171,42 @@ export default function Sidebar() {
                 {group.items.map((item: any) => {
                   const isActive = pathname === item.href;
                   const children = item.children as { name: string; href: string; icon?: any }[] | undefined;
+                  const hasChildren = !!(children && children.length > 0);
+                  const menuOpen = !!openMenus[item.href];
                   return (
                     <div key={item.href}>
-                      <Link
-                        href={item.href}
-                        title={item.name}
-                        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${collapsed ? "lg:justify-center lg:px-0" : ""} ${isActive
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
-                        }`}
-                      >
-                        <item.icon className="w-5 h-5 shrink-0" strokeWidth={2} />
-                        <span className={`font-bold text-sm tracking-tight ${collapsed ? "lg:hidden" : ""}`}>{item.name}</span>
-                      </Link>
+                      <div className="flex items-center gap-1">
+                        <Link
+                          href={item.href}
+                          title={item.name}
+                          className={`flex-1 flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${collapsed ? "lg:justify-center lg:px-0" : ""} ${isActive
+                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
+                          }`}
+                        >
+                          <item.icon className="w-5 h-5 shrink-0" strokeWidth={2} />
+                          <span className={`font-bold text-sm tracking-tight ${collapsed ? "lg:hidden" : ""}`}>{item.name}</span>
+                        </Link>
+
+                        {/* Submenu open/close toggle */}
+                        {hasChildren && (
+                          <button
+                            type="button"
+                            onClick={() => toggleMenu(item.href)}
+                            aria-label={menuOpen ? `Collapse ${item.name} submenu` : `Expand ${item.name} submenu`}
+                            aria-expanded={menuOpen}
+                            title={menuOpen ? "Collapse" : "Expand"}
+                            className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all ${collapsed ? "lg:hidden" : ""}`}
+                          >
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${menuOpen ? "rotate-180" : ""}`} strokeWidth={2.5} />
+                          </button>
+                        )}
+                      </div>
 
                       {/* Nested submenu (e.g. PSX → Trade Analytics) */}
-                      {children && children.length > 0 && (
+                      {hasChildren && menuOpen && (
                         <div className={`mt-1 ml-[26px] pl-3 border-l border-zinc-200 dark:border-zinc-800 space-y-1 ${collapsed ? "lg:hidden" : ""}`}>
-                          {children.map((child) => {
+                          {children!.map((child) => {
                             const childActive = pathname === child.href;
                             return (
                               <Link

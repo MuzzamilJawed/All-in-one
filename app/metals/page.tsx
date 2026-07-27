@@ -408,6 +408,40 @@ export default function MetalsPage() {
     }
   }, [goldRaw, silverRaw, rawMarketData, tableCurrency]);
 
+  // --- Weight calculator helpers (support Gold, Silver, Platinum, Palladium) ---
+  const OZ_TO_GRAM = 31.1035;   // 1 troy ounce in grams
+  const OZ_TO_TOLA = 0.375;     // 11.6638g / 31.1035g ≈ 0.375
+
+  // Live per-ounce spot for a metal in the active currency.
+  const getMetalOunce = (metal: string) => {
+    const isPkr = tableCurrency === 'PKR';
+    const src =
+      metal === 'gold' ? rawMarketData?.gold?.ounce24k :
+      metal === 'silver' ? rawMarketData?.silver?.ounce :
+      metal === 'platinum' ? rawMarketData?.platinum?.ounce :
+      metal === 'palladium' ? rawMarketData?.palladium?.ounce : null;
+    if (!src) return 0;
+    return (isPkr ? src.pkrPrice : src.usdPrice) || 0;
+  };
+
+  // Base price per selected weight unit (before purity/quantity).
+  const getMetalBasePrice = (metal: string, unit: string) => {
+    const oz = getMetalOunce(metal);
+    if (!oz) return 0;
+    if (unit === 'Ounce') return oz;
+    if (unit === 'Tola') return oz * OZ_TO_TOLA;
+    if (unit === 'Gram') return oz / OZ_TO_GRAM;
+    if (unit === 'Kg') return (oz / OZ_TO_GRAM) * 1000;
+    return oz;
+  };
+
+  const CALC_METALS = [
+    { key: 'gold', label: 'Gold (24K)', icon: Award, active: 'bg-amber-500/10 border-amber-500 text-amber-600' },
+    { key: 'silver', label: 'Silver (999)', icon: Circle, active: 'bg-zinc-500/10 border-zinc-500 text-zinc-600' },
+    { key: 'platinum', label: 'Platinum', icon: Gem, active: 'bg-sky-500/10 border-sky-500 text-sky-600' },
+    { key: 'palladium', label: 'Palladium', icon: Circle, active: 'bg-emerald-500/10 border-emerald-500 text-emerald-600' },
+  ];
+
   if (loading && !rawMarketData) return <PageSkeleton variant="metals" />;
 
   return (
@@ -499,7 +533,7 @@ export default function MetalsPage() {
             <div className="w-8 h-8 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
               <Gem className="w-4 h-4 text-amber-600 dark:text-amber-400" strokeWidth={2.5} />
             </div>
-            <span className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Analyze Purity</span>
+            <span className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Gold Purity</span>
           </button>
         </div>
 
@@ -520,19 +554,20 @@ export default function MetalsPage() {
                   <div className="space-y-6 sm:space-y-10">
                     <div className="space-y-4">
                       <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-2">Selection Logic</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setCalcMetal('gold')}
-                          className={`flex items-center justify-center gap-3 p-5 rounded-3xl border-2 transition-all duration-300 font-bold ${calcMetal === 'gold' ? 'bg-amber-500/10 border-amber-500 text-amber-600' : 'bg-zinc-50 dark:bg-zinc-800 border-transparent text-zinc-500'}`}
-                        >
-                          <Award className="w-5 h-5 shrink-0" strokeWidth={2} /> Gold (24K)
-                        </button>
-                        <button
-                          onClick={() => setCalcMetal('silver')}
-                          className={`flex items-center justify-center gap-3 p-5 rounded-3xl border-2 transition-all duration-300 font-bold ${calcMetal === 'silver' ? 'bg-zinc-500/10 border-zinc-500 text-zinc-600' : 'bg-zinc-50 dark:bg-zinc-800 border-transparent text-zinc-500'}`}
-                        >
-                          <Circle className="w-5 h-5 shrink-0" strokeWidth={2} /> Silver (999)
-                        </button>
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                        {CALC_METALS.map((m) => {
+                          const Icon = m.icon;
+                          const selected = calcMetal === m.key;
+                          return (
+                            <button
+                              key={m.key}
+                              onClick={() => setCalcMetal(m.key)}
+                              className={`flex items-center justify-center gap-2.5 p-4 sm:p-5 rounded-3xl border-2 transition-all duration-300 font-bold text-sm ${selected ? m.active : 'bg-zinc-50 dark:bg-zinc-800 border-transparent text-zinc-500'}`}
+                            >
+                              <Icon className="w-5 h-5 shrink-0" strokeWidth={2} /> {m.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -562,6 +597,7 @@ export default function MetalsPage() {
                           <option value="Tola">Tola</option>
                           <option value="Gram">Gram</option>
                           <option value="Ounce">Ounce (oz)</option>
+                          <option value="Kg">Kilogram (kg)</option>
                         </select>
                       </div>
                     </div>
@@ -596,25 +632,10 @@ export default function MetalsPage() {
                           <span className="text-2xl sm:text-4xl font-medium text-blue-200 lowercase">{tableCurrency === 'PKR' ? 'Rs.' : '$'}</span>
                           <span className="text-4xl sm:text-7xl font-black tracking-tighter font-mono break-words">
                             {(() => {
-                              const isPkr = tableCurrency === 'PKR';
-                              let basePrice = 0;
-
-                              if (calcMetal === 'gold') {
-                                if (calcUnit === 'Tola') basePrice = isPkr ? (metalPrices[1].pkrPrice || 0) : (metalPrices[1].usdPrice || 0);
-                                else if (calcUnit === 'Gram') basePrice = isPkr ? (metalPrices[0].pkrPrice || 0) : (metalPrices[0].usdPrice || 0);
-                                else if (calcUnit === 'Ounce') basePrice = isPkr ? (metalPrices[2].pkrPrice || 0) : (metalPrices[2].usdPrice || 0);
-                                else if (calcUnit === 'Kg') basePrice = (isPkr ? (metalPrices[0].pkrPrice || 0) : (metalPrices[0].usdPrice || 0)) * 1000;
-
-                                const purityRatio = (parseInt(calcPurity) || 24) / 24;
-                                return (basePrice * purityRatio * calcQuantity).toLocaleString(undefined, { maximumFractionDigits: 0 });
-                              } else {
-                                if (calcUnit === 'Tola') basePrice = isPkr ? (metalPrices[3].pkrPrice || 0) : (metalPrices[3].usdPrice || 0);
-                                else if (calcUnit === 'Ounce') basePrice = isPkr ? (metalPrices[4].pkrPrice || 0) : (metalPrices[4].usdPrice || 0);
-                                else if (calcUnit === 'Kg') basePrice = isPkr ? (metalPrices[5].pkrPrice || 0) : (metalPrices[5].usdPrice || 0);
-                                else if (calcUnit === 'Gram') basePrice = (isPkr ? (metalPrices[3].pkrPrice || 0) : (metalPrices[3].usdPrice || 0)) / 11.6638;
-
-                                return (basePrice * calcQuantity).toLocaleString(undefined, { maximumFractionDigits: 0 });
-                              }
+                              const basePrice = getMetalBasePrice(calcMetal, calcUnit);
+                              // Purity grade only reduces value for gold; other metals are quoted at spot.
+                              const purityRatio = calcMetal === 'gold' ? (parseInt(calcPurity) || 24) / 24 : 1;
+                              return (basePrice * purityRatio * calcQuantity).toLocaleString(undefined, { maximumFractionDigits: 0 });
                             })()}
                           </span>
                         </div>
@@ -625,13 +646,10 @@ export default function MetalsPage() {
 
                       <div className="grid grid-cols-2 gap-4 pt-8 border-t border-white/10">
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-blue-200/50 uppercase">Current Bid</p>
+                          <p className="text-[10px] font-black text-blue-200/50 uppercase">Current Bid / Tola</p>
                           <p className="font-bold text-lg">
                             {tableCurrency === 'PKR' ? 'Rs.' : '$'}
-                            {(tableCurrency === 'PKR'
-                              ? metalPrices[calcMetal === 'gold' ? 1 : 3].pkrPrice
-                              : metalPrices[calcMetal === 'gold' ? 1 : 3].usdPrice || 0
-                            )?.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            {getMetalBasePrice(calcMetal, 'Tola').toLocaleString(undefined, { maximumFractionDigits: 2 })}
                           </p>
                         </div>
                         <div className="space-y-1">
