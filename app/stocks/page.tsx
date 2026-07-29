@@ -1,6 +1,6 @@
 "use client";
 
-import { CandlestickChart, Gauge, LayoutGrid, Table, Grid3x3, Search, SearchX, Folder, Scale, Download, RotateCcw, X, SlidersHorizontal } from "lucide-react";
+import { CandlestickChart, Gauge, LayoutGrid, Table, Grid3x3, Search, SearchX, Folder, Scale, Download, RotateCcw, X, SlidersHorizontal, ChevronDown } from "lucide-react";
 
 import StockCard from "../components/StockCard";
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
@@ -15,6 +15,8 @@ import CompareTray from "../components/CompareTray";
 import PageSkeleton from "../components/PageSkeleton";
 import { computeSignals, dayRangePosition, toneClasses, parseVolume } from "../lib/stockSignals";
 import { rollLeaders } from "../lib/stockPrefs";
+
+const ANALYSIS_OPEN_KEY = "psx.analysis.open";
 
 export default function StocksPage() {
     return (
@@ -78,12 +80,20 @@ function StocksContent() {
     const [isCreatingWatchlist, setIsCreatingWatchlist] = useState(false);
     const itemsPerPage = 15;
     const [showFilters, setShowFilters] = useState(false); // mobile: collapse the filter panel
+    // Market Analysis panel: collapsed keeps only the headline + active filters.
+    const [analysisOpen, setAnalysisOpen] = useState(true);
+    const searchRef = useRef<HTMLInputElement | null>(null);
     const PAGE_SIZE = 24; // infinite-scroll: how many rows/cards to reveal per step
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
     const { settings } = useSettings();
     const { success, error } = useToast();
+
+    // The auto-refresh interval holds a closure from the render that armed it, so
+    // `indexFilter` would be read stale inside `load`. Mirror it in a ref.
+    const indexFilterRef = useRef(indexFilter);
+    useEffect(() => { indexFilterRef.current = indexFilter; }, [indexFilter]);
 
     const load = async (isManual = true) => {
         try {
@@ -113,22 +123,29 @@ function StocksContent() {
             setNewLeaders(new Set(leaderSyms.filter(sym => !prev.has(sym))));
 
             if (rawIndices.length > 0) {
-                // Priority: 1. URL search param 2. Explicit "all" 3. First index from list
-                const urlIdxName = searchParams.get('idx') || indexFilter;
-
-                if (urlIdxName === 'all') {
-                    setSelectedIndex(null);
+                if (!isManual) {
+                    // Background refresh: never touch the user's choice. Only re-point
+                    // the card at the same index so its numbers update — the card stays
+                    // until they dismiss it themselves.
+                    setSelectedIndex(prev => prev ? (rawIndices.find(idx => idx.name === prev.name) || prev) : prev);
                 } else {
-                    const foundIdx = urlIdxName
-                        ? rawIndices.find(idx => idx.name.toLowerCase() === urlIdxName.toLowerCase())
-                        : null;
+                    // Priority: 1. URL search param 2. Explicit "all" 3. First index from list
+                    const urlIdxName = searchParams.get('idx') || indexFilterRef.current;
 
-                    if (foundIdx) {
-                        setSelectedIndex(foundIdx);
-                    } else if (!searchParams.has('idx')) {
-                        // Only force default if no param exists at all (first landing)
-                        setSelectedIndex(rawIndices[0]);
-                        setIndexFilter(rawIndices[0].name);
+                    if (urlIdxName === 'all') {
+                        setSelectedIndex(null);
+                    } else {
+                        const foundIdx = urlIdxName
+                            ? rawIndices.find(idx => idx.name.toLowerCase() === urlIdxName.toLowerCase())
+                            : null;
+
+                        if (foundIdx) {
+                            setSelectedIndex(foundIdx);
+                        } else if (!searchParams.has('idx')) {
+                            // Only force default if no param exists at all (first landing)
+                            setSelectedIndex(rawIndices[0]);
+                            setIndexFilter(rawIndices[0].name);
+                        }
                     }
                 }
             }
@@ -229,6 +246,28 @@ function StocksContent() {
         fetchWatchlists();
     }, []);
 
+    // Remember whether the Market Analysis panel was left open or collapsed.
+    useEffect(() => {
+        const saved = localStorage.getItem(ANALYSIS_OPEN_KEY);
+        if (saved !== null) setAnalysisOpen(saved === '1');
+    }, []);
+
+    const toggleAnalysis = () => {
+        setAnalysisOpen(v => {
+            const next = !v;
+            try { localStorage.setItem(ANALYSIS_OPEN_KEY, next ? '1' : '0'); } catch { /* private mode */ }
+            return next;
+        });
+    };
+
+    // Collapsed shortcut: open the panel and drop the caret straight into search.
+    const openAndSearch = () => {
+        setAnalysisOpen(true);
+        try { localStorage.setItem(ANALYSIS_OPEN_KEY, '1'); } catch { /* private mode */ }
+        setShowFilters(true);
+        requestAnimationFrame(() => searchRef.current?.focus());
+    };
+
     // Fetch the session (day) high/low for the currently selected index
     useEffect(() => {
         if (!selectedIndex) {
@@ -281,6 +320,20 @@ function StocksContent() {
     const compareStocks = compareSymbols
         .map(sym => stocks.find(s => s.symbol.toUpperCase() === sym))
         .filter(Boolean) as Stock[];
+
+    // What's actually narrowing the list right now — surfaced as chips so the
+    // collapsed panel still says what you're looking at.
+    const VIEW_LABELS: Record<string, string> = {
+        gainers: 'Top Performers', active: 'High Liquidity', losers: 'Market Decliners',
+    };
+    const activeFilters: string[] = [
+        indexFilter && indexFilter !== 'all' ? indexFilter : null,
+        filter !== 'all' ? filter : null,
+        categoryFilter !== 'all' ? (VIEW_LABELS[categoryFilter] || categoryFilter) : null,
+        activeWatchlistId ? (watchlists.find(w => w._id === activeWatchlistId)?.name || 'Watchlist') : null,
+        searchTerm.trim() ? `"${searchTerm.trim()}"` : null,
+        compareMode ? 'Compare On' : null,
+    ].filter(Boolean) as string[];
 
     const exportCSV = () => {
         const rows = [
@@ -429,12 +482,12 @@ function StocksContent() {
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
             {loading && (
-                <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-blue-600/10">
+                <div className="fixed top-[var(--sa-top)] left-0 w-full h-1 z-[100] bg-blue-600/10">
                     <div className="h-full bg-blue-600 animate-[loading_2s_infinite]"></div>
                 </div>
             )}
 
-            <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+            <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
                     <div>
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
@@ -446,7 +499,7 @@ function StocksContent() {
             </header>
 
             {indices.length > 0 && (
-                <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-x-auto no-scrollbar shadow-sm sticky top-[65px] sm:top-[73px] z-30">
+                <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-x-auto no-scrollbar shadow-sm sticky top-[calc(65px_+_var(--sa-top))] sm:top-[calc(73px_+_var(--sa-top))] z-30">
                     <div className="max-w-[1600px] mx-auto px-4 sm:px-8 flex items-center gap-6 sm:gap-10">
                         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 border-r border-zinc-200 dark:border-white/10 pr-4 sm:pr-10">
                             <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
@@ -572,18 +625,49 @@ function StocksContent() {
 
             <div className={`px-4 sm:px-8 py-5 sm:py-10 max-w-[1700px] mx-auto w-full space-y-5 sm:space-y-10 ${compareStocks.length > 0 ? 'pb-64' : ''}`}>
                 {/* Unified Market Control Ribbon */}
-                <div className="bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 shadow-2xl space-y-5 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                <div className={`bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 transition-all ${analysisOpen ? 'p-4 sm:p-8 space-y-5 sm:space-y-8' : 'px-4 sm:px-8 py-3.5 sm:py-5'}`}>
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
-                        <div className="flex-1 space-y-6 w-full">
+                        <div className={`flex-1 w-full ${analysisOpen ? 'space-y-6' : ''}`}>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <div className="space-y-1">
-                                    <h2 className="text-lg sm:text-2xl font-black italic uppercase tracking-tighter text-zinc-900 dark:text-white leading-none">Market Intelligence</h2>
+                                <div className="space-y-1 min-w-0">
+                                    <button
+                                        onClick={toggleAnalysis}
+                                        aria-expanded={analysisOpen}
+                                        aria-controls="market-analysis-body"
+                                        title={analysisOpen ? 'Collapse panel' : 'Expand panel'}
+                                        className="flex items-center gap-2 group"
+                                    >
+                                        <h2 className="text-lg sm:text-2xl font-black italic uppercase tracking-tighter text-zinc-900 dark:text-white leading-none group-hover:text-blue-600 transition-colors">Market Analysis</h2>
+                                        <ChevronDown
+                                            className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-zinc-400 group-hover:text-blue-600 transition-all duration-300 ${analysisOpen ? '' : '-rotate-90'}`}
+                                            strokeWidth={3}
+                                        />
+                                    </button>
                                     <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                                         <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span>
                                         Monitoring {filteredStocks.length} Real-Time Assets
                                     </p>
+                                    {/* Collapsed: keep the active filters visible so the list is never unexplained */}
+                                    {!analysisOpen && (
+                                        <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+                                            {activeFilters.length === 0 ? (
+                                                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-zinc-100 dark:bg-white/5 text-zinc-400">All Market</span>
+                                            ) : activeFilters.map(f => (
+                                                <span key={f} className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400 max-w-[160px] truncate">{f}</span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    {!analysisOpen && (
+                                        <button
+                                            onClick={openAndSearch}
+                                            title="Search symbols"
+                                            className="shrink-0 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-400 hover:text-blue-600 hover:border-blue-500 transition-all"
+                                        >
+                                            <Search className="w-4 h-4" strokeWidth={3} />
+                                        </button>
+                                    )}
                                     <div className="flex flex-1 sm:flex-none h-fit bg-zinc-100 dark:bg-white/5 p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/10">
                                         <button
                                             onClick={() => setViewType('card')}
@@ -607,11 +691,12 @@ function StocksContent() {
                                 </div>
                             </div>
 
-                            {/* Search — always visible; on mobile a Filters button toggles the dropdowns */}
-                            <div className="flex gap-2 sm:gap-3">
+                            {/* Search — on mobile a Filters button toggles the dropdowns */}
+                            <div id="market-analysis-body" className={`${analysisOpen ? 'flex' : 'hidden'} gap-2 sm:gap-3`}>
                                 <div className="relative group flex-1">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" strokeWidth={2.5} />
                                     <input
+                                        ref={searchRef}
                                         type="text"
                                         placeholder="Search Symbol..."
                                         value={searchTerm}
@@ -628,7 +713,7 @@ function StocksContent() {
                             </div>
 
                             {/* Filter dropdowns — collapsible on mobile, always shown on desktop */}
-                            <div className={`${showFilters ? 'grid' : 'hidden'} lg:grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4`}>
+                            <div className={`${analysisOpen ? (showFilters ? 'grid' : 'hidden') : 'hidden'} ${analysisOpen ? 'lg:grid' : ''} grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4`}>
                                 <div className="relative group">
                                     <select
                                         value={indexFilter || "all"}
@@ -677,7 +762,7 @@ function StocksContent() {
                         </div>
                     </div>
 
-                    <div className={`${showFilters ? 'flex' : 'hidden'} lg:flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 pt-5 sm:pt-6 border-t border-zinc-100 dark:border-white/5`}>
+                    <div className={`${analysisOpen ? (showFilters ? 'flex' : 'hidden') : 'hidden'} ${analysisOpen ? 'lg:flex' : ''} flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 pt-5 sm:pt-6 border-t border-zinc-100 dark:border-white/5`}>
                         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2 w-full lg:w-auto">
                             <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] whitespace-nowrap">Watchlist Monitor:</span>
                             <button
@@ -727,7 +812,7 @@ function StocksContent() {
                         </div>
                     </div>
 
-                    {isCreatingWatchlist && (
+                    {analysisOpen && isCreatingWatchlist && (
                         <div className="flex gap-2 p-3 bg-blue-600 text-white rounded-2xl animate-in zoom-in-95 duration-200">
                             <input
                                 type="text"

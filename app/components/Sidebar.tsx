@@ -43,7 +43,12 @@ const navigationGroups = [
           { name: "Graph Analysis", href: "/metals/analysis", icon: LineChart },
         ],
       },
-      { name: "Oil & Energy", href: "/oil", icon: Fuel, module: "oil" },
+      {
+        name: "Oil & Energy", href: "/oil", icon: Fuel, module: "oil",
+        children: [
+          { name: "Graph Analysis", href: "/oil/analysis", icon: LineChart },
+        ],
+      },
     ]
   },
   {
@@ -115,7 +120,7 @@ export default function Sidebar() {
         onClick={() => setIsOpen(!isOpen)}
         aria-label={isOpen ? "Close menu" : "Open menu"}
         aria-expanded={isOpen}
-        className="lg:hidden fixed top-2.5 left-3 z-[100] w-11 h-11 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg flex items-center justify-center active:scale-90 transition-transform"
+        className="lg:hidden fixed top-[calc(0.625rem_+_var(--sa-top))] left-3 z-[100] w-11 h-11 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg flex items-center justify-center active:scale-90 transition-transform"
       >
         {isOpen ? (
           <X className="w-5 h-5" strokeWidth={2.5} />
@@ -139,7 +144,7 @@ export default function Sidebar() {
       <aside className={`fixed left-0 top-0 h-screen h-dvh w-[min(16rem,85vw)] ${collapsed ? "lg:w-20" : "lg:w-64"} bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-lg overflow-y-auto overflow-x-hidden flex flex-col border-r border-zinc-200 dark:border-zinc-800 transition-[transform,width] duration-300 z-[95]
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
 
-        <div className={`pl-6 pr-2 py-6 ${collapsed ? "lg:pl-2 lg:pr-1 lg:py-3" : ""} border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-2`}>
+        <div className={`pl-6 pr-2 py-6 pt-[calc(1.5rem_+_var(--sa-top))] ${collapsed ? "lg:pl-2 lg:pr-1 lg:py-3" : ""} border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-2`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className={`w-9 h-9 ${collapsed ? "lg:w-8 lg:h-8" : ""} shrink-0 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25`}>
               <span className="text-white font-black text-xl italic leading-none">S</span>

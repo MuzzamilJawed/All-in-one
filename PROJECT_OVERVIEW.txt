@@ -1,7 +1,7 @@
 """
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║                                                                            ║
-║                   🎉 ALL-IN-ONE DASHBOARD - CREATED! 🎉                  ║
+║                   🎉 SOLOTRACKR DASHBOARD - CREATED! 🎉                  ║
 ║                                                                            ║
 ║        Your centralized hub for gold prices, silver prices, PSX stocks    ║
 ║                                                                            ║
@@ -129,7 +129,7 @@ Customize:
 📁 FILE STRUCTURE:
 ═══════════════════════════════════════════════════════════════════════════
 
-all-in-one/
+solo-trackr/
 ├── app/
 │   ├── components/
 │   │   ├── PriceCard.tsx      ← Gold/Silver display

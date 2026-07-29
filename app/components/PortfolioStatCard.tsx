@@ -3,15 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Briefcase } from "lucide-react";
 import StatCard from "./StatCard";
-import { useSettings } from "../context/SettingsContext";
+import { useCurrency } from "../context/CurrencyContext";
+import { convertAmount, currencySymbol } from "../lib/currency";
 import { getTxns, computeHoldings, type Txn } from "../lib/portfolio";
-import { fetchAllPrices, priceKey, priceIn, convert, curSymbol, type PriceBook } from "../lib/prices";
+import { fetchAllPrices, priceKey, priceIn, type PriceBook } from "../lib/prices";
 
 // Compact dashboard tile: live portfolio value + total return %. Reuses the same
 // average-cost + live-price logic as the full /portfolio screen and PortfolioSummary.
 export default function PortfolioStatCard() {
-    const { settings } = useSettings();
-    const displayCur: "PKR" | "USD" = settings.currency === "PKR" ? "PKR" : "USD";
+    const { currency: displayCur, rates } = useCurrency();
 
     const [txns, setTxns] = useState<Txn[]>([]);
     const [book, setBook] = useState<PriceBook>({ map: {}, rate: 278, updated: "" });
@@ -33,29 +33,30 @@ export default function PortfolioStatCard() {
     }, []);
 
     const rate = book.rate;
-    const { holdings, realized } = useMemo(() => computeHoldings(txns), [txns]);
+    const fxRates = useMemo(() => ({ ...rates, PKR: rate || rates.PKR, USD: 1 }), [rates, rate]);
+    const { holdings } = useMemo(() => computeHoldings(txns), [txns]);
 
     const totals = useMemo(() => {
+        const convert = (amt: number, from: string) => convertAmount(amt, from, displayCur, fxRates) ?? 0;
         let value = 0, investedPriced = 0;
         holdings.forEach(h => {
             const info = book.map[priceKey(h.assetType, h.symbol)];
             const current = priceIn(info, h.currency, rate);
-            const inv = convert(h.quantity * h.avgCost, h.currency, displayCur, rate);
+            const inv = convert(h.quantity * h.avgCost, h.currency);
             if (current != null) {
-                value += convert(h.quantity * current, h.currency, displayCur, rate);
+                value += convert(h.quantity * current, h.currency);
                 investedPriced += inv;
             }
         });
         const unrealized = value - investedPriced;
-        const realizedTotal = convert(realized.PKR, "PKR", displayCur, rate) + convert(realized.USD, "USD", displayCur, rate);
         return {
             value,
             totalPct: investedPriced > 0 ? (unrealized / investedPriced) * 100 : 0,
             count: holdings.length,
         };
-    }, [holdings, book, rate, displayCur, realized]);
+    }, [holdings, book, rate, displayCur, fxRates]);
 
-    const cs = curSymbol(displayCur);
+    const cs = currencySymbol(displayCur);
     const fmt = (v: number) => `${cs}${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     const has = totals.count > 0;
 

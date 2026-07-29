@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright Configuration for All-in-One Dashboard
+ * Playwright Configuration for SoloTrackr Dashboard
  * Optimized for High-Fidelity Market Terminal Testing
  */
 export default defineConfig({

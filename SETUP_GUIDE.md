@@ -1,4 +1,4 @@
-# 🎯 ALL-IN-ONE DASHBOARD - COMPLETE SETUP GUIDE
+# 🎯 SOLOTRACKR DASHBOARD - COMPLETE SETUP GUIDE
 
 ## What You Have Built ✨
 
@@ -87,7 +87,7 @@ Then open: **http://localhost:3000**
 ## 📁 PROJECT STRUCTURE
 
 ```
-all-in-one/
+solo-trackr/
 │
 ├── app/
 │   ├── components/              # Reusable UI components
@@ -361,7 +361,7 @@ Before deploying:
 
 ## 🎉 YOU'RE ALL SET!
 
-Your all-in-one dashboard is ready to use. Start by:
+Your SoloTrackr dashboard is ready to use. Start by:
 
 1. **Running the app**: `npm run dev`
 2. **Exploring pages**: Click through all sections

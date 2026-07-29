@@ -3,15 +3,18 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Globe, Plus, Search } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
+import { useCurrency } from "../context/CurrencyContext";
+import CurrencyToggle from "./CurrencyToggle";
+import { MARKET_CURRENCY, currencySymbol } from "../lib/currency";
 import { getWatch, addWatch, removeWatch, type WatchItem } from "../lib/universalWatch";
 import {
-    fetchAllPrices, priceKey, priceIn, curSymbol, ASSET_TYPES,
+    fetchAllPrices, priceKey, priceInAny, ASSET_TYPES,
     COMMODITY_SYMBOLS, type AssetType, type PriceBook,
 } from "../lib/prices";
 
 export default function UniversalWatchlist() {
     const { settings } = useSettings();
-    const displayCur: "PKR" | "USD" = settings.currency === "PKR" ? "PKR" : "USD";
+    const { currency: displayCur, rates } = useCurrency();
 
     const [items, setItems] = useState<WatchItem[]>([]);
     const [book, setBook] = useState<PriceBook>({ map: {}, rate: 278, updated: "" });
@@ -94,7 +97,11 @@ export default function UniversalWatchlist() {
         }
     };
 
-    const fmt = (v: number | null) => v == null ? "—" : `${curSymbol(displayCur)}${v.toLocaleString(undefined, { minimumFractionDigits: v < 1 ? 4 : 2, maximumFractionDigits: v < 1 ? 6 : 2 })}`;
+    // PSX rows stay in PKR and NASDAQ rows in USD; everything else follows the
+    // active display currency.
+    const fxRates = useMemo(() => ({ ...rates, PKR: book.rate || rates.PKR, USD: 1 }), [rates, book.rate]);
+    const codeFor = (t: AssetType) => MARKET_CURRENCY[t] ?? displayCur;
+    const fmt = (v: number | null, code: string) => v == null ? "—" : `${currencySymbol(code)}${v.toLocaleString(undefined, { minimumFractionDigits: v < 1 ? 4 : 2, maximumFractionDigits: v < 1 ? 6 : 2 })}`;
     const badge = (t: AssetType) => ({ PSX: "bg-blue-500/10 text-blue-500", NASDAQ: "bg-indigo-500/10 text-indigo-500", CRYPTO: "bg-orange-500/10 text-orange-500", FOREX: "bg-green-500/10 text-green-500", COMMODITY: "bg-amber-500/10 text-amber-500" }[t]);
     const inputCls = "px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500";
 
@@ -105,7 +112,10 @@ export default function UniversalWatchlist() {
                     <h2 className="text-sm font-black uppercase tracking-tighter italic flex items-center gap-2"><Globe className="w-4 h-4 text-blue-500 shrink-0" strokeWidth={2} /> Watch Any Asset</h2>
                     <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Stocks · Crypto · Forex · Commodities</p>
                 </div>
-                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{loading ? "Pricing…" : book.updated}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                    <CurrencyToggle />
+                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{loading ? "Pricing…" : book.updated}</span>
+                </div>
             </div>
 
             {/* Add row — market selector + searchable autocomplete */}
@@ -180,7 +190,8 @@ export default function UniversalWatchlist() {
                 <div className="divide-y divide-zinc-100 dark:divide-white/5 max-h-[420px] overflow-y-auto custom-scrollbar">
                     {items.map(it => {
                         const info = book.map[priceKey(it.assetType, it.symbol)];
-                        const price = priceIn(info, displayCur, book.rate);
+                        const code = codeFor(it.assetType);
+                        const price = priceInAny(info, code, fxRates);
                         return (
                             <div key={`${it.assetType}:${it.symbol}`} className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3 hover:bg-zinc-50 dark:hover:bg-white/[0.02]">
                                 <div className="flex items-center gap-2 min-w-0">
@@ -191,7 +202,7 @@ export default function UniversalWatchlist() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">
-                                    <span className="text-xs font-black font-mono tabular-nums">{fmt(price)}</span>
+                                    <span className="text-xs font-black font-mono tabular-nums">{fmt(price, code)}</span>
                                     <button onClick={() => removeWatch(it.assetType, it.symbol)} className="text-zinc-400 hover:text-red-500 text-sm" title="Remove">✕</button>
                                 </div>
                             </div>

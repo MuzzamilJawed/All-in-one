@@ -1,54 +1,35 @@
 "use client";
 
-import { Fuel, AlertTriangle, Award, TrendingDown, Search, Bell } from "lucide-react";
+import { Fuel, AlertTriangle, Award, TrendingDown, Search, Bell, LineChart } from "lucide-react";
 
 import PageSkeleton from "../components/PageSkeleton";
 
 import PriceCard from "../components/PriceCard";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSettings } from "../context/SettingsContext";
+import { useCurrency } from "../context/CurrencyContext";
+import CurrencyToggle from "../components/CurrencyToggle";
+import { rateOf } from "../lib/currency";
 import { useToast } from "../context/ToastContext";
 import { fetchOilPrices } from "../lib/api";
 import { type OilAlert, type AlertCondition, loadAlerts, persistAlerts, makeAlertId } from "../lib/oilAlerts";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 
 type SortKey = "name" | "price" | "changePercent" | "weekly" | "monthly" | "yearly";
-
-// Timeframe metrics for the cross-market comparison matrix
-const COMPARE_METRICS: { key: 'changePercent' | 'weekly' | 'monthly' | 'yearly'; label: string }[] = [
-  { key: 'changePercent', label: '24h' },
-  { key: 'weekly', label: '7D' },
-  { key: 'monthly', label: '30D' },
-  { key: 'yearly', label: '52W' },
-];
 
 export default function OilPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [oilPrices, setOilPrices] = useState<any[]>([]);
   const [allEnergy, setAllEnergy] = useState<any[]>([]);
-  const [trendData, setTrendData] = useState<any[]>([]);
-  const [trendEnergy, setTrendEnergy] = useState("crudeOil");
-  const [trendTimeframe, setTrendTimeframe] = useState("Daily");
-  const { settings, updateSettings } = useSettings();
+  const { settings } = useSettings();
   const { success, info, error: toastError } = useToast();
-  const tableCurrency = settings.currency as 'USD' | 'PKR';
+  const { currency: tableCurrency, sym, conv, rates } = useCurrency();
   const router = useRouter();
 
   // Table controls
   const [tableSearch, setTableSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'changePercent', dir: 'desc' });
-
-  // Cross-market comparison timeframe
-  const [compareMetric, setCompareMetric] = useState<'changePercent' | 'weekly' | 'monthly' | 'yearly'>('changePercent');
 
   // Alerts
   const [alerts, setAlerts] = useState<OilAlert[]>([]);
@@ -56,8 +37,6 @@ export default function OilPage() {
   const [alertKey, setAlertKey] = useState("");
   const [alertCondition, setAlertCondition] = useState<AlertCondition>("above");
   const [alertPrice, setAlertPrice] = useState("");
-
-  const stableTrendRef = useRef<Record<string, any[]>>({});
 
   const loadPrices = useCallback(async (isManual = true) => {
     try {
@@ -89,16 +68,13 @@ export default function OilPage() {
       setOilPrices(updatedPrices);
       setAllEnergy(data.allEnergy || []);
 
-      // Update trend and candles based on new data
-      updateMarketVisuals(data);
-
     } catch (err) {
       console.error("Failed to fetch oil prices:", err);
       if (isManual) setError("An error occurred while fetching energy data.");
     } finally {
       if (isManual) setLoading(false);
     }
-  }, [trendEnergy, trendTimeframe, tableCurrency]);
+  }, [tableCurrency]);
 
   const openDetail = (item: any) => {
     router.push(`/oil/${item.key}`);
@@ -111,65 +87,9 @@ export default function OilPage() {
     });
   };
 
-  const updateMarketVisuals = (data: any) => {
-    const isPkr = tableCurrency === 'PKR';
-    const selectedEnergy = data[trendEnergy] || (data.allEnergy && data.allEnergy.find((i: any) => i.key === trendEnergy));
-    if (!selectedEnergy) return;
-
-    const currentPrice = isPkr ? selectedEnergy.pkrPrice : selectedEnergy.price;
-    const trendKey = `${trendEnergy}-${trendTimeframe}-${tableCurrency}`;
-
-    // Generate/Update Trend Data
-    let points = 24;
-    let interval = 3600 * 1000;
-    let volatility = 0.01;
-
-    if (trendTimeframe === 'Daily') { points = 24; interval = 3600 * 1000; volatility = 0.005; }
-    if (trendTimeframe === 'Weekly') { points = 7; interval = 24 * 3600 * 1000; volatility = 0.015; }
-    if (trendTimeframe === 'Monthly') { points = 30; interval = 24 * 3600 * 1000; volatility = 0.02; }
-    if (trendTimeframe === 'Yearly') { points = 52; interval = 7 * 24 * 3600 * 1000; volatility = 0.04; }
-
-    if (stableTrendRef.current[trendKey] && stableTrendRef.current[trendKey].length === points) {
-      const existing = [...stableTrendRef.current[trendKey]];
-      existing[existing.length - 1] = {
-        ...existing[existing.length - 1],
-        price: isPkr ? Math.round(currentPrice) : parseFloat(currentPrice.toFixed(2))
-      };
-      stableTrendRef.current[trendKey] = existing;
-      setTrendData(existing);
-    } else {
-      const newTrendData = [];
-      const now = Date.now();
-      let simPrice = currentPrice;
-      const prices = [currentPrice];
-      const times = [now];
-
-      for (let i = 1; i < points; i++) {
-        const change = (Math.random() - 0.5) * (volatility * 2);
-        simPrice = simPrice * (1 - change);
-        prices.push(simPrice);
-        times.push(now - i * interval);
-      }
-
-      for (let i = points - 1; i >= 0; i--) {
-        const time = new Date(times[i]);
-        let label = (trendTimeframe === 'Daily')
-          ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          : time.toLocaleDateString([], { month: 'short', day: 'numeric' });
-
-        newTrendData.push({
-          name: label,
-          price: isPkr ? Math.round(prices[i]) : parseFloat(prices[i].toFixed(2))
-        });
-      }
-      stableTrendRef.current[trendKey] = newTrendData;
-      setTrendData(newTrendData);
-    }
-  };
-
   useEffect(() => {
     loadPrices(true);
-  }, [trendEnergy, trendTimeframe, tableCurrency]);
+  }, [tableCurrency]);
 
   useEffect(() => {
     if (!settings.refreshInterval || settings.refreshInterval <= 0) return;
@@ -224,12 +144,13 @@ export default function OilPage() {
   const rateFor = (key: string) => {
     const item = allEnergy.find((i) => i.key === key);
     if (item?.pkrPrice && item?.price) return item.pkrPrice / item.price;
-    return 280;
+    return rateOf(rates, 'PKR');
   };
 
+  // Alerts are stored in USD; show and accept them in the active currency.
   const displayTarget = (al: OilAlert) => {
-    const val = tableCurrency === 'PKR' ? al.targetUsd * rateFor(al.key) : al.targetUsd;
-    return `${tableCurrency === 'PKR' ? 'Rs. ' : '$'}${formatPrice(val)}`;
+    const val = conv(al.targetUsd, al.targetUsd * rateFor(al.key)) ?? 0;
+    return `${sym}${formatPrice(val)}`;
   };
 
   const handleAddAlert = () => {
@@ -240,8 +161,10 @@ export default function OilPage() {
       toastError("Enter a valid target price");
       return;
     }
-    const rate = item.pkrPrice && item.price ? item.pkrPrice / item.price : 280;
-    const targetUsd = tableCurrency === 'PKR' ? parsed / rate : parsed;
+    const rate = item.pkrPrice && item.price ? item.pkrPrice / item.price : rateOf(rates, 'PKR');
+    const targetUsd = tableCurrency === 'USD' ? parsed
+      : tableCurrency === 'PKR' ? parsed / rate
+      : parsed / rateOf(rates, tableCurrency);
     const triggered = alertCondition === 'above' ? item.price >= targetUsd : item.price <= targetUsd;
     const newAlert: OilAlert = {
       id: makeAlertId(),
@@ -255,7 +178,7 @@ export default function OilPage() {
     const next = [newAlert, ...alerts];
     setAlerts(next);
     persistAlerts(next);
-    success(`Alert set — ${item.name} ${alertCondition} ${tableCurrency === 'PKR' ? 'Rs. ' : '$'}${formatPrice(parsed)}`);
+    success(`Alert set — ${item.name} ${alertCondition} ${sym}${formatPrice(parsed)}`);
     setAlertPrice("");
     setShowAlertForm(false);
   };
@@ -291,17 +214,6 @@ export default function OilPage() {
     [allEnergy]
   );
 
-  // Cross-market comparison: every contract ranked by the selected timeframe
-  const comparison = useMemo(() => {
-    const rows = allEnergy
-      .map((i) => ({ key: i.key, name: i.name, value: Number(i[compareMetric] ?? 0) }))
-      .sort((a, b) => b.value - a.value);
-    const maxAbs = Math.max(1, ...rows.map((r) => Math.abs(r.value)));
-    return { rows, maxAbs };
-  }, [allEnergy, compareMetric]);
-
-  const activeName = allEnergy.find(i => i.key === trendEnergy)?.name || 'Markets';
-
   if (loading && oilPrices.length === 0) return <PageSkeleton variant="cards" />;
 
   const SortArrow = ({ k }: { k: SortKey }) => (
@@ -313,7 +225,7 @@ export default function OilPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
+      <div className="safe-top sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
         <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 max-w-[1600px] mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
             <div>
@@ -328,6 +240,7 @@ export default function OilPage() {
                 {loading ? "Synchronizing satellite Feeds..." : `Terminal Active - ${new Date().toLocaleTimeString()}`}
               </p>
             </div>
+            <CurrencyToggle className="w-full sm:w-auto" />
           </div>
         </div>
       </div>
@@ -387,7 +300,7 @@ export default function OilPage() {
               const fullItem = allEnergy.find(i => i.name === oil.title);
               if (fullItem) openDetail(fullItem);
             }}>
-              <PriceCard {...oil} currency={tableCurrency} />
+              <PriceCard {...oil} />
             </div>
           ))}
         </div>
@@ -446,8 +359,8 @@ export default function OilPage() {
                         </div>
                       </td>
                       <td className="px-4 sm:px-8 py-3 sm:py-5 text-right font-mono font-black text-zinc-900 dark:text-zinc-400 group-hover:text-blue-500 text-[10px] sm:text-sm">
-                        {tableCurrency === 'PKR' ? 'Rs. ' : '$'}
-                        {formatPrice(tableCurrency === 'PKR' ? item.pkrPrice : item.price)}
+                        {sym}
+                        {formatPrice(conv(item.price, item.pkrPrice) ?? 0)}
                       </td>
                       <td className="px-4 sm:px-8 py-3 sm:py-5">
                         <div className="flex flex-col items-end gap-1">
@@ -479,76 +392,25 @@ export default function OilPage() {
           </div>
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-12">
-          {/* Trend Chart */}
-          <div className="xl:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3rem] shadow-sm p-5 sm:p-10 border border-zinc-200 dark:border-zinc-800 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
-
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center mb-8 sm:mb-10 gap-6">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Market Momentum</h2>
-                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Velocity Trace: <span className="text-blue-500">{activeName}</span></p>
-              </div>
-
-              <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
-                <select
-                  value={trendEnergy}
-                  onChange={(e) => setTrendEnergy(e.target.value)}
-                  className="flex-1 sm:flex-none bg-zinc-100 dark:bg-zinc-800/50 rounded-xl px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest border-none outline-none focus:ring-1 focus:ring-blue-500 transition-all dark:text-zinc-300"
-                >
-                  {allEnergy.map(item => (
-                    <option key={item.key} value={item.key}>{item.name}</option>
-                  ))}
-                </select>
-
-                <div className="flex bg-zinc-100 dark:bg-zinc-800/50 rounded-xl p-1">
-                  {['Daily', 'Weekly', 'Monthly', 'Yearly'].map(tf => (
-                    <button
-                      key={tf}
-                      onClick={() => setTrendTimeframe(tf)}
-                      className={`px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-lg transition-all uppercase tracking-widest ${trendTimeframe === tf ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}
-                    >
-                      {tf}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        {/* Graph Analysis entry point — full interactive candlestick + momentum + matrix */}
+        <button
+          onClick={() => router.push('/oil/analysis')}
+          className="group w-full flex items-center justify-between gap-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl sm:rounded-[2rem] p-5 sm:p-8 shadow-lg shadow-blue-600/20 hover:shadow-xl transition-all text-left"
+        >
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-2xl bg-white/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <LineChart className="w-6 h-6" strokeWidth={2.5} />
             </div>
-
-            <div className="h-[360px] sm:h-[400px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
-                  <defs>
-                    <linearGradient id="colorOil" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} tick={{ fontWeight: 800 }} />
-                  <YAxis
-                    stroke="#52525b"
-                    fontSize={10}
-                    tickLine={false}
-                    axisLine={false}
-                    domain={['auto', 'auto']}
-                    tickFormatter={(v) => tableCurrency === 'PKR' ? `Rs.${(v / 1000).toFixed(1)}k` : `$${v}`}
-                    tick={{ fontWeight: 800 }}
-                  />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '24px', color: '#fff', padding: '16px' }}
-                    itemStyle={{ fontWeight: 900, textTransform: 'uppercase', fontSize: '10px' }}
-                    labelStyle={{ fontWeight: 900, marginBottom: '8px', color: '#71717a' }}
-                    formatter={(v: any) => [tableCurrency === 'PKR' ? `Rs. ${Number(v).toLocaleString()}` : `$${Number(v).toLocaleString()}`, 'Execution Price']}
-                  />
-                  <Area type="monotone" dataKey="price" stroke="#3b82f6" fillOpacity={1} fill="url(#colorOil)" strokeWidth={4} animationDuration={1500} />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-2xl font-black uppercase italic tracking-tighter leading-none">Graph Analysis</h2>
+              <p className="text-blue-100/80 text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1.5">Interactive candlestick · momentum · performance matrix</p>
             </div>
           </div>
+          <span className="text-2xl sm:text-3xl font-black shrink-0 group-hover:translate-x-1 transition-transform">→</span>
+        </button>
 
-          {/* Market Stats Sidebar */}
-          <div className="space-y-8">
+        {/* Market Intelligence & Price Alerts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12 items-start">
             {/* Real market intelligence */}
             <div className="bg-zinc-900 text-white rounded-2xl sm:rounded-[3rem] p-5 sm:p-10 relative overflow-hidden border border-white/5">
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/20 to-transparent pointer-events-none"></div>
@@ -663,66 +525,6 @@ export default function OilPage() {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Cross-Market Performance Comparison — a view you can't get on a single detail page */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3rem] shadow-sm p-5 sm:p-10 border border-zinc-200 dark:border-zinc-800">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-            <div>
-              <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter">Performance Matrix</h2>
-              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Every energy contract, ranked head-to-head</p>
-            </div>
-            <div className="flex bg-zinc-100 dark:bg-zinc-800/50 rounded-xl p-1 w-full md:w-auto">
-              {COMPARE_METRICS.map((m) => (
-                <button
-                  key={m.key}
-                  onClick={() => setCompareMetric(m.key)}
-                  className={`flex-1 md:flex-none px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-black rounded-lg transition-all uppercase tracking-widest ${compareMetric === m.key ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            {comparison.rows.map((row) => {
-              const pos = row.value >= 0;
-              const widthPct = (Math.abs(row.value) / comparison.maxAbs) * 50; // half-width max (diverging)
-              return (
-                <button
-                  key={row.key}
-                  onClick={() => router.push(`/oil/${row.key}`)}
-                  className="w-full group flex items-center gap-2 sm:gap-4 text-left"
-                >
-                  <span className="w-24 sm:w-40 shrink-0 text-[10px] sm:text-xs font-black uppercase italic tracking-tight text-zinc-700 dark:text-zinc-300 group-hover:text-blue-500 transition-colors truncate">
-                    {row.name}
-                  </span>
-                  {/* Diverging bar around a centre baseline */}
-                  <div className="flex-1 flex items-center h-6 relative">
-                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-zinc-200 dark:bg-zinc-700" />
-                    <div className="w-1/2 flex justify-end">
-                      {!pos && (
-                        <div className="h-3 sm:h-3.5 rounded-l-md bg-gradient-to-l from-red-500 to-red-500/60" style={{ width: `${widthPct * 2}%` }} />
-                      )}
-                    </div>
-                    <div className="w-1/2 flex justify-start">
-                      {pos && (
-                        <div className="h-3 sm:h-3.5 rounded-r-md bg-gradient-to-r from-green-500 to-green-500/60" style={{ width: `${widthPct * 2}%` }} />
-                      )}
-                    </div>
-                  </div>
-                  <span className={`w-14 sm:w-20 shrink-0 text-right text-[10px] sm:text-sm font-black font-mono tabular-nums ${pos ? 'text-green-500' : 'text-red-500'}`}>
-                    {pos ? '+' : ''}{row.value.toFixed(2)}%
-                  </span>
-                </button>
-              );
-            })}
-            {comparison.rows.length === 0 && (
-              <p className="py-10 text-center text-zinc-400 font-black uppercase tracking-widest text-[11px]">No comparison data available</p>
-            )}
-          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-# All-in-One Dashboard Project
+# SoloTrackr Dashboard Project
 
 This repository houses a comprehensive real-time dashboard built with Next.js 13+ (App Router) that aggregates market data across multiple asset classes and exchanges.
 

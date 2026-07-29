@@ -65,7 +65,8 @@ export default function NasdaqPage() {
     const { settings } = useSettings();
     const { success, error } = useToast();
     const router = useRouter();
-    const displayCurrency = settings.currency as 'USD' | 'PKR';
+    // NASDAQ is a USD market — prices here are always quoted in USD and never
+    // follow the display-currency setting, so this screen has no toggle.
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -305,12 +306,12 @@ export default function NasdaqPage() {
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
             {/* Real-time Loading Indicator */}
             {loading && (
-                <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-blue-600/10">
+                <div className="fixed top-[var(--sa-top)] left-0 w-full h-1 z-[100] bg-blue-600/10">
                     <div className="h-full bg-blue-600 animate-[loading_2s_infinite]"></div>
                 </div>
             )}
 
-            <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+            <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center">
                     <div>
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white flex items-center gap-2.5">
@@ -520,12 +521,12 @@ export default function NasdaqPage() {
                                     <StockCard
                                         key={stock.symbol}
                                         {...stock}
-                                        currentPrice={displayCurrency === 'USD' ? stock.currentPrice : (stock.pkrPrice || stock.currentPrice * exchangeRate)}
-                                        change={displayCurrency === 'USD' ? stock.change : (stock.change * exchangeRate)}
-                                        open={displayCurrency === 'USD' ? stock.open : (stock.open * exchangeRate)}
-                                        high={displayCurrency === 'USD' ? stock.high : (stock.high * exchangeRate)}
-                                        low={displayCurrency === 'USD' ? stock.low : (stock.low * exchangeRate)}
-                                        currencySymbol={displayCurrency === 'USD' ? '$' : 'Rs.'}
+                                        currentPrice={stock.currentPrice}
+                                        change={stock.change}
+                                        open={stock.open}
+                                        high={stock.high}
+                                        low={stock.low}
+                                        currencySymbol="$"
                                         exchange="NASDAQ"
                                         onClick={() => router.push(`/nasdaq/${stock.symbol.toLowerCase()}`)}
                                         watchlists={watchlists}
@@ -602,8 +603,7 @@ export default function NasdaqPage() {
                                                 </td>
                                                 <td className="p-3 sm:p-8 font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-xs hidden sm:table-cell">{stock.name}</td>
                                                 <td className="p-3 sm:p-8 font-mono font-black text-right text-sm">
-                                                    {displayCurrency === 'USD' ? '$' : 'Rs.'}
-                                                    {(displayCurrency === 'USD' ? stock.currentPrice : (stock.pkrPrice || stock.currentPrice * exchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    ${stock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </td>
                                                 <td className="p-3 sm:p-8 text-right">
                                                     <span className={`px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-xl font-black ${stock.changePercent >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-600'}`}>

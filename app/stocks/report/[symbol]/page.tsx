@@ -662,7 +662,7 @@ function ReportContent({ symbol }: { symbol: string }) {
             <div className="min-h-screen bg-zinc-50 dark:bg-[#0a0a0a] text-zinc-900 dark:text-white">
 
                 {/* ── Action bar ── */}
-                <div className="no-print sticky top-0 z-50 bg-white/90 dark:bg-black/90 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 flex items-center justify-between gap-3">
+                <div className="no-print sticky top-0 z-50 bg-white/90 dark:bg-black/90 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 pt-[calc(0.75rem_+_var(--sa-top))] flex items-center justify-between gap-3">
                     <button
                         onClick={goBack}
                         title={back ? `Back to ${back.label}` : "Go back"}

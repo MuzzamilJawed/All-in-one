@@ -1,4 +1,4 @@
-All-in-One Dashboard
+SoloTrackr Dashboard
 
 This project is a Next.js application providing live market data for:
 - PSX (Pakistan Stock Exchange) stocks via scraping

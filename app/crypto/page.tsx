@@ -6,6 +6,9 @@ import PageSkeleton from "../components/PageSkeleton";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSettings } from "../context/SettingsContext";
+import { useCurrency } from "../context/CurrencyContext";
+import CurrencyToggle from "../components/CurrencyToggle";
+import { rateOf } from "../lib/currency";
 import { computePivotLevels, nextLevels } from "../lib/levels";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
@@ -22,8 +25,8 @@ export default function CryptoPage() {
     const [trendData, setTrendData] = useState<any[]>([]);   // raw USD candles
     const [chartLoading, setChartLoading] = useState(false);
     const [chartTF, setChartTF] = useState("1W");
-    const { settings, updateSettings } = useSettings();
-    const displayCurrency = settings.currency as 'USD' | 'PKR';
+    const { settings } = useSettings();
+    const { currency: displayCurrency, sym, rates, conv } = useCurrency();
 
     const pageRef = useRef(1);
     const hasMoreRef = useRef(true);
@@ -112,10 +115,11 @@ export default function CryptoPage() {
         return () => { cancelled = true; };
     }, [selectedCoin?.id, chartTF]);
 
-    // USD -> display-currency factor for the selected coin
-    const fx = selectedCoin?.usdPrice ? (selectedCoin.pkrPrice / selectedCoin.usdPrice) : 1;
-    const inDisplay = (usd: number) => displayCurrency === 'PKR' ? usd * fx : usd;
-    const sym = displayCurrency === 'USD' ? '$' : 'Rs.';
+    // USD -> display-currency factor. PKR uses the feed's own implied rate so it
+    // matches the pkrPrice the API returns; every other currency uses live FX.
+    const impliedPkr = selectedCoin?.usdPrice ? (selectedCoin.pkrPrice / selectedCoin.usdPrice) : rateOf(rates, 'PKR');
+    const fx = displayCurrency === 'USD' ? 1 : displayCurrency === 'PKR' ? impliedPkr : rateOf(rates, displayCurrency);
+    const inDisplay = (usd: number) => usd * fx;
     const fmtLevel = (usd: number | null | undefined) =>
         usd == null ? '—' : `${sym}${inDisplay(usd).toLocaleString(undefined, { maximumFractionDigits: inDisplay(usd) > 1 ? 2 : 6 })}`;
     // Compact form for the tight 7-column pivot ladder (e.g. Rs.18.33M, $65.9K)
@@ -134,9 +138,9 @@ export default function CryptoPage() {
 
     // Candles converted to display currency + S/R price lines in the same units
     const displayTrend = useMemo(() => {
-        if (displayCurrency !== 'PKR') return trendData;
+        if (fx === 1) return trendData;
         return trendData.map((c: any) => ({ ...c, open: c.open * fx, high: c.high * fx, low: c.low * fx, close: c.close * fx }));
-    }, [trendData, displayCurrency, fx]);
+    }, [trendData, fx]);
 
     const priceLines = useMemo(() => {
         const lines: { price: number; color: string; title: string }[] = [];
@@ -166,7 +170,7 @@ export default function CryptoPage() {
             </div>
 
             {/* Sticky Header */}
-            <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+            <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2">
@@ -175,6 +179,7 @@ export default function CryptoPage() {
                         </h1>
                         <p className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">Global Digital Asset Pulse</p>
                     </div>
+                    <CurrencyToggle />
                 </div>
             </header>
 
@@ -205,7 +210,7 @@ export default function CryptoPage() {
                                     </span>
                                 </div>
                                 <div className="text-lg sm:text-2xl font-mono font-black text-zinc-900 dark:text-white tracking-tighter italic">
-                                    {displayCurrency === 'USD' ? '$' : 'Rs.'}{(displayCurrency === 'USD' ? (coin.usdPrice ?? 0) : (coin.pkrPrice ?? 0)).toLocaleString(undefined, { maximumFractionDigits: (coin.usdPrice ?? 0) > 1 ? 2 : 4 })}
+                                    {sym}{(conv(coin.usdPrice, coin.pkrPrice) ?? 0).toLocaleString(undefined, { maximumFractionDigits: (coin.usdPrice ?? 0) > 1 ? 2 : 4 })}
                                 </div>
                                 <div className="text-[10px] sm:text-xs font-black text-zinc-500 uppercase tracking-widest mt-1 sm:mt-2 truncate">{coin.name}</div>
                             </div>
@@ -222,7 +227,7 @@ export default function CryptoPage() {
                                 </h2>
                                 <div className="flex flex-wrap items-center gap-4 mt-2">
                                     <span className="text-xl sm:text-4xl font-mono font-black text-zinc-900 dark:text-white tracking-tighter italic">
-                                        {displayCurrency === 'USD' ? '$' : 'Rs.'}{(displayCurrency === 'USD' ? selectedCoin?.usdPrice : selectedCoin?.pkrPrice)?.toLocaleString()}
+                                        {sym}{conv(selectedCoin?.usdPrice, selectedCoin?.pkrPrice)?.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                     </span>
                                     <span className={`text-xs sm:text-base font-black ${selectedCoin?.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                         {selectedCoin?.changePercent >= 0 ? '▲' : '▼'} {Math.abs(selectedCoin?.changePercent || 0).toFixed(2)}%
@@ -259,7 +264,7 @@ export default function CryptoPage() {
                                     data={displayTrend}
                                     currentTimeframe={chartTF}
                                     onTimeframeChange={setChartTF}
-                                    currencySymbol={displayCurrency === 'PKR' ? 'Rs.' : '$'}
+                                    currencySymbol={sym}
                                     priceLines={priceLines}
                                     seamless
                                 />
@@ -313,7 +318,7 @@ export default function CryptoPage() {
                                     </div>
                                     <div className="text-right shrink-0">
                                         <div className="font-mono font-black text-zinc-900 dark:text-white text-xs sm:text-sm tracking-tighter tabular-nums">
-                                            {displayCurrency === 'USD' ? '$' : 'Rs.'}{(displayCurrency === 'USD' ? (coin.usdPrice ?? 0) : (coin.pkrPrice ?? 0)).toLocaleString(undefined, { maximumFractionDigits: (coin.usdPrice ?? 0) > 1 ? 2 : 4 })}
+                                            {sym}{(conv(coin.usdPrice, coin.pkrPrice) ?? 0).toLocaleString(undefined, { maximumFractionDigits: (coin.usdPrice ?? 0) > 1 ? 2 : 4 })}
                                         </div>
                                         <div className={`text-[10px] sm:text-xs font-black ${coin.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                             {coin.changePercent >= 0 ? '+' : ''}{(coin.changePercent ?? 0).toFixed(1)}%

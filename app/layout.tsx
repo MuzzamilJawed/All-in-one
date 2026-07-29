@@ -4,8 +4,10 @@ import "./globals.css";
 import AppShell from "./components/AppShell";
 import CommandPalette from "./components/CommandPalette";
 import Splash from "./components/Splash";
+import SafeArea from "./components/SafeArea";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SettingsProvider } from "./context/SettingsContext";
+import { CurrencyProvider } from "./context/CurrencyContext";
 import { SidebarProvider } from "./context/SidebarContext";
 import { ToastProvider } from "./context/ToastContext";
 
@@ -61,20 +63,23 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-50 dark:bg-black`}
       >
         <SettingsProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <SidebarProvider>
-              <ToastProvider>
-                <AppShell>{children}</AppShell>
-                <CommandPalette />
-                <Splash />
-              </ToastProvider>
-            </SidebarProvider>
-          </ThemeProvider>
+          <CurrencyProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <SidebarProvider>
+                <ToastProvider>
+                  <SafeArea />
+                  <AppShell>{children}</AppShell>
+                  <CommandPalette />
+                  <Splash />
+                </ToastProvider>
+              </SidebarProvider>
+            </ThemeProvider>
+          </CurrencyProvider>
         </SettingsProvider>
       </body>
     </html>

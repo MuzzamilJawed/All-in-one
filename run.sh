@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# All-in-One Dashboard - Setup & Run Script
+# SoloTrackr Dashboard - Setup & Run Script
 
 echo "======================================"
-echo "All-in-One Dashboard"
+echo "SoloTrackr Dashboard"
 echo "Your centralized tracking hub"
 echo "======================================"
 echo ""

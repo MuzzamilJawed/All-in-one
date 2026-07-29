@@ -7,6 +7,9 @@ import MetalStatCard from "../components/MetalStatCard";
 import PageSkeleton from "../components/PageSkeleton";
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "../context/SettingsContext";
+import { useCurrency } from "../context/CurrencyContext";
+import CurrencyToggle from "../components/CurrencyToggle";
+import { rateOf } from "../lib/currency";
 // Use internal API routes to avoid CORS and run scraping/server code server-side
 
 export default function MetalsPage() {
@@ -38,8 +41,8 @@ export default function MetalsPage() {
   const [goldChartTF, setGoldChartTF] = useState("1D");
   const [silverChartTF, setSilverChartTF] = useState("1D");
 
-  const { settings, updateSettings } = useSettings();
-  const tableCurrency = settings.currency as 'USD' | 'PKR';
+  const { settings } = useSettings();
+  const { currency: tableCurrency, sym, rates: fxRates, conv, convertFrom } = useCurrency();
   const [detailedRates, setDetailedRates] = useState<any[]>([]);
   const [rawMarketData, setRawMarketData] = useState<any>(null);
   const [purityUnit, setPurityUnit] = useState('Tola'); // 'Tola' | 'Gram' | 'Ounce' | 'Kg'
@@ -166,26 +169,29 @@ export default function MetalsPage() {
       const gOunce = gold.ounce24k;
       const sOunce = silver.ounce;
 
-      // Calculate implied exchange rate for conversion
+      // Implied USD→PKR rate from the feed; other currencies use live FX.
       const exchangeRate = (gOunce.pkrPrice && gOunce.usdPrice)
         ? gOunce.pkrPrice / gOunce.usdPrice
-        : 280;
+        : rateOf(fxRates, 'PKR');
+      const factor = tableCurrency === 'USD' ? 1
+        : tableCurrency === 'PKR' ? exchangeRate
+        : rateOf(fxRates, tableCurrency);
 
       const getPrice = (usdPrice: number) => {
         if (!usdPrice) return undefined;
-        return tableCurrency === 'PKR' ? usdPrice * exchangeRate : usdPrice;
+        return usdPrice * factor;
       };
 
       const getChange = (usdChange: number) => {
         if (!usdChange) return 0;
-        return tableCurrency === 'PKR' ? usdChange * exchangeRate : usdChange;
+        return usdChange * factor;
       };
 
       const rates = [
         {
           name: 'Gold',
-          priceOunce: tableCurrency === 'PKR' ? gOunce.pkrPrice : gOunce.usdPrice,
-          priceTola: tableCurrency === 'PKR' ? gOunce.pkrPrice * 0.375 : gOunce.usdPrice * 0.375,
+          priceOunce: conv(gOunce.usdPrice, gOunce.pkrPrice),
+          priceTola: (conv(gOunce.usdPrice, gOunce.pkrPrice) ?? 0) * 0.375,
           change: getChange(gOunce.change),
           changePercent: gOunce.changePercent || 0,
           weeklyPercent: commodities?.gold?.weekly,
@@ -195,8 +201,8 @@ export default function MetalsPage() {
         },
         {
           name: 'Silver',
-          priceOunce: tableCurrency === 'PKR' ? sOunce.pkrPrice : sOunce.usdPrice,
-          priceTola: tableCurrency === 'PKR' ? sOunce.pkrPrice * 0.375 : sOunce.usdPrice * 0.375,
+          priceOunce: conv(sOunce.usdPrice, sOunce.pkrPrice),
+          priceTola: (conv(sOunce.usdPrice, sOunce.pkrPrice) ?? 0) * 0.375,
           change: getChange(sOunce.change),
           changePercent: sOunce.changePercent || 0,
           weeklyPercent: commodities?.silver?.weekly,
@@ -206,8 +212,8 @@ export default function MetalsPage() {
         },
         {
           name: 'Platinum',
-          priceOunce: tableCurrency === 'PKR' ? platinum?.ounce?.pkrPrice : platinum?.ounce?.usdPrice,
-          priceTola: tableCurrency === 'PKR' ? (platinum?.ounce?.pkrPrice || 0) * 0.375 : (platinum?.ounce?.usdPrice || 0) * 0.375,
+          priceOunce: conv(platinum?.ounce?.usdPrice, platinum?.ounce?.pkrPrice),
+          priceTola: (conv(platinum?.ounce?.usdPrice, platinum?.ounce?.pkrPrice) ?? 0) * 0.375,
           change: getChange(platinum?.ounce?.change),
           changePercent: platinum?.ounce?.changePercent || 0,
           weeklyPercent: commodities?.platinum?.weekly,
@@ -217,8 +223,8 @@ export default function MetalsPage() {
         },
         {
           name: 'Palladium',
-          priceOunce: tableCurrency === 'PKR' ? palladium?.ounce?.pkrPrice : palladium?.ounce?.usdPrice,
-          priceTola: tableCurrency === 'PKR' ? (palladium?.ounce?.pkrPrice || 0) * 0.375 : (palladium?.ounce?.usdPrice || 0) * 0.375,
+          priceOunce: conv(palladium?.ounce?.usdPrice, palladium?.ounce?.pkrPrice),
+          priceTola: (conv(palladium?.ounce?.usdPrice, palladium?.ounce?.pkrPrice) ?? 0) * 0.375,
           change: getChange(palladium?.ounce?.change),
           changePercent: palladium?.ounce?.changePercent || 0,
           weeklyPercent: commodities?.palladium?.weekly,
@@ -371,12 +377,11 @@ export default function MetalsPage() {
   useEffect(() => {
     const gold = rawMarketData?.gold;
     const silver = rawMarketData?.silver;
-    const isPkr = tableCurrency === 'PKR';
 
-    // Implied USD→PKR rate from the live gold ounce quote (falls back to ~280).
+    // Implied USD→PKR rate from the live gold ounce quote (falls back to live FX).
     const fx = (gold?.ounce24k?.pkrPrice && gold?.ounce24k?.usdPrice)
       ? gold.ounce24k.pkrPrice / gold.ounce24k.usdPrice
-      : 280;
+      : rateOf(fxRates, 'PKR');
 
     const scaleCandles = (raw: any, anchorDisplay?: number) => {
       if (!raw?.data?.length) return [];
@@ -394,8 +399,8 @@ export default function MetalsPage() {
     };
 
     // Gold chart is quoted per tola; silver per ounce (matches the spot cards).
-    const goldAnchor = isPkr ? gold?.tola24k?.pkrPrice : gold?.tola24k?.usdPrice;
-    const silverAnchor = isPkr ? silver?.ounce?.pkrPrice : silver?.ounce?.usdPrice;
+    const goldAnchor = conv(gold?.tola24k?.usdPrice, gold?.tola24k?.pkrPrice) ?? undefined;
+    const silverAnchor = conv(silver?.ounce?.usdPrice, silver?.ounce?.pkrPrice) ?? undefined;
     setGoldCandles(scaleCandles(goldRaw, goldAnchor));
     setSilverCandles(scaleCandles(silverRaw, silverAnchor));
 
@@ -414,14 +419,13 @@ export default function MetalsPage() {
 
   // Live per-ounce spot for a metal in the active currency.
   const getMetalOunce = (metal: string) => {
-    const isPkr = tableCurrency === 'PKR';
     const src =
       metal === 'gold' ? rawMarketData?.gold?.ounce24k :
       metal === 'silver' ? rawMarketData?.silver?.ounce :
       metal === 'platinum' ? rawMarketData?.platinum?.ounce :
       metal === 'palladium' ? rawMarketData?.palladium?.ounce : null;
     if (!src) return 0;
-    return (isPkr ? src.pkrPrice : src.usdPrice) || 0;
+    return conv(src.usdPrice, src.pkrPrice) || 0;
   };
 
   // Base price per selected weight unit (before purity/quantity).
@@ -435,6 +439,22 @@ export default function MetalsPage() {
     return oz;
   };
 
+  // Calculator output: spot × purity × quantity, in the active currency.
+  const calcTotal = () => {
+    const basePrice = getMetalBasePrice(calcMetal, calcUnit);
+    // Purity grade only reduces value for gold; other metals are quoted at spot.
+    const purityRatio = calcMetal === 'gold' ? (parseInt(calcPurity) || 24) / 24 : 1;
+    return basePrice * purityRatio * calcQuantity;
+  };
+
+  // The headline can run to millions (PKR, high quantities) — step the type down
+  // as it grows so it never overflows the card and gets clipped.
+  const headlineSize = (text: string) =>
+    text.length <= 7 ? 'text-3xl sm:text-5xl'
+      : text.length <= 10 ? 'text-2xl sm:text-4xl'
+        : text.length <= 13 ? 'text-xl sm:text-3xl'
+          : 'text-lg sm:text-2xl';
+
   const CALC_METALS = [
     { key: 'gold', label: 'Gold (24K)', icon: Award, active: 'bg-amber-500/10 border-amber-500 text-amber-600' },
     { key: 'silver', label: 'Silver (999)', icon: Circle, active: 'bg-zinc-500/10 border-zinc-500 text-zinc-600' },
@@ -446,7 +466,7 @@ export default function MetalsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
+      <div className="safe-top sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
         <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 max-w-[1600px] mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
             <div>
@@ -462,12 +482,7 @@ export default function MetalsPage() {
               </p>
             </div>
 
-            {/* <div className="flex w-full sm:w-auto items-center gap-3">
-              <div className="flex flex-1 sm:flex-none bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700">
-                <button onClick={() => updateSettings({ currency: 'PKR' })} className={`flex-1 sm:flex-none px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${tableCurrency === 'PKR' ? 'bg-white dark:bg-zinc-700 shadow text-green-600 dark:text-green-400' : 'text-zinc-500 hover:text-zinc-900'}`}>PKR</button>
-                <button onClick={() => updateSettings({ currency: 'USD' })} className={`flex-1 sm:flex-none px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${tableCurrency === 'USD' ? 'bg-white dark:bg-zinc-700 shadow text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900'}`}>USD</button>
-              </div>
-            </div> */}
+            <CurrencyToggle className="w-full sm:w-auto" />
           </div>
         </div>
       </div>
@@ -482,11 +497,11 @@ export default function MetalsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 items-stretch mb-6">
           {metalPrices
             .map((metal) => (
-              <PriceCard key={metal.title} {...metal} currency={tableCurrency} />
+              <PriceCard key={metal.title} {...metal} />
             ))}
         </div>
 
-        {/* 52-week range + price-target alerts (always in PKR) */}
+        {/* 52-week range + price-target alerts (sourced in PKR, shown in the active currency) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
           <MetalStatCard
             metal="GOLD"
@@ -499,6 +514,7 @@ export default function MetalsPage() {
             low52={gold52w.low}
             high52={gold52w.high}
             accent="from-amber-500 to-yellow-600"
+            pkrPerUsd={rawMarketData?.gold?.ounce24k?.usdPrice ? rawMarketData.gold.ounce24k.pkrPrice / rawMarketData.gold.ounce24k.usdPrice : undefined}
           />
           <MetalStatCard
             metal="SILVER"
@@ -511,6 +527,7 @@ export default function MetalsPage() {
             low52={silver52w.low}
             high52={silver52w.high}
             accent="from-zinc-500 to-zinc-700"
+            pkrPerUsd={rawMarketData?.gold?.ounce24k?.usdPrice ? rawMarketData.gold.ounce24k.pkrPrice / rawMarketData.gold.ounce24k.usdPrice : undefined}
           />
         </div>
 
@@ -619,42 +636,45 @@ export default function MetalsPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col justify-center items-center bg-blue-600 rounded-[2.5rem] p-6 sm:p-12 text-white shadow-2xl shadow-blue-500/20 relative group overflow-hidden">
+                  <div className="flex flex-col justify-center items-center bg-blue-600 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-2xl shadow-blue-500/20 relative group overflow-hidden">
                     {/* Animated background pulse */}
                     <div className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors pointer-events-none" />
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
-                    <div className="relative z-10 text-center space-y-8 w-full">
+                    <div className="relative z-10 text-center space-y-8 w-full min-w-0">
                       <p className="text-[12px] font-black uppercase tracking-[0.4em] text-blue-100/60">Estimated Market Value</p>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-center gap-4">
-                          <span className="text-2xl sm:text-4xl font-medium text-blue-200 lowercase">{tableCurrency === 'PKR' ? 'Rs.' : '$'}</span>
-                          <span className="text-4xl sm:text-7xl font-black tracking-tighter font-mono break-words">
-                            {(() => {
-                              const basePrice = getMetalBasePrice(calcMetal, calcUnit);
-                              // Purity grade only reduces value for gold; other metals are quoted at spot.
-                              const purityRatio = calcMetal === 'gold' ? (parseInt(calcPurity) || 24) / 24 : 1;
-                              return (basePrice * purityRatio * calcQuantity).toLocaleString(undefined, { maximumFractionDigits: 0 });
-                            })()}
-                          </span>
-                        </div>
+                      <div className="space-y-2 min-w-0">
+                        {(() => {
+                          const text = calcTotal().toLocaleString(undefined, { maximumFractionDigits: 0 });
+                          return (
+                            <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 min-w-0 w-full">
+                              <span className="text-xl sm:text-3xl font-medium text-blue-200 lowercase shrink-0">{sym}</span>
+                              <span
+                                title={`${sym}${text}`}
+                                className={`${headlineSize(text)} font-black tracking-tighter font-mono tabular-nums leading-none min-w-0`}
+                              >
+                                {text}
+                              </span>
+                            </div>
+                          );
+                        })()}
                         <p className="text-blue-100/40 text-[10px] font-black uppercase tracking-widest">
                           Calculated at {new Date().toLocaleTimeString()}
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 pt-8 border-t border-white/10">
-                        <div className="space-y-1">
+                      <div className="grid grid-cols-2 gap-4 pt-8 border-t border-white/10 min-w-0">
+                        <div className="space-y-1 min-w-0">
                           <p className="text-[10px] font-black text-blue-200/50 uppercase">Current Bid / Tola</p>
-                          <p className="font-bold text-lg">
-                            {tableCurrency === 'PKR' ? 'Rs.' : '$'}
+                          <p className="font-bold text-sm sm:text-base font-mono tabular-nums break-all">
+                            {sym}
                             {getMetalBasePrice(calcMetal, 'Tola').toLocaleString(undefined, { maximumFractionDigits: 2 })}
                           </p>
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-1 min-w-0">
                           <p className="text-[10px] font-black text-blue-200/50 uppercase">Base Spread</p>
-                          <p className="font-bold text-lg">0.05% Fixed</p>
+                          <p className="font-bold text-sm sm:text-base">0.05% Fixed</p>
                         </div>
                       </div>
                     </div>
@@ -694,8 +714,8 @@ export default function MetalsPage() {
                   <tr key={item.name} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                     <td className="p-2 sm:p-4 text-[10px] text-zinc-500 whitespace-nowrap hidden md:table-cell">{new Date().toLocaleString()}</td>
                     <td className="p-2 sm:p-4 font-bold text-zinc-900 dark:text-zinc-50 whitespace-nowrap">{item.name}</td>
-                    <td className="p-2 sm:p-4 text-right font-mono font-medium whitespace-nowrap hidden sm:table-cell">{item.priceOunce ? (tableCurrency === 'PKR' ? 'Rs. ' : '$') + item.priceOunce.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'}</td>
-                    <td className="p-2 sm:p-4 text-right font-mono font-medium whitespace-nowrap">{item.priceTola ? (tableCurrency === 'PKR' ? 'Rs. ' : '$') + item.priceTola.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'}</td>
+                    <td className="p-2 sm:p-4 text-right font-mono font-medium whitespace-nowrap hidden sm:table-cell">{item.priceOunce ? sym + item.priceOunce.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'}</td>
+                    <td className="p-2 sm:p-4 text-right font-mono font-medium whitespace-nowrap">{item.priceTola ? sym + item.priceTola.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'}</td>
                     <td className="p-2 sm:p-4 text-center">
                       <span className={`text-xs font-bold ${(item.changePercent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>{item.changePercent ? (item.changePercent > 0 ? '+' : '') + item.changePercent + '%' : '-'}</span>
                     </td>
@@ -766,8 +786,9 @@ export default function MetalsPage() {
                           if (purityUnit === "Gram") factor = 1 / 11.6638;
                           if (purityUnit === "Ounce") factor = 1 / 0.375;
                           if (purityUnit === "Kg") factor = 1000 / 11.6638;
-                          const displayPrice = tableCurrency === 'PKR' ? item.pkr * factor : item.usd * factor;
-                          const displayChange = item.change * factor;
+                          const displayPrice = (conv(item.usd, item.pkr) ?? 0) * factor;
+                          // The gold feed quotes `change` in PKR.
+                          const displayChange = (convertFrom(item.change, 'PKR') ?? 0) * factor;
                           return (
                             <tr key={item.carat} className="bg-zinc-50 dark:bg-white/[0.02] hover:bg-zinc-100 dark:hover:bg-white/5 transition-all group">
                               <td className="py-3 px-3 sm:px-4 first:rounded-l-2xl text-[10px] font-mono text-zinc-500 border-y border-l border-transparent dark:border-white/5 hidden sm:table-cell">{new Date().toLocaleTimeString()}</td>
@@ -777,7 +798,7 @@ export default function MetalsPage() {
                               </td>
                               <td className="py-3 px-3 sm:px-4 font-bold text-zinc-400 border-y border-transparent dark:border-white/5 hidden sm:table-cell">{item.purity}% Pure</td>
                               <td className="py-3 px-3 sm:px-4 font-mono font-black text-zinc-900 dark:text-zinc-50 text-right text-base border-y border-transparent dark:border-white/5">
-                                {tableCurrency === 'PKR' ? 'Rs.' : '$'} {displayPrice.toLocaleString(undefined, { maximumFractionDigits: purityUnit === 'Tola' || purityUnit === 'Kg' ? 0 : 2 })}
+                                {sym} {displayPrice.toLocaleString(undefined, { maximumFractionDigits: purityUnit === 'Tola' || purityUnit === 'Kg' ? 0 : 2 })}
                               </td>
                               <td className={`py-3 px-3 sm:px-4 last:rounded-r-2xl font-black text-right border-y border-r border-transparent dark:border-white/5 ${displayChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                 {displayChange >= 0 ? '+' : ''}{displayChange.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -790,7 +811,7 @@ export default function MetalsPage() {
                   </div>
 
                   <div className="mt-10 p-6 bg-amber-500/5 rounded-[2rem] border border-amber-500/10">
-                    <p className="text-[10px] text-amber-500/70 font-black uppercase tracking-widest text-center">Calculations based on 24K Gold Reference of {tableCurrency === 'PKR' ? 'Rs.' : '$'}{(tableCurrency === 'PKR' ? caratPrices[0]?.pkr : caratPrices[0]?.usd)?.toLocaleString()} per Tola</p>
+                    <p className="text-[10px] text-amber-500/70 font-black uppercase tracking-widest text-center">Calculations based on 24K Gold Reference of {sym}{conv(caratPrices[0]?.usd, caratPrices[0]?.pkr)?.toLocaleString(undefined, { maximumFractionDigits: 2 })} per Tola</p>
                   </div>
                 </div>
               </div>

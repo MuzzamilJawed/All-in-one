@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { useSettings } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
 import { MODULES, DEFAULT_MODULES, isModuleEnabled } from "../lib/modules";
+import { CURRENCIES, DEFAULT_CURRENCIES, DEFAULT_CURRENCY, normalizeCurrencies } from "../lib/currency";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -37,7 +38,8 @@ export default function SettingsPage() {
 
   const handleReset = () => {
     updateSettings({
-      currency: 'PKR',
+      currency: DEFAULT_CURRENCY,
+      currencies: [...DEFAULT_CURRENCIES],
       refreshInterval: 30,
       notifications: true,
       soundAlerts: false,
@@ -48,6 +50,23 @@ export default function SettingsPage() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
     info("Settings restored to defaults");
+  };
+
+  // Enabled display currencies. Turning one off can't leave the list empty, and
+  // the default currency always follows the list.
+  const enabledCurrencies = normalizeCurrencies(settings.currencies, settings.currency);
+  const toggleCurrency = (code: string) => {
+    const on = enabledCurrencies.includes(code);
+    if (on && enabledCurrencies.length === 1) {
+      info("Keep at least one display currency");
+      return;
+    }
+    const next = normalizeCurrencies(
+      on ? enabledCurrencies.filter(c => c !== code) : [...enabledCurrencies, code],
+      "",
+    );
+    // The default must stay part of the selection.
+    updateSettings({ currencies: next, currency: next.includes(settings.currency) ? settings.currency : next[0] });
   };
 
   const toggleModule = (key: string) => {
@@ -67,7 +86,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+      <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
         <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
           <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
             <Settings className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Configuration <span className="text-blue-500 text-xl sm:text-2xl">Hub</span>
@@ -90,15 +109,46 @@ export default function SettingsPage() {
                 <p className="text-zinc-500 text-xs font-bold mt-0.5">Visual preferences for the dashboard</p>
               </div>
               <div className="p-5 sm:p-8 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <label className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">Display Currencies</label>
+                  <p className="text-xs text-zinc-500 mt-0.5 mb-4">
+                    Pick every currency you want available. Select more than one and screens get a currency toggle; with just one, that currency always displays.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {CURRENCIES.map(({ code, name, symbol }) => {
+                      const on = enabledCurrencies.includes(code);
+                      return (
+                        <button
+                          key={code}
+                          onClick={() => toggleCurrency(code)}
+                          aria-pressed={on}
+                          title={name}
+                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${on
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200'}`}
+                        >
+                          {code} <span className="opacity-60 font-bold normal-case">{symbol.trim()}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-zinc-400 font-bold mt-3 leading-relaxed">
+                    PSX stocks always display in PKR and NASDAQ stocks always in USD — those markets are never converted.
+                    Forex, oil, metals, crypto, portfolio, watchlist and the dashboard follow your selection.
+                  </p>
+                </div>
+
+                <div className="border-t border-zinc-100 dark:border-white/5 pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <label className="text-sm font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">Default Currency</label>
-                    <p className="text-xs text-zinc-500 mt-0.5">Prices display in this currency</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Screens open in this currency</p>
                   </div>
                   <select value={settings.currency} onChange={(e) => handleChange("currency", e.target.value)} className={selectClass}>
-                    <option value="PKR">PKR — Pakistani Rupee</option>
-                    <option value="USD">USD — US Dollar</option>
-                    <option value="EUR">EUR — Euro</option>
+                    {enabledCurrencies.map(code => (
+                      <option key={code} value={code}>
+                        {code} — {CURRENCIES.find(c => c.code === code)?.name ?? code}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

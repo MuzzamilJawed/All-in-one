@@ -1,4 +1,4 @@
-# All-in-One Dashboard 📊
+# SoloTrackr Dashboard 📊
 
 A centralized dashboard application to manage and monitor all your daily information in one place - including gold & silver prices, PSX stocks, and a personal watchlist.
 

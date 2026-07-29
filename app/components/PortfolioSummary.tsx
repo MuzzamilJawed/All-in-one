@@ -2,15 +2,15 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Briefcase, PieChart } from "lucide-react";
-import { useSettings } from "../context/SettingsContext";
+import { useCurrency } from "../context/CurrencyContext";
+import { convertAmount, currencySymbol } from "../lib/currency";
 import { getTxns, computeHoldings, type Txn } from "../lib/portfolio";
-import { fetchAllPrices, priceKey, priceIn, convert, curSymbol, type PriceBook } from "../lib/prices";
+import { fetchAllPrices, priceKey, priceIn, type PriceBook } from "../lib/prices";
 
 // Compact live portfolio snapshot for the dashboard — headline value + today's
 // and total change. Full holdings live on the /portfolio screen.
 export default function PortfolioSummary() {
-    const { settings } = useSettings();
-    const displayCur: "PKR" | "USD" = settings.currency === "PKR" ? "PKR" : "USD";
+    const { currency: displayCur, rates } = useCurrency();
 
     const [txns, setTxns] = useState<Txn[]>([]);
     const [book, setBook] = useState<PriceBook>({ map: {}, rate: 278, updated: "" });
@@ -40,6 +40,11 @@ export default function PortfolioSummary() {
     }, []);
 
     const rate = book.rate;
+    const fxRates = useMemo(() => ({ ...rates, PKR: rate || rates.PKR, USD: 1 }), [rates, rate]);
+    const convert = useCallback(
+        (amt: number, from: string, to: string) => convertAmount(amt, from, to, fxRates) ?? 0,
+        [fxRates],
+    );
     const { holdings, realized } = useMemo(() => computeHoldings(txns), [txns]);
 
     const rows = useMemo(() => holdings.map(h => {
@@ -52,29 +57,29 @@ export default function PortfolioSummary() {
         const dayPct = info?.changePct ?? null;
         const dayPnl = (current != null && dayPct != null) ? h.quantity * current * (dayPct / 100) : null;
         // Value in display currency for ranking / totals
-        const valueDisp = value != null ? convert(value, h.currency, displayCur, rate) : null;
+        const valueDisp = value != null ? convert(value, h.currency, displayCur) : null;
         return { ...h, name: h.name || info?.name, current, invested, value, valueDisp, pnl, pnlPct, dayPnl };
-    }), [holdings, book, rate, displayCur]);
+    }), [holdings, book, rate, displayCur, convert]);
 
     const totals = useMemo(() => {
         let invested = 0, value = 0, investedPriced = 0, day = 0;
         rows.forEach(r => {
-            const inv = convert(r.invested, r.currency, displayCur, rate);
+            const inv = convert(r.invested, r.currency, displayCur);
             invested += inv;
-            if (r.value != null) { value += convert(r.value, r.currency, displayCur, rate); investedPriced += inv; }
-            if (r.dayPnl != null) day += convert(r.dayPnl, r.currency, displayCur, rate);
+            if (r.value != null) { value += convert(r.value, r.currency, displayCur); investedPriced += inv; }
+            if (r.dayPnl != null) day += convert(r.dayPnl, r.currency, displayCur);
         });
         const unrealized = value - investedPriced;
-        const realizedTotal = convert(realized.PKR, "PKR", displayCur, rate) + convert(realized.USD, "USD", displayCur, rate);
+        const realizedTotal = convert(realized.PKR, "PKR", displayCur) + convert(realized.USD, "USD", displayCur);
         const total = unrealized + realizedTotal;
         return {
             invested, value, day, unrealized, realizedTotal, total,
             dayPct: value > 0 ? (day / value) * 100 : 0,
             totalPct: investedPriced > 0 ? (unrealized / investedPriced) * 100 : 0,
         };
-    }, [rows, realized, displayCur, rate]);
+    }, [rows, realized, displayCur, convert]);
 
-    const cs = curSymbol(displayCur);
+    const cs = currencySymbol(displayCur);
     const fmt = (v: number) => `${cs}${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     const signed = (v: number) => `${v >= 0 ? "+" : "-"}${cs}${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 

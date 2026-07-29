@@ -1,9 +1,9 @@
 @echo off
-REM All-in-One Dashboard - Setup & Run Script for Windows
+REM SoloTrackr Dashboard - Setup & Run Script for Windows
 
 echo.
 echo ======================================
-echo All-in-One Dashboard
+echo SoloTrackr Dashboard
 echo Your centralized tracking hub
 echo ======================================
 echo.

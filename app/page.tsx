@@ -12,6 +12,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchGoldPrice, fetchSilverPrice, fetchForexRates, fetchCryptoPrices, fetchOilPrices } from "./lib/api";
 import { useSettings } from "./context/SettingsContext";
+import { useCurrency } from "./context/CurrencyContext";
+import CurrencyToggle from "./components/CurrencyToggle";
 import { isModuleEnabled } from "./lib/modules";
 
 export default function Home() {
@@ -30,6 +32,13 @@ export default function Home() {
   const router = useRouter();
   const { settings } = useSettings();
   const mod = (k: string) => isModuleEnabled(settings.modules, k);
+  // Dashboard tiles follow the display currency — except the PSX and NASDAQ
+  // cards, which stay in their market's own currency.
+  const { currency, sym, conv } = useCurrency();
+  const money = (usd?: number | null, pkr?: number | null, maxFrac = 2) => {
+    const v = conv(usd, pkr);
+    return v == null ? "---" : `${sym}${v.toLocaleString(undefined, { maximumFractionDigits: maxFrac })}`;
+  };
 
   // Mobile: tabbed dashboard so each section ≈ one screen. Desktop (lg+) shows
   // everything in one scroll (the tab bar is hidden and every group is lg:block).
@@ -110,7 +119,7 @@ export default function Home() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+      <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
         <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25">
@@ -124,7 +133,8 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/10">
+            <CurrencyToggle />
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/10">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
               <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">Active</span>
             </div>
@@ -181,8 +191,16 @@ export default function Home() {
                 </a>
               );
             })()}
-            {mod('crypto') && <StatCard label="Bitcoin / USD" value={`$${cryptoData[0]?.usdPrice?.toLocaleString() || "---"}`} icon={<Bitcoin className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={cryptoData[0]?.changePercent || 0} changeLabel="Volatility" />}
-            {mod('forex') && <StatCard label="USD / PKR" value={`Rs. ${forexData[0]?.pkrPrice?.toFixed(2) || "---"}`} icon={<Banknote className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={forexData[0]?.changePercent || 0} changeLabel="Forex" />}
+            {mod('crypto') && <StatCard label={`Bitcoin / ${currency}`} value={money(cryptoData[0]?.usdPrice, cryptoData[0]?.pkrPrice)} icon={<Bitcoin className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={cryptoData[0]?.changePercent || 0} changeLabel="Volatility" />}
+            {mod('forex') && (() => {
+              // Quote USD against the display currency (falls back to PKR when USD is active).
+              const quote = currency === 'USD' ? 'PKR' : currency;
+              const usdRow = forexData[0];
+              const value = quote === 'PKR'
+                ? (usdRow?.pkrPrice != null ? `Rs. ${usdRow.pkrPrice.toFixed(2)}` : "---")
+                : money(1);
+              return <StatCard label={`USD / ${quote}`} value={value} icon={<Banknote className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />} change={usdRow?.changePercent || 0} changeLabel="Forex" />;
+            })()}
             {mod('metals') && (
               <a href="/metals" className="group bg-white dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl p-4 sm:p-6 border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 flex flex-col">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 group-hover:scale-110 transition-transform duration-300 mb-4">
@@ -190,14 +208,14 @@ export default function Home() {
                 </div>
                 <div className="grid grid-cols-2 divide-x divide-zinc-200/70 dark:divide-white/10 flex-1">
                   {[
-                    { label: "Gold · Tola", price: goldData.tola24k?.pkrPrice, chg: goldData.tola24k?.changePercent ?? 0, pad: "pr-3 sm:pr-4" },
-                    { label: "Silver · Oz", price: silverData.ounce?.pkrPrice, chg: silverData.ounce?.changePercent ?? 0, pad: "pl-3 sm:pl-4" },
+                    { label: "Gold · Tola", price: conv(goldData.tola24k?.usdPrice, goldData.tola24k?.pkrPrice), chg: goldData.tola24k?.changePercent ?? 0, pad: "pr-3 sm:pr-4" },
+                    { label: "Silver · Oz", price: conv(silverData.ounce?.usdPrice, silverData.ounce?.pkrPrice), chg: silverData.ounce?.changePercent ?? 0, pad: "pl-3 sm:pl-4" },
                   ].map((m) => {
                     const up = (m.chg || 0) >= 0;
                     return (
                       <div key={m.label} className={`${m.pad} flex flex-col justify-center`}>
                         <p className="text-[8px] sm:text-[9px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.15em] mb-1.5 truncate">{m.label}</p>
-                        <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono italic leading-none truncate">Rs.{m.price?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || "---"}</p>
+                        <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono italic leading-none truncate">{sym}{m.price?.toLocaleString(undefined, { maximumFractionDigits: m.price < 100 ? 2 : 0 }) || "---"}</p>
                         <p className={`mt-1.5 text-[10px] font-black ${up ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>{up ? "▲" : "▼"} {Math.abs(m.chg || 0).toFixed(2)}%</p>
                       </div>
                     );
@@ -210,7 +228,7 @@ export default function Home() {
               <a href="/oil" className="block">
                 <StatCard
                   label="Crude Oil · WTI"
-                  value={oilData?.crudeOil?.price != null ? `$${Number(oilData.crudeOil.price).toFixed(2)}` : "---"}
+                  value={money(oilData?.crudeOil?.price, oilData?.crudeOil?.pkrPrice)}
                   icon={<Fuel className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />}
                   change={oilData?.crudeOil?.changePercent ?? 0}
                   changeLabel="Energy · Oil & Gas"
@@ -293,13 +311,13 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
-                          {["USD", "EUR", "GBP", "SAR", "AED"]
+                          {["USD", "EUR", "GBP", "SAR"]
                             .map(code => forexData.find(r => r.code === code))
                             .filter(Boolean)
                             .map(rate => (
                               <tr key={rate.code} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group">
                                 <td className="px-4 sm:px-8 py-3 sm:py-4 font-black text-zinc-900 dark:text-white tracking-tight uppercase italic text-[10px] sm:text-sm whitespace-nowrap">{rate.code} / {rate.name}</td>
-                                <td className="px-4 sm:px-8 py-3 sm:py-4 text-right font-mono font-black text-blue-600 dark:text-blue-400 text-[10px] sm:text-base">Rs.{rate.pkrPrice.toFixed(2)}</td>
+                                <td className="px-4 sm:px-8 py-3 sm:py-4 text-right font-mono font-black text-blue-600 dark:text-blue-400 text-[10px] sm:text-base">{money(rate.usdPrice, rate.pkrPrice, 4)}</td>
                                 <td className={`px-4 sm:px-8 py-3 sm:py-4 text-center text-[8px] sm:text-[10px] font-black ${rate.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                   {rate.changePercent >= 0 ? '▲' : '▼'}{Math.abs(rate.changePercent).toFixed(1)}%
                                 </td>
@@ -326,10 +344,10 @@ export default function Home() {
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:gap-6">
                     <div onClick={() => router.push('/oil/crudeOil')} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95">
-                      <PriceCard title="Crude Oil (WTI)" usdPrice={oilData?.crudeOil?.usdPrice} pkrPrice={oilData?.crudeOil?.pkrPrice} change={oilData?.crudeOil?.change} changePercent={oilData?.crudeOil?.changePercent} error={oilData?.crudeOil?.error} lastUpdated={currentTime} isLoading={loading} currency="USD" />
+                      <PriceCard title="Crude Oil (WTI)" usdPrice={oilData?.crudeOil?.usdPrice} pkrPrice={oilData?.crudeOil?.pkrPrice} change={oilData?.crudeOil?.change} changePercent={oilData?.crudeOil?.changePercent} error={oilData?.crudeOil?.error} lastUpdated={currentTime} isLoading={loading} />
                     </div>
                     <div onClick={() => router.push('/oil/brentOil')} className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95">
-                      <PriceCard title="Brent Crude" usdPrice={oilData?.brentOil?.usdPrice} pkrPrice={oilData?.brentOil?.pkrPrice} change={oilData?.brentOil?.change} changePercent={oilData?.brentOil?.changePercent} error={oilData?.brentOil?.error} lastUpdated={currentTime} isLoading={loading} currency="USD" />
+                      <PriceCard title="Brent Crude" usdPrice={oilData?.brentOil?.usdPrice} pkrPrice={oilData?.brentOil?.pkrPrice} change={oilData?.brentOil?.change} changePercent={oilData?.brentOil?.changePercent} error={oilData?.brentOil?.error} lastUpdated={currentTime} isLoading={loading} />
                     </div>
                   </div>
                 </div>
@@ -359,7 +377,7 @@ export default function Home() {
                             {coin.changePercent >= 0 ? '+' : ''}{coin.changePercent.toFixed(1)}%
                           </div>
                         </div>
-                        <div className="text-lg sm:text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter group-hover:translate-x-1 transition-transform italic">${coin.usdPrice?.toLocaleString()}</div>
+                        <div className="text-lg sm:text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter group-hover:translate-x-1 transition-transform italic">{money(coin.usdPrice, coin.pkrPrice)}</div>
                       </div>
                     ))}
                   </div>
@@ -375,7 +393,7 @@ export default function Home() {
                               {(coin.changePercent ?? 0) >= 0 ? '+' : ''}{(coin.changePercent ?? 0).toFixed(1)}%
                             </span>
                           </div>
-                          <div className="text-[11px] sm:text-sm font-black text-zinc-900 dark:text-white font-mono tracking-tighter truncate">${(coin.usdPrice ?? 0).toLocaleString()}</div>
+                          <div className="text-[11px] sm:text-sm font-black text-zinc-900 dark:text-white font-mono tracking-tighter truncate">{money(coin.usdPrice, coin.pkrPrice)}</div>
                         </div>
                       ))}
                     </div>

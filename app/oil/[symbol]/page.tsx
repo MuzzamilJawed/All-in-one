@@ -6,6 +6,9 @@ import { useParams, useRouter } from "next/navigation";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../../components/TradingChart'), { ssr: false });
 import { useSettings } from "../../context/SettingsContext";
+import { useCurrency } from "../../context/CurrencyContext";
+import CurrencyToggle from "../../components/CurrencyToggle";
+import { rateOf } from "../../lib/currency";
 import { useToast } from "../../context/ToastContext";
 import { fetchOilPrices } from "../../lib/api";
 import { type OilAlert, type AlertCondition, loadAlerts, persistAlerts, makeAlertId } from "../../lib/oilAlerts";
@@ -16,7 +19,7 @@ export default function OilDetailPage() {
     const symbol = params.symbol as string;
     const { settings } = useSettings();
     const { success, info, error: toastError } = useToast();
-    const tableCurrency = settings.currency as 'USD' | 'PKR';
+    const { currency: tableCurrency, sym: priceSymbol, conv, rates } = useCurrency();
 
     const [loading, setLoading] = useState(true);
     const [item, setItem] = useState<any>(null);
@@ -57,7 +60,7 @@ export default function OilDetailPage() {
         };
 
         const generateInitialCandles = (data: any) => {
-            const basePrice = tableCurrency === 'PKR' ? data.pkrPrice : data.price;
+            const basePrice = conv(data.price, data.pkrPrice) ?? 0;
             const candleData = [];
             const now = new Date();
             if (timeframe === "1H") now.setMinutes(0, 0, 0);
@@ -126,9 +129,8 @@ export default function OilDetailPage() {
         );
     }
 
-    const currentPrice = tableCurrency === 'PKR' ? item.pkrPrice : item.price;
-    const priceSymbol = tableCurrency === 'PKR' ? 'Rs. ' : '$';
-    const rate = item.pkrPrice && item.price ? item.pkrPrice / item.price : 280;
+    const currentPrice = conv(item.price, item.pkrPrice) ?? 0;
+    const rate = item.pkrPrice && item.price ? item.pkrPrice / item.price : rateOf(rates, 'PKR');
 
     // Real multi-timeframe performance for this contract
     const perf = [
@@ -145,8 +147,9 @@ export default function OilDetailPage() {
 
     const myAlerts = alerts.filter((a) => a.key === symbol);
 
+    // Alerts are stored in USD; show and accept them in the active currency.
     const displayTarget = (al: OilAlert) =>
-        `${priceSymbol}${formatPrice(tableCurrency === 'PKR' ? al.targetUsd * rate : al.targetUsd)}`;
+        `${priceSymbol}${formatPrice(conv(al.targetUsd, al.targetUsd * rate) ?? 0)}`;
 
     const handleAddAlert = () => {
         const parsed = parseFloat(alertPrice.replace(/,/g, ""));
@@ -154,7 +157,9 @@ export default function OilDetailPage() {
             toastError("Enter a valid target price");
             return;
         }
-        const targetUsd = tableCurrency === 'PKR' ? parsed / rate : parsed;
+        const targetUsd = tableCurrency === 'USD' ? parsed
+            : tableCurrency === 'PKR' ? parsed / rate
+            : parsed / rateOf(rates, tableCurrency);
         const triggered = alertCondition === 'above' ? item.price >= targetUsd : item.price <= targetUsd;
         const next: OilAlert[] = [
             { id: makeAlertId(), key: symbol, name: item.name, condition: alertCondition, targetUsd, createdAt: Date.now(), triggered },
@@ -176,7 +181,7 @@ export default function OilDetailPage() {
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30">
             {/* Header */}
-            <div className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+            <div className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center">
                     <div className="flex items-center gap-6">
                         <button onClick={() => router.push('/oil')} className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group">
@@ -190,6 +195,7 @@ export default function OilDetailPage() {
                             </div>
                         </div>
                     </div>
+                    <CurrencyToggle />
                 </div>
             </div>
 

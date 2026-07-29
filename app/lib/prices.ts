@@ -3,6 +3,7 @@
 // rate, so the portfolio (and multi-asset watchlist) can price any holding.
 
 import { fetchOilPrices } from "./api";
+import { rateOf } from "./currency";
 
 export type AssetType = "PSX" | "NASDAQ" | "CRYPTO" | "FOREX" | "COMMODITY";
 
@@ -89,6 +90,22 @@ export function priceIn(info: PriceInfo | undefined, cur: "PKR" | "USD", rate: n
     if (!info) return null;
     if (cur === "PKR") return info.pkr ?? (info.usd != null ? info.usd * rate : null);
     return info.usd ?? (info.pkr != null ? info.pkr / rate : null);
+}
+
+// Price of an asset in any display currency, using a USD-based rate map.
+// (`rates.PKR` should carry the price book's own USD→PKR rate so PKR figures
+// stay in step with the feeds.)
+export function priceInAny(
+    info: PriceInfo | undefined,
+    code: string,
+    rates: Record<string, number>,
+): number | null {
+    if (!info) return null;
+    const pkrRate = rateOf(rates, "PKR");
+    if (code === "PKR") return info.pkr ?? (info.usd != null ? info.usd * pkrRate : null);
+    const usd = info.usd ?? (info.pkr != null ? info.pkr / pkrRate : null);
+    if (code === "USD") return usd;
+    return usd == null ? null : usd * rateOf(rates, code);
 }
 
 // Convert an amount between PKR and USD.

@@ -1,6 +1,6 @@
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                                                                         │
-│  🎉 YOUR ALL-IN-ONE DASHBOARD IS READY! 🎉                            │
+│  🎉 YOUR SOLOTRACKR DASHBOARD IS READY! 🎉                            │
 │                                                                         │
 │  A complete application to manage gold prices, silver prices, PSX      │
 │  stocks, and a personal watchlist - all in one place!                  │
@@ -34,7 +34,7 @@
 │ ALL USERS (Manual Start):                                              │
 │                                                                         │
 │ 1. Open Terminal/Command Prompt                                       │
-│ 2. Navigate to: d:\Mine\Project and practice\all-in-one              │
+│ 2. Navigate to: d:\Projects\solo-trackr                             │
 │ 3. Run: npm install                                                  │
 │ 4. Run: npm run dev                                                  │
 │ 5. Open browser to: http://localhost:3000                           │

@@ -8,6 +8,8 @@ import StockCard from "../components/StockCard";
 import PriceCard from "../components/PriceCard";
 import { useToast } from "../context/ToastContext";
 import { useSettings } from "../context/SettingsContext";
+import CurrencyToggle from "../components/CurrencyToggle";
+import { MARKET_CURRENCY } from "../lib/currency";
 import WatchlistAddBar from "../components/WatchlistAddBar";
 import { fetchAllPrices, priceKey, type PriceBook, type AssetType } from "../lib/prices";
 
@@ -19,7 +21,6 @@ const TYPE_OPTIONS: AssetType[] = ["PSX", "NASDAQ", "CRYPTO", "FOREX", "COMMODIT
 export default function WatchlistPage() {
   const { success, error } = useToast();
   const { settings } = useSettings();
-  const displayCur: "PKR" | "USD" = settings.currency === "USD" ? "USD" : "PKR";
   const [watchlists, setWatchlists] = useState<any[]>([]);
   const [selectedWlId, setSelectedWlId] = useState<string | null>(null);
   const [stocksData, setStocksData] = useState<any[]>([]);
@@ -208,14 +209,18 @@ export default function WatchlistPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-        <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
-            <Star className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> My <span className="text-blue-500">Watchlists</span>
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">
-            Personalized Asset Monitoring Engine
-          </p>
+      <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+        <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
+              <Star className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> My <span className="text-blue-500">Watchlists</span>
+            </h1>
+            <p className="text-zinc-500 dark:text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">
+              Personalized Asset Monitoring Engine
+            </p>
+          </div>
+          {/* PSX and NASDAQ categories ignore this — they render in PKR / USD. */}
+          <CurrencyToggle />
         </div>
       </header>
 
@@ -333,7 +338,8 @@ export default function WatchlistPage() {
                       onWatchlistCreated={(newList) => setWatchlists([newList, ...watchlists])}
                     />
                   ) : (
-                    <PriceCard {...item} currency={displayCur} lastUpdated={book.updated || "Live"} />
+                    // NASDAQ categories stay in USD; everything else follows the display currency.
+                    <PriceCard {...item} currency={MARKET_CURRENCY[activeType]} lastUpdated={book.updated || "Live"} />
                   )}
                 </div>
               ))}

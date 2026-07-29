@@ -10,7 +10,7 @@
 ✅ WHAT'S NEW:
 ═══════════════════════════════════════════════════════════════════════════════
 
-Your All-in-One Dashboard now has REAL-TIME precious metals prices!
+Your SoloTrackr Dashboard now has REAL-TIME precious metals prices!
 
 Instead of showing static demo prices, it now:
   ✅ Fetches live gold prices from API (USD → PKR)

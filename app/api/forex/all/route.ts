@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 // Paginated full currency list for the Forex terminal's infinite-scroll list.
 // Prices come from the same free USD-rates feed; names via Intl.DisplayNames;
 // real 24h change is fetched from Yahoo only for the requested page's codes.
+//
+// `q` filters by code or currency name across the WHOLE list before paging, so
+// search reaches currencies that haven't been scrolled into view yet.
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -49,6 +52,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '24', 10)));
+    const q = (searchParams.get('q') || '').trim().toLowerCase();
 
     try {
         const res = await fetch('https://open.er-api.com/v6/latest/USD', { next: { revalidate: 120 } });
@@ -60,10 +64,20 @@ export async function GET(request: Request) {
         // Ordered list of codes: priority first, then the rest alphabetically.
         const all = Object.keys(rates).filter(c => rates[c] > 0);
         const prioritySet = new Set(PRIORITY);
-        const ordered = [
+        let ordered = [
             ...PRIORITY.filter(c => rates[c] > 0),
             ...all.filter(c => !prioritySet.has(c)).sort(),
         ];
+
+        // Search the full universe (code or name) before slicing into pages.
+        if (q) {
+            ordered = ordered.filter(c => c.toLowerCase().includes(q) || currencyName(c).toLowerCase().includes(q));
+            // Exact/prefix code matches float to the top.
+            ordered.sort((a, b) => {
+                const rank = (c: string) => (c.toLowerCase() === q ? 0 : c.toLowerCase().startsWith(q) ? 1 : 2);
+                return rank(a) - rank(b);
+            });
+        }
 
         const total = ordered.length;
         const start = (page - 1) * perPage;

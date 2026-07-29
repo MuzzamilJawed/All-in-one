@@ -1,8 +1,8 @@
-# Quick Start Guide - All-in-One Dashboard
+# Quick Start Guide - SoloTrackr Dashboard
 
 ## What You've Built 🎯
 
-A complete all-in-one dashboard for tracking:
+A complete SoloTrackr dashboard for tracking:
 - ✅ Gold & Silver prices
 - ✅ PSX stocks 
 - ✅ Personal watchlist

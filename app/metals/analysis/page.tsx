@@ -9,7 +9,7 @@ export default function MetalsAnalysisPage() {
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
             {/* Header */}
-            <div className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
+            <div className="safe-top sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
                 <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 max-w-[1600px] mx-auto flex items-center gap-3">
                     <button onClick={() => router.push("/metals")} className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group shrink-0" title="Back to Gold & Silver">
                         <span className="text-zinc-500 group-hover:text-blue-500 transition-colors font-bold">←</span>

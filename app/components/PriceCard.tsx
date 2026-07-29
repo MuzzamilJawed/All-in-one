@@ -1,13 +1,21 @@
+"use client";
+
+import { useCurrency } from "../context/CurrencyContext";
+import { currencySymbol as symbolFor, rateOf } from "../lib/currency";
+
 interface PriceCardProps {
   title: string;
   usdPrice?: number;
   pkrPrice?: number;
+  /** Day change, denominated in USD (converted alongside the price). */
   change?: number;
   changePercent?: number;
   lastUpdated: string;
   isLoading?: boolean;
   error?: string;
-  currency?: 'PKR' | 'USD';
+  /** Pin the card to one currency (e.g. a NASDAQ holding). Defaults to the
+   *  active display currency. */
+  currency?: string;
 }
 
 export default function PriceCard({
@@ -19,13 +27,20 @@ export default function PriceCard({
   lastUpdated,
   isLoading = false,
   error,
-  currency = 'PKR',
+  currency,
 }: PriceCardProps) {
+  const { currency: active, rates } = useCurrency();
+  const code = currency ?? active;
+
   const isPositive = (changePercent || 0) >= 0;
-  const exchangeRate = (pkrPrice && usdPrice) ? pkrPrice / usdPrice : 280;
-  const displayPrice = currency === 'PKR' ? pkrPrice : usdPrice;
-  const displayChange = currency === 'PKR' ? change * exchangeRate : change;
-  const currencySymbol = currency === 'PKR' ? 'Rs.' : '$';
+  // Prefer the feed's own implied USD→PKR rate so PKR figures match the source.
+  const impliedPkr = (pkrPrice && usdPrice) ? pkrPrice / usdPrice : rateOf(rates, 'PKR');
+  const factor = code === 'USD' ? 1 : code === 'PKR' ? impliedPkr : rateOf(rates, code);
+  const usdBase = usdPrice ?? (pkrPrice != null ? pkrPrice / impliedPkr : undefined);
+  const displayPrice = code === 'PKR' ? (pkrPrice ?? (usdBase != null ? usdBase * factor : undefined))
+    : (usdBase != null ? usdBase * factor : undefined);
+  const displayChange = change * factor;
+  const currencySymbol = symbolFor(code);
 
   return (
     <div className="group h-full flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-sm hover:shadow-2xl transition-all duration-500 relative overflow-hidden">

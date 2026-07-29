@@ -7,12 +7,15 @@ import {
     XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { useSettings } from "../context/SettingsContext";
+import { useCurrency } from "../context/CurrencyContext";
+import CurrencyToggle from "../components/CurrencyToggle";
+import { convertAmount, currencySymbol } from "../lib/currency";
 import { useToast } from "../context/ToastContext";
 import {
     getTxns, addTxn, deleteTxn, computeHoldings, txnsToCsv, type Txn,
 } from "../lib/portfolio";
 import {
-    fetchAllPrices, priceKey, priceIn, convert, curSymbol, ASSET_TYPES,
+    fetchAllPrices, priceKey, priceIn, ASSET_TYPES,
     COMMODITY_SYMBOLS, type AssetType, type PriceBook,
 } from "../lib/prices";
 
@@ -24,7 +27,9 @@ const todayStr = () => {
 export default function PortfolioPage() {
     const { settings } = useSettings();
     const { success, info } = useToast();
-    const displayCur: "PKR" | "USD" = settings.currency === "PKR" ? "PKR" : "USD";
+    // Holdings stay in their own currency (PSX in PKR, NASDAQ in USD); only the
+    // aggregate figures are converted to the active display currency.
+    const { currency: displayCur, rates } = useCurrency();
 
     const [txns, setTxns] = useState<Txn[]>([]);
     const [book, setBook] = useState<PriceBook>({ map: {}, rate: 278, updated: "" });
@@ -66,6 +71,12 @@ export default function PortfolioPage() {
     }, [loadPrices, settings.refreshInterval]);
 
     const rate = book.rate;
+    // Use the price book's own USD→PKR rate so PKR totals line up with the feeds.
+    const fxRates = useMemo(() => ({ ...rates, PKR: rate || rates.PKR, USD: 1 }), [rates, rate]);
+    const convert = useCallback(
+        (amt: number, from: string, to: string) => convertAmount(amt, from, to, fxRates) ?? 0,
+        [fxRates],
+    );
     const { holdings, realized } = useMemo(() => computeHoldings(txns), [txns]);
 
     // Enrich holdings with live prices + P/L (in each holding's own currency)
@@ -89,18 +100,18 @@ export default function PortfolioPage() {
         let investedPriced = 0;  // cost of just those priced holdings
         let day = 0;             // today's P/L across priced holdings
         rows.forEach(r => {
-            const inv = convert(r.invested, r.currency, displayCur, rate);
+            const inv = convert(r.invested, r.currency, displayCur);
             invested += inv;
             if (r.value != null) {
-                value += convert(r.value, r.currency, displayCur, rate);
+                value += convert(r.value, r.currency, displayCur);
                 investedPriced += inv;
             }
-            if (r.dayPnl != null) day += convert(r.dayPnl, r.currency, displayCur, rate);
+            if (r.dayPnl != null) day += convert(r.dayPnl, r.currency, displayCur);
         });
         const unrealized = value - investedPriced;
-        const realizedTotal = convert(realized.PKR, "PKR", displayCur, rate) + convert(realized.USD, "USD", displayCur, rate);
+        const realizedTotal = convert(realized.PKR, "PKR", displayCur) + convert(realized.USD, "USD", displayCur);
         return { invested, value, day, dayPct: value > 0 ? (day / value) * 100 : 0, unrealized, realizedTotal, total: unrealized + realizedTotal };
-    }, [rows, realized, displayCur, rate]);
+    }, [rows, realized, displayCur, convert]);
 
     // Date-filtered ledger (most recent first)
     const ledger = useMemo(() => {
@@ -117,40 +128,40 @@ export default function PortfolioPage() {
         const priced = rows.filter(r => r.value != null);
         if (allocBy === "type") {
             const byType = new Map<string, number>();
-            priced.forEach(r => byType.set(r.assetType, (byType.get(r.assetType) || 0) + convert(r.value as number, r.currency, displayCur, rate)));
+            priced.forEach(r => byType.set(r.assetType, (byType.get(r.assetType) || 0) + convert(r.value as number, r.currency, displayCur)));
             return Array.from(byType.entries()).map(([name, value]) => ({ name, value, color: TYPE_COLORS[name] || "#3b82f6" }));
         }
         return priced
-            .map((r, i) => ({ name: r.symbol, value: convert(r.value as number, r.currency, displayCur, rate), color: PALETTE[i % PALETTE.length] }))
+            .map((r, i) => ({ name: r.symbol, value: convert(r.value as number, r.currency, displayCur), color: PALETTE[i % PALETTE.length] }))
             .sort((a, b) => b.value - a.value);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rows, allocBy, displayCur, rate]);
+    }, [rows, allocBy, displayCur, convert]);
     const allocTotal = useMemo(() => allocData.reduce((a, d) => a + d.value, 0), [allocData]);
 
     const perfData = useMemo(() => {
         const pick = (r: typeof rows[number]) => (perfMetric === "day" ? r.dayPnl : r.pnl);
         return rows.filter(r => pick(r) != null)
-            .map(r => ({ name: r.symbol, pnl: convert(pick(r) as number, r.currency, displayCur, rate) }))
+            .map(r => ({ name: r.symbol, pnl: convert(pick(r) as number, r.currency, displayCur) }))
             .sort((a, b) => b.pnl - a.pnl);
-    }, [rows, displayCur, rate, perfMetric]);
+    }, [rows, displayCur, convert, perfMetric]);
 
     const timelineData = useMemo(() => {
         const sorted = [...txns].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
         const byDate = new Map<string, number>();
         let running = 0;
         sorted.forEach(t => {
-            const v = convert(t.quantity * t.price, t.currency, displayCur, rate) * (t.type === "BUY" ? 1 : -1);
+            const v = convert(t.quantity * t.price, t.currency, displayCur) * (t.type === "BUY" ? 1 : -1);
             running += v;
             byDate.set(t.date, running);
         });
         return Array.from(byDate.entries()).map(([date, invested]) => ({ date, invested }));
-    }, [txns, displayCur, rate]);
+    }, [txns, displayCur, convert]);
 
-    const fmt = (amt: number | null | undefined, cur: "PKR" | "USD" = displayCur) =>
-        amt == null ? "—" : `${curSymbol(cur)}${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    const signed = (amt: number | null | undefined, cur: "PKR" | "USD" = displayCur) =>
-        amt == null ? "—" : `${amt >= 0 ? "+" : "-"}${curSymbol(cur)}${Math.abs(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    const compact = (v: number) => `${curSymbol(displayCur)}${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v)}`;
+    const fmt = (amt: number | null | undefined, cur: string = displayCur) =>
+        amt == null ? "—" : `${currencySymbol(cur)}${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const signed = (amt: number | null | undefined, cur: string = displayCur) =>
+        amt == null ? "—" : `${amt >= 0 ? "+" : "-"}${currencySymbol(cur)}${Math.abs(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const compact = (v: number) => `${currencySymbol(displayCur)}${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v)}`;
     const tooltipStyle: any = { backgroundColor: "var(--tooltip-bg,#fff)", color: "var(--tooltip-fg,#111)", border: "1px solid var(--tooltip-border,#e4e4e7)", borderRadius: "0.75rem", fontSize: "12px", fontWeight: 700 };
     // Pop-out shape for the hovered donut slice (interactive)
     const renderActiveSlice = (props: any) => {
@@ -222,13 +233,14 @@ export default function PortfolioPage() {
             </div>
 
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+            <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase leading-none flex items-center gap-2"><Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" strokeWidth={2} /> Portfolio <span className="text-emerald-500">Ledger</span></h1>
                         <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1">Multi-Asset Holdings · Profit &amp; Loss</p>
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <CurrencyToggle />
                         <button onClick={() => setShowAdd(s => !s)} className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">{showAdd ? "✕ Close" : "+ Add Trade"}</button>
                         <button onClick={download} disabled={ledger.length === 0} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-zinc-200 dark:border-white/10 transition-all"><Download className="w-3.5 h-3.5" strokeWidth={2} /> Download</button>
                     </div>
@@ -552,8 +564,8 @@ export default function PortfolioPage() {
                     )}
                     {ledger.length > 0 && (
                         <div className="px-4 sm:px-6 py-3 border-t border-zinc-100 dark:border-white/5 flex flex-wrap items-center justify-end gap-x-6 gap-y-1 text-[10px] font-black uppercase tracking-widest">
-                            <span className="text-zinc-400">Bought <span className="text-green-500">{fmt(ledger.filter(t => t.type === "BUY").reduce((a, t) => a + convert(t.quantity * t.price, t.currency, displayCur, rate), 0))}</span></span>
-                            <span className="text-zinc-400">Sold <span className="text-red-500">{fmt(ledger.filter(t => t.type === "SELL").reduce((a, t) => a + convert(t.quantity * t.price, t.currency, displayCur, rate), 0))}</span></span>
+                            <span className="text-zinc-400">Bought <span className="text-green-500">{fmt(ledger.filter(t => t.type === "BUY").reduce((a, t) => a + convert(t.quantity * t.price, t.currency, displayCur), 0))}</span></span>
+                            <span className="text-zinc-400">Sold <span className="text-red-500">{fmt(ledger.filter(t => t.type === "SELL").reduce((a, t) => a + convert(t.quantity * t.price, t.currency, displayCur), 0))}</span></span>
                         </div>
                     )}
                 </div>

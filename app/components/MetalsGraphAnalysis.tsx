@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 const TradingChart = dynamic(() => import("./TradingChart"), { ssr: false });
 import { useSettings } from "../context/SettingsContext";
+import { useCurrency } from "../context/CurrencyContext";
+import CurrencyToggle from "./CurrencyToggle";
 import { computePivotLevels, nextLevels } from "../lib/levels";
 
 // Self-contained "Graph Analysis" terminal for precious metals: fetches its own
@@ -11,7 +13,7 @@ import { computePivotLevels, nextLevels } from "../lib/levels";
 // support/resistance. Rendered on its own route (moved out of the metals page).
 export default function MetalsGraphAnalysis() {
     const { settings } = useSettings();
-    const tableCurrency = settings.currency as "USD" | "PKR";
+    const { currency: tableCurrency, sym: mSym, conv } = useCurrency();
 
     const [metal, setMetal] = useState<"gold" | "silver">("gold");
     const [goldTF, setGoldTF] = useState("1D");
@@ -68,7 +70,6 @@ export default function MetalsGraphAnalysis() {
     // Scale candles so the last close matches the live spot (gold per tola, silver per ounce).
     useEffect(() => {
         const gold = spot.gold, silver = spot.silver;
-        const isPkr = tableCurrency === "PKR";
         const scaleCandles = (raw: any, anchor?: number) => {
             if (!raw?.data?.length) return [];
             const lastClose = raw.data[raw.data.length - 1].close;
@@ -76,8 +77,8 @@ export default function MetalsGraphAnalysis() {
             const scale = (anchor && anchor > 0) ? anchor / lastClose : 1;
             return raw.data.map((c: any) => ({ time: c.time, open: c.open * scale, high: c.high * scale, low: c.low * scale, close: c.close * scale, volume: c.volume }));
         };
-        const goldAnchor = isPkr ? gold?.tola24k?.pkrPrice : gold?.tola24k?.usdPrice;
-        const silverAnchor = isPkr ? silver?.ounce?.pkrPrice : silver?.ounce?.usdPrice;
+        const goldAnchor = conv(gold?.tola24k?.usdPrice, gold?.tola24k?.pkrPrice) ?? undefined;
+        const silverAnchor = conv(silver?.ounce?.usdPrice, silver?.ounce?.pkrPrice) ?? undefined;
         setGoldCandles(scaleCandles(goldRaw, goldAnchor));
         setSilverCandles(scaleCandles(silverRaw, silverAnchor));
     }, [goldRaw, silverRaw, spot, tableCurrency]);
@@ -88,7 +89,6 @@ export default function MetalsGraphAnalysis() {
     const pivotSrc = [...activeCandles].reverse().find((c: any) => c && c.high > c.low) || activeCandles[activeCandles.length - 1];
     const metalLevels = pivotSrc ? computePivotLevels(pivotSrc.high, pivotSrc.low, pivotSrc.close) : null;
     const metalNext = (metalLevels && pivotSrc) ? nextLevels(pivotSrc.close, metalLevels) : { nextResistance: null, nextSupport: null };
-    const mSym = tableCurrency === "PKR" ? "Rs." : "$";
     const fmtLvl = (v?: number | null) => v == null ? "—" : `${mSym}${v.toLocaleString(undefined, { maximumFractionDigits: v > 1 ? 2 : 4 })}`;
     const fmtCompact = (v?: number | null) => {
         if (v == null) return "—";
@@ -112,6 +112,7 @@ export default function MetalsGraphAnalysis() {
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Global Sentiment Explorer: {metal}</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
+                    <CurrencyToggle />
                     <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1 shadow-inner h-fit">
                         <button onClick={() => setMetal("gold")} className={`px-4 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${metal === "gold" ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20" : "text-zinc-500"}`}>Gold</button>
                         <button onClick={() => setMetal("silver")} className={`px-4 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest ${metal === "silver" ? "bg-zinc-500 text-white shadow-lg shadow-zinc-500/20" : "text-zinc-500"}`}>Silver</button>
@@ -124,7 +125,7 @@ export default function MetalsGraphAnalysis() {
                     data={activeCandles}
                     currentTimeframe={activeTF}
                     onTimeframeChange={setActiveTF}
-                    currencySymbol={tableCurrency === "PKR" ? "Rs." : "$"}
+                    currencySymbol={mSym}
                     priceLines={metalPriceLines}
                     seamless={true}
                 />

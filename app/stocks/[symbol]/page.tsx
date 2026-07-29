@@ -27,7 +27,7 @@ export default function StockDetailPage() {
     const symbol = (params.symbol as string)?.toUpperCase();
     const router = useRouter();
     const { settings } = useSettings();
-    const tableCurrency = settings.currency as 'USD' | 'PKR';
+    // PSX is a PKR market — never converted to the display currency.
 
     const [stock, setStock] = useState<Stock | null>(null);
     const [relatedStocks, setRelatedStocks] = useState<Stock[]>([]);
@@ -271,7 +271,7 @@ export default function StockDetailPage() {
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30">
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+            <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center gap-4">
                     <div className="flex items-center gap-3 sm:gap-6">
                         <button onClick={() => router.push('/stocks')} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group shrink-0">

@@ -348,7 +348,7 @@ function MarketTerminalContent() {
             </div>
 
             {/* Minimalist Professional Header */}
-            <header className="h-16 border-b border-zinc-200 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl flex items-center justify-between pl-16 pr-4 sm:pr-8 lg:pl-8 shrink-0 relative z-30">
+            <header className="safe-top h-[calc(4rem_+_var(--sa-top))] border-b border-zinc-200 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl flex items-center justify-between pl-16 pr-4 sm:pr-8 lg:pl-8 shrink-0 relative z-30">
                 <div className="flex items-center gap-3 sm:gap-6">
                     <button
                         onClick={() => router.push('/stocks')}

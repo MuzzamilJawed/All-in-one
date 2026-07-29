@@ -29,7 +29,8 @@ export default function NasdaqSymbolPage() {
     const [loading, setLoading] = useState(true);
     const [chartTF, setChartTF] = useState("1D");
     const { settings } = useSettings();
-    const displayCurrency = settings.currency as 'USD' | 'PKR';
+    // NASDAQ is a USD market — never converted to the display currency.
+    const displayCurrency = 'USD';
 
     const generateHistory = (currentPrice: number) => {
         const history = [];
@@ -106,7 +107,7 @@ export default function NasdaqSymbolPage() {
     }
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white p-6">
+        <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white p-6 pt-[calc(1.5rem_+_var(--sa-top))]">
             <button onClick={() => router.back()} className="text-blue-600 font-black tracking-widest text-[10px] uppercase hover:underline mb-8 pl-10 lg:pl-0 flex items-center gap-2"><ArrowLeft className="w-5 h-5" strokeWidth={2} /> Back to Console</button>
             <div className="max-w-4xl mx-auto space-y-6 sm:space-y-12">
                 <div className="max-w-md">
@@ -130,7 +131,7 @@ export default function NasdaqSymbolPage() {
                                 data={stock.history} 
                                 currentTimeframe={chartTF} 
                                 onTimeframeChange={setChartTF} 
-                                currencySymbol={displayCurrency === 'PKR' ? 'Rs.' : '$'} 
+                                currencySymbol="$"
                             />
                         </div>
                     </div>

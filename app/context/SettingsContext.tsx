@@ -2,9 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { DEFAULT_MODULES } from '../lib/modules';
+import { DEFAULT_CURRENCIES, DEFAULT_CURRENCY, normalizeCurrencies } from '../lib/currency';
 
 interface Settings {
+    /** Default display currency — used when only one currency is enabled, and as
+     *  the starting point for the per-screen currency toggle. */
     currency: string;
+    /** Currencies the user made available for display across the app. */
+    currencies: string[];
     refreshInterval: number;
     notifications: boolean;
     soundAlerts: boolean;
@@ -18,7 +23,8 @@ interface SettingsContextType {
 }
 
 const defaultSettings: Settings = {
-    currency: "PKR",
+    currency: DEFAULT_CURRENCY,
+    currencies: [...DEFAULT_CURRENCIES],
     refreshInterval: 30, // Default to 30 seconds as requested
     notifications: true,
     soundAlerts: false,
@@ -37,8 +43,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Merge modules so any newly-added module defaults to enabled.
-                setSettings({ ...defaultSettings, ...parsed, modules: { ...DEFAULT_MODULES, ...(parsed.modules || {}) } });
+                // Merge modules so any newly-added module defaults to enabled, and
+                // repair the currency list (older saves only had a single currency).
+                setSettings({
+                    ...defaultSettings,
+                    ...parsed,
+                    modules: { ...DEFAULT_MODULES, ...(parsed.modules || {}) },
+                    currencies: normalizeCurrencies(parsed.currencies, parsed.currency || defaultSettings.currency),
+                });
             } catch (e) {
                 console.error("Failed to parse settings", e);
             }
