@@ -342,7 +342,7 @@ function MarketTerminalContent() {
     return (
         <div className="min-h-screen lg:h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white flex flex-col lg:overflow-hidden selection:bg-blue-500/30">
             {/* Dynamic Background Glows */}
-            <div className="fixed inset-0 pointer-events-none z-0">
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/5 dark:bg-blue-600/10 blur-[120px] rounded-full"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/5 dark:bg-indigo-600/10 blur-[120px] rounded-full"></div>
             </div>
@@ -352,7 +352,8 @@ function MarketTerminalContent() {
                 <div className="flex items-center gap-3 sm:gap-6">
                     <button
                         onClick={() => router.push('/stocks')}
-                        className="text-zinc-500 hover:text-blue-500 transition-colors"
+                        aria-label="Back to PSX stocks"
+                        className="shrink-0 -ml-2 w-10 h-10 flex items-center justify-center rounded-xl text-zinc-500 hover:text-blue-500 hover:bg-zinc-100 dark:hover:bg-white/5 active:scale-90 transition-all"
                     >
                         <ArrowLeft className="w-5 h-5" strokeWidth={2} />
                     </button>

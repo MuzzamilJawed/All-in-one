@@ -3,6 +3,7 @@ import { Target, Volume2, StickyNote } from "lucide-react";
 import { computeSignals, dayRangePosition, toneClasses } from "../lib/stockSignals";
 import { getTarget, setTarget, getNote, setNote, type StockNote } from "../lib/stockPrefs";
 import { useToast } from "../context/ToastContext";
+import FitText from "./FitText";
 
 interface StockCardProps {
     symbol: string;
@@ -358,10 +359,10 @@ export default function StockCard({
             <div className="mt-auto pt-2 sm:pt-3 flex items-end justify-between gap-2 border-t border-zinc-100 dark:border-zinc-800">
                 <div className="min-w-0">
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Price</p>
-                    <p className="text-sm sm:text-xl font-black text-zinc-900 dark:text-zinc-50 font-mono tabular-nums leading-none truncate">
+                    <FitText className="text-sm sm:text-xl font-black text-zinc-900 dark:text-zinc-50 font-mono tabular-nums leading-none">
                         <span className="text-[10px] sm:text-xs font-normal mr-0.5">{currencySymbol}</span>
                         {currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                    </p>
+                    </FitText>
                     {effectiveTarget != null && (
                         <p className="text-[9px] font-bold text-blue-500 mt-0.5 truncate inline-flex items-center gap-0.5" title="Your target"><Target className="w-2.5 h-2.5 shrink-0" strokeWidth={2} /> {effectiveTarget.toLocaleString()}</p>
                     )}

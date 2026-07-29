@@ -666,7 +666,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                     <button
                         onClick={goBack}
                         title={back ? `Back to ${back.label}` : "Go back"}
-                        className="group flex items-center gap-2 pl-1.5 pr-3 sm:pr-3.5 py-1.5 rounded-full bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 transition-all"
+                        className="group flex items-center gap-2 min-w-0 shrink pl-1.5 pr-3 sm:pr-3.5 py-1.5 rounded-full bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 transition-all"
                     >
                         <span className="w-6 h-6 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm text-zinc-600 dark:text-zinc-300 group-hover:-translate-x-0.5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all">
                             <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2} />
@@ -685,9 +685,12 @@ function ReportContent({ symbol }: { symbol: string }) {
                         </span>
                         <button
                             onClick={() => window.print()}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20"
+                            aria-label="Download PDF"
+                            title="Download PDF"
+                            className="flex items-center gap-2 shrink-0 px-3 xs:px-4 py-2 min-h-[36px] bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20"
                         >
-                            <Download className="w-3.5 h-3.5" strokeWidth={2} /> Download PDF
+                            <Download className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                            <span className="hidden xs:inline">Download PDF</span>
                         </button>
                     </div>
                 </div>
@@ -1211,7 +1214,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                     {/* ══ FINAL VERDICT ══ */}
                     <div className="bg-white dark:bg-zinc-900 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-6">
                         <div className="flex flex-wrap items-start justify-between gap-6">
-                            <div className="flex-1 min-w-[280px]">
+                            <div className="flex-1 min-w-0 sm:min-w-[280px]">
                                 <SectionTitle num={13} label="Final Verdict — Composite Scorecard" />
                                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                                     {[

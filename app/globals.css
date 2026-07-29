@@ -10,6 +10,12 @@
   --tooltip-border: #e4e4e7;
 }
 
+/* Extra-small breakpoint for the narrowest phones (iPhone SE / 320px class
+   devices), where dense action bars have to drop their button labels. */
+@theme {
+  --breakpoint-xs: 22.5rem; /* 360px — the common Android floor */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -107,6 +113,22 @@ select option {
   .toast-item {
     animation: none;
   }
+}
+
+/* ── Mobile bottom sheet (currency picker) ─────────────────────────────────── */
+@keyframes sheet-rise {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes sheet-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.sheet-panel { animation: sheet-rise 0.24s cubic-bezier(0.16, 1, 0.3, 1); }
+.sheet-scrim { animation: sheet-fade 0.18s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-panel, .sheet-scrim { animation: none; }
 }
 
 /* ── Launch splash entrance animations ─────────────────────────────────────── */

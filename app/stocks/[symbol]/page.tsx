@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../../components/TradingChart'), { ssr: false });
 import { useSettings } from "../../context/SettingsContext";
 import StockCard from "../../components/StockCard";
+import FitText from "../../components/FitText";
 import { computePivotLevels, nextLevels } from "../../lib/levels";
 import { Radar, AlertTriangle, ArrowLeft, BarChart3, Newspaper, Star } from "lucide-react";
 
@@ -273,7 +274,7 @@ export default function StockDetailPage() {
             {/* Header */}
             <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center gap-4">
-                    <div className="flex items-center gap-3 sm:gap-6">
+                    <div className="flex items-center gap-3 sm:gap-6 min-w-0 flex-1">
                         <button onClick={() => router.push('/stocks')} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group shrink-0">
                             <ArrowLeft className="w-5 h-5 text-zinc-500 group-hover:text-blue-500 transition-colors" strokeWidth={2} />
                         </button>
@@ -296,10 +297,10 @@ export default function StockDetailPage() {
                             <BarChart3 className="w-4 h-4" strokeWidth={2} />
                             <span className="hidden sm:inline">Full Report</span>
                         </button>
-                        <div className="text-right shrink-0">
-                            <p className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter leading-none">
+                        <div className="text-right shrink-0 max-w-[45vw] sm:max-w-none">
+                            <FitText className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter leading-none">
                                 Rs.{stock.currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                            </p>
+                            </FitText>
                             <p className={`text-[10px] sm:text-sm font-black flex items-center justify-end gap-1 mt-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
                                 {isPositive ? '▲' : '▼'}{Math.abs(stock.change).toFixed(2)} ({Math.abs(stock.changePercent).toFixed(2)}%)
                             </p>
@@ -333,7 +334,7 @@ export default function StockDetailPage() {
                                 <h2 className="text-base sm:text-xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Support &amp; Resistance</h2>
                                 <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-widest mt-0.5">Pivot Levels · Session High / Low</p>
                             </div>
-                            <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20">
                                     <span className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest">Next Support</span>
                                     <span className="text-xs sm:text-sm font-black font-mono text-green-600 dark:text-green-400 tabular-nums">{fmtSR(srNext.nextSupport)}</span>

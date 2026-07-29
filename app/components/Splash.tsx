@@ -94,7 +94,7 @@ export default function Splash() {
 
     return (
         <div
-            className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-zinc-50 dark:bg-[#050505] transition-opacity duration-500 ${leaving ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+            className={`fixed inset-0 z-[200] overflow-hidden flex flex-col items-center justify-center bg-zinc-50 dark:bg-[#050505] transition-opacity duration-500 ${leaving ? "opacity-0 pointer-events-none" : "opacity-100"}`}
             style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
         >
             {/* ambient glow — breathes */}

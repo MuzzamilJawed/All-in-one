@@ -515,7 +515,7 @@ function StocksContent() {
                                         if (isSelected) { setSelectedIndex(null); setIndexFilter('all'); }
                                         else { setSelectedIndex(idx); setIndexFilter(idx.name); }
                                     }}
-                                    className={`flex items-center gap-3 flex-shrink-0 transition-all px-2 py-1 rounded-lg ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900'}`}
+                                    className={`flex items-center gap-3 flex-shrink-0 transition-all px-2 py-2 min-h-[34px] rounded-lg ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900'}`}
                                 >
                                     <span className={`text-[10px] font-black transition-colors ${isSelected ? 'text-blue-600' : 'text-zinc-500 dark:text-zinc-400'}`}>{idx.name}</span>
                                     <span className="text-xs font-mono font-black text-zinc-900 dark:text-zinc-50">{idx.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>

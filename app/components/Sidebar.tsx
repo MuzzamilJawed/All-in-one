@@ -115,27 +115,25 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Toggle Button (top-left hamburger) */}
+      {/* Mobile Toggle Button (top-left hamburger). Hidden once the drawer is
+          open — the drawer has its own close button, and showing both put two
+          ✕ icons on screen at once. */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label={isOpen ? "Close menu" : "Open menu"}
+        onClick={() => setIsOpen(true)}
+        aria-label="Open menu"
         aria-expanded={isOpen}
-        className="lg:hidden fixed top-[calc(0.625rem_+_var(--sa-top))] left-3 z-[100] w-11 h-11 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg flex items-center justify-center active:scale-90 transition-transform"
+        className={`lg:hidden fixed top-[calc(0.625rem_+_var(--sa-top))] left-3 z-[100] w-11 h-11 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg items-center justify-center active:scale-90 transition-transform ${isOpen ? "hidden" : "flex"}`}
       >
-        {isOpen ? (
-          <X className="w-5 h-5" strokeWidth={2.5} />
-        ) : (
-          <span className="flex flex-col items-center justify-center gap-[3px]">
-            <span className="block w-[18px] h-[2px] bg-current rounded-full"></span>
-            <span className="block w-[18px] h-[2px] bg-current rounded-full"></span>
-            <span className="block w-[18px] h-[2px] bg-current rounded-full"></span>
-          </span>
-        )}
+        <span className="flex flex-col items-center justify-center gap-[3px]">
+          <span className="block w-[18px] h-[2px] bg-current rounded-full"></span>
+          <span className="block w-[18px] h-[2px] bg-current rounded-full"></span>
+          <span className="block w-[18px] h-[2px] bg-current rounded-full"></span>
+        </span>
       </button>
 
       {/* Backdrop */}
       {isOpen && (
-        <div 
+        <div
           onClick={() => setIsOpen(false)}
           className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]"
         />
@@ -145,7 +143,7 @@ export default function Sidebar() {
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
 
         <div className={`pl-6 pr-2 py-6 pt-[calc(1.5rem_+_var(--sa-top))] ${collapsed ? "lg:pl-2 lg:pr-1 lg:py-3" : ""} border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-2`}>
-          <div className="flex items-center gap-3 min-w-0">
+          <a className="flex items-center gap-3 min-w-0" href="/">
             <div className={`w-9 h-9 ${collapsed ? "lg:w-8 lg:h-8" : ""} shrink-0 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25`}>
               <span className="text-white font-black text-xl italic leading-none">S</span>
             </div>
@@ -153,8 +151,8 @@ export default function Sidebar() {
               <h1 className="text-base font-black tracking-tighter italic uppercase leading-none whitespace-nowrap">Solo<span className="text-blue-500">Trackr</span></h1>
               <p className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-0.5 uppercase font-bold tracking-widest whitespace-nowrap">All Markets · One Place</p>
             </div>
-          </div>
-          <button onClick={() => setIsOpen(false)} className="lg:hidden text-zinc-500 shrink-0"><X className="w-4 h-4" strokeWidth={2.5} /></button>
+          </a>
+          <button onClick={() => setIsOpen(false)} aria-label="Close menu" className="lg:hidden shrink-0 w-10 h-10 -mr-1 flex items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-90 transition-all"><X className="w-5 h-5" strokeWidth={2.5} /></button>
           {/* Desktop collapse / expand toggle — same row as logo, on the right */}
           <button
             onClick={toggleCollapsed}
@@ -187,7 +185,7 @@ export default function Sidebar() {
                           className={`flex-1 flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${collapsed ? "lg:justify-center lg:px-0" : ""} ${isActive
                             ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
                             : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
-                          }`}
+                            }`}
                         >
                           <item.icon className="w-5 h-5 shrink-0" strokeWidth={2} />
                           <span className={`font-bold text-sm tracking-tight ${collapsed ? "lg:hidden" : ""}`}>{item.name}</span>
@@ -221,7 +219,7 @@ export default function Sidebar() {
                                 className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold tracking-tight transition-all duration-300 ${childActive
                                   ? "bg-blue-600 text-white shadow shadow-blue-600/20"
                                   : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-50"
-                                }`}
+                                  }`}
                               >
                                 {child.icon && <child.icon className="w-4 h-4 shrink-0" strokeWidth={2} />}
                                 <span>{child.name}</span>
@@ -245,7 +243,7 @@ export default function Sidebar() {
               <button
                 data-testid="theme-toggle-light"
                 onClick={() => setTheme('light')}
-                className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'light' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+                className={`flex-1 flex items-center justify-center p-1.5 min-h-[36px] lg:min-h-0 rounded transition-all ${theme === 'light' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
                 title="Light Mode"
               >
                 <Sun className="w-4 h-4" strokeWidth={2} />
@@ -253,14 +251,14 @@ export default function Sidebar() {
               <button
                 data-testid="theme-toggle-dark"
                 onClick={() => setTheme('dark')}
-                className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'dark' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+                className={`flex-1 flex items-center justify-center p-1.5 min-h-[36px] lg:min-h-0 rounded transition-all ${theme === 'dark' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
                 title="Dark Mode"
               >
                 <Moon className="w-4 h-4" strokeWidth={2} />
               </button>
               <button
                 onClick={() => setTheme('system')}
-                className={`flex-1 flex items-center justify-center p-1.5 rounded transition-all ${theme === 'system' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
+                className={`flex-1 flex items-center justify-center p-1.5 min-h-[36px] lg:min-h-0 rounded transition-all ${theme === 'system' ? 'bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'}`}
                 title="System Auto"
               >
                 <Monitor className="w-4 h-4" strokeWidth={2} />

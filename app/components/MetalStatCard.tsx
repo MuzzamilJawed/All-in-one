@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Target, Medal, Gem } from "lucide-react";
+import { Target, Medal, Gem, Trash2 } from "lucide-react";
 import { dayRangePosition } from "../lib/stockSignals";
 import { getMetalTarget, setMetalTarget, type MetalTarget } from "../lib/stockPrefs";
 import { useCurrency } from "../context/CurrencyContext";
 import { rateOf } from "../lib/currency";
+import FitText from "./FitText";
 
 interface MetalStatCardProps {
     metal: "GOLD" | "SILVER";
@@ -65,39 +66,67 @@ export default function MetalStatCard({
     const fmtPkr = (n?: number | null) => fmt(show(n));
 
     return (
-        <div className={`rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 text-white relative overflow-hidden bg-gradient-to-br ${accent} shadow-xl`}>
+        <div className={`rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 text-white relative overflow-hidden bg-gradient-to-br ${accent} shadow-xl`}>
             <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -translate-y-12 translate-x-8 pointer-events-none"></div>
 
             <div className="relative z-10">
-                <div className="flex items-start justify-between gap-2 mb-4">
-                    <div className="flex items-center gap-2">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2 min-w-0">
                         {metal === "GOLD"
                             ? <Medal className="w-5 h-5 shrink-0" strokeWidth={2} />
                             : <Gem className="w-5 h-5 shrink-0" strokeWidth={2} />}
-                        <div>
+                        <div className="min-w-0">
                             <h3 className="text-sm font-black uppercase italic tracking-tighter leading-none">{label}</h3>
                             <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest mt-0.5">{unitLabel}</p>
                         </div>
                     </div>
-                    {hit && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full bg-white text-emerald-600 animate-pulse"><Target className="w-2.5 h-2.5" strokeWidth={2} /> Target hit</span>
-                    )}
+
+                    {/* The price target sits in the header's spare space rather than in a
+                        row of its own — on a phone that row was pure card height. */}
+                    {!editing && (target ? (
+                        <button
+                            onClick={() => { setInput(String(Number(((target.value * fx)).toFixed(2)))); setEditing(true); }}
+                            title={hit ? "Target reached — tap to edit" : "Tap to edit your price target"}
+                            className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[32px] rounded-full text-[9px] font-black uppercase tracking-widest transition-colors ${hit
+                                ? "bg-white text-emerald-600 animate-pulse"
+                                : "bg-white/15 hover:bg-white/25 text-white/90"
+                                }`}
+                        >
+                            <Target className="w-3 h-3 shrink-0" strokeWidth={2} />
+                            {hit ? "Target hit" : (
+                                <>
+                                    <span className="tabular-nums">{sym}{fmtPkr(target.value)}</span>
+                                    {awayPct != null && (
+                                        <span className="tabular-nums text-white/60">{(awayPct >= 0 ? "+" : "") + awayPct.toFixed(1)}%</span>
+                                    )}
+                                </>
+                            )}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => { setInput(""); setEditing(true); }}
+                            title="Set a price target"
+                            className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[32px] rounded-full bg-white/15 hover:bg-white/25 text-[9px] font-black uppercase tracking-widest text-white/80 hover:text-white transition-colors"
+                        >
+                            <Target className="w-3 h-3 shrink-0" strokeWidth={2} /> Set target
+                        </button>
+                    ))}
                 </div>
 
-                <div className="flex items-end justify-between gap-2 mb-5">
-                    <div>
-                        <p className="text-2xl sm:text-4xl font-black font-mono tracking-tighter leading-none">
+                <div className="flex items-end justify-between gap-2 mb-4">
+                    <div className="min-w-0 flex-1">
+                        <FitText className="text-2xl sm:text-4xl font-black font-mono tracking-tighter leading-none">
                             <span className="text-sm sm:text-lg font-medium mr-1 text-white/70">{sym}</span>{fmtPkr(currentPrice)}
-                        </p>
+                        </FitText>
                     </div>
-                    <div className={`text-right ${isPos ? 'text-emerald-200' : 'text-red-200'}`}>
+                    <div className={`text-right shrink-0 ${isPos ? 'text-emerald-200' : 'text-red-200'}`}>
                         <p className="text-sm font-black font-mono leading-none">{isPos ? '▲' : '▼'} {Math.abs(changePercent || 0).toFixed(2)}%</p>
                         <p className="text-[10px] font-bold opacity-80">{isPos ? '+' : ''}{fmtPkr(change || 0)}</p>
                     </div>
                 </div>
 
                 {/* 52-week range bar */}
-                <div className="mb-4">
+                <div>
                     <div className="flex items-center justify-between text-[8px] font-black text-white/70 uppercase tracking-widest mb-1.5">
                         <span>52W Low {fmtPkr(low52)}</span>
                         <span>52W High {fmtPkr(high52)}</span>
@@ -113,9 +142,10 @@ export default function MetalStatCard({
                     </div>
                 </div>
 
-                {/* Target alert */}
-                <div className="pt-3 border-t border-white/15">
-                    {editing ? (
+                {/* The editor only exists while it is being used, so the card keeps
+                    its short resting height. */}
+                {editing && (
+                    <div className="mt-4 pt-3 border-t border-white/15">
                         <div className="flex items-center gap-2">
                             <div className="flex-1 relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 text-xs font-bold">{sym}</span>
@@ -130,24 +160,27 @@ export default function MetalStatCard({
                                     className="w-full bg-white/15 border border-white/20 rounded-xl pl-9 pr-3 py-2 text-sm font-black text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-white/40"
                                 />
                             </div>
-                            <button onClick={save} className="bg-white text-zinc-900 text-[10px] font-black uppercase px-3 py-2 rounded-xl">Save</button>
-                            <button onClick={() => setEditing(false)} className="text-white/70 hover:text-white px-1">✕</button>
+                            <button onClick={save} className="shrink-0 bg-white text-zinc-900 text-[10px] font-black uppercase px-3 py-2 min-h-[36px] rounded-xl">Save</button>
+                            <button
+                                onClick={() => setEditing(false)}
+                                aria-label="Cancel"
+                                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                            >
+                                ✕
+                            </button>
+                            {target && (
+                                <button
+                                    onClick={() => { setMetalTarget(metal, null, currentPrice || 0); setEditing(false); }}
+                                    aria-label="Remove target"
+                                    title="Remove target"
+                                    className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" strokeWidth={2} />
+                                </button>
+                            )}
                         </div>
-                    ) : target ? (
-                        <button onClick={() => { setInput(String(Number(((target.value * fx)).toFixed(2)))); setEditing(true); }} className="w-full flex items-center justify-between gap-2 group">
-                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/80">
-                                <Target className="w-3 h-3 shrink-0" strokeWidth={2} /> Target {sym}{fmtPkr(target.value)}
-                            </span>
-                            <span className="text-[10px] font-black tabular-nums text-white/70 group-hover:text-white">
-                                {hit ? 'Reached' : `${awayPct != null ? (awayPct >= 0 ? '+' : '') + awayPct.toFixed(1) + '%' : ''} away`}
-                            </span>
-                        </button>
-                    ) : (
-                        <button onClick={() => { setInput(""); setEditing(true); }} className="w-full inline-flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/70 hover:text-white transition-colors">
-                            <Target className="w-3 h-3 shrink-0" strokeWidth={2} /> Set a price target
-                        </button>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );

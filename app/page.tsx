@@ -121,18 +121,18 @@ export default function Home() {
       {/* Header */}
       <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
         <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex justify-between items-center">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25">
               <span className="text-white font-black text-xl sm:text-2xl italic leading-none">S</span>
             </div>
-            <div>
-              <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none truncate">
                 Solo<span className="text-blue-500">Trackr</span>
               </h1>
-              <p className="text-zinc-500 dark:text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2">All Markets · One Place</p>
+              <p className="text-zinc-500 dark:text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2 truncate">All Markets · One Place</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <CurrencyToggle />
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/10">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -283,7 +283,7 @@ export default function Home() {
                 <div className="flex flex-col">
                   <div className="flex items-end justify-between mb-4 sm:mb-6">
                     <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter flex items-center gap-2.5"><Gem className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Commodity Spot Rates</h2>
-                    <a href="/metals" className="shrink-0 text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View Warehouse →</a>
+                    <a href="/metals" className="shrink-0 text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View →</a>
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:gap-6 flex-1 xl:auto-rows-fr">
                     <PriceCard title="Gold (24K) - Tola" usdPrice={goldData.tola24k?.usdPrice} pkrPrice={goldData.tola24k?.pkrPrice} change={goldData.tola24k?.change} changePercent={goldData.tola24k?.changePercent} error={goldData.tola24k?.error} lastUpdated={currentTime} isLoading={loading} />
@@ -359,7 +359,7 @@ export default function Home() {
                 <div className="bg-zinc-100 dark:bg-zinc-900/40 backdrop-blur-sm rounded-[1.5rem] sm:rounded-[3rem] p-4 sm:p-8 border border-zinc-200 dark:border-white/5">
                   <div className="flex items-end justify-between mb-4 sm:mb-8">
                     <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none flex items-center gap-2.5"><Bitcoin className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 shrink-0" strokeWidth={2} /> Crypto Hub</h2>
-                    <span className="text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-widest italic hidden sm:block">Real-Time</span>
+                    <a href="/crypto" className="shrink-0 text-xs font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/0 hover:border-blue-500 transition-all">View →</a>
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:gap-6">
                     {cryptoData.slice(0, 2).map(coin => (

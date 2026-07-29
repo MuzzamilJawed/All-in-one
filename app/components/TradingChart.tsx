@@ -354,7 +354,7 @@ export default function TradingChart({
                             <button
                                 key={tf}
                                 onClick={() => onTimeframeChange?.(tf)}
-                                className={`px-3 sm:px-4 py-2 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest ${currentTimeframe === tf ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}
+                                className={`px-3 sm:px-4 py-2 min-h-[34px] sm:min-h-0 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest ${currentTimeframe === tf ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/40' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300'}`}
                             >
                                 {tf}
                             </button>

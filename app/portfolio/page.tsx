@@ -239,7 +239,7 @@ export default function PortfolioPage() {
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase leading-none flex items-center gap-2"><Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" strokeWidth={2} /> Portfolio <span className="text-emerald-500">Ledger</span></h1>
                         <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1">Multi-Asset Holdings · Profit &amp; Loss</p>
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:flex-nowrap">
                         <CurrencyToggle />
                         <button onClick={() => setShowAdd(s => !s)} className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">{showAdd ? "✕ Close" : "+ Add Trade"}</button>
                         <button onClick={download} disabled={ledger.length === 0} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-zinc-200 dark:border-white/10 transition-all"><Download className="w-3.5 h-3.5" strokeWidth={2} /> Download</button>
@@ -463,7 +463,7 @@ export default function PortfolioPage() {
                             <BarChart3 className="w-8 h-8 mx-auto mb-3 text-zinc-400" strokeWidth={1.5} />
                             <p className="text-zinc-500 font-black uppercase tracking-widest text-[11px] mb-1">No open positions</p>
                             <p className="text-zinc-400 text-[10px] mb-4">Add a Buy trade — stocks, crypto, forex or commodities — to start tracking P/L.</p>
-                            <button onClick={() => setShowAdd(true)} className="text-[10px] font-black text-blue-500 uppercase tracking-widest border-b border-blue-500/40 hover:border-blue-500">+ Add your first trade</button>
+                            <button onClick={() => setShowAdd(true)} className="inline-flex items-center px-2 py-2 min-h-[34px] text-[10px] font-black text-blue-500 uppercase tracking-widest border-b border-blue-500/40 hover:border-blue-500">+ Add your first trade</button>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">

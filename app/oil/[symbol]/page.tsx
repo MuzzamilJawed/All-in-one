@@ -8,6 +8,7 @@ const TradingChart = dynamic(() => import('../../components/TradingChart'), { ss
 import { useSettings } from "../../context/SettingsContext";
 import { useCurrency } from "../../context/CurrencyContext";
 import CurrencyToggle from "../../components/CurrencyToggle";
+import FitText from "../../components/FitText";
 import { rateOf } from "../../lib/currency";
 import { useToast } from "../../context/ToastContext";
 import { fetchOilPrices } from "../../lib/api";
@@ -182,15 +183,15 @@ export default function OilDetailPage() {
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30">
             {/* Header */}
             <div className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center">
-                    <div className="flex items-center gap-6">
-                        <button onClick={() => router.push('/oil')} className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group">
+                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center gap-3">
+                    <div className="flex items-center gap-3 sm:gap-6 min-w-0 flex-1">
+                        <button onClick={() => router.push('/oil')} className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group">
                             <ArrowLeft className="w-5 h-5 text-zinc-500 group-hover:text-blue-500 transition-colors" strokeWidth={2} />
                         </button>
-                        <div>
-                            <h1 className="text-3xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-none">{item.name}</h1>
-                            <div className="flex items-center gap-2 mt-2">
-                                <span className="bg-blue-500/10 text-blue-500 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded">Terminal ID: {symbol}</span>
+                        <div className="min-w-0">
+                            <h1 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter leading-none truncate">{item.name}</h1>
+                            <div className="flex items-center gap-2 mt-1 sm:mt-2 min-w-0">
+                                <span className="bg-blue-500/10 text-blue-500 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded truncate">Terminal ID: {symbol}</span>
                                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                             </div>
                         </div>
@@ -210,7 +211,7 @@ export default function OilDetailPage() {
                     ].map((stat, i) => (
                         <div key={i} className="bg-white dark:bg-zinc-900/50 p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-sm">
                             <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2">{stat.label}</p>
-                            <div className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter mb-1">{stat.value}</div>
+                            <FitText className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter mb-1">{stat.value}</FitText>
                             <div className={`text-[10px] font-black ${stat.color}`}>{stat.sub}</div>
                         </div>
                     ))}
@@ -279,18 +280,18 @@ export default function OilDetailPage() {
                                 <Target className="w-6 h-6 shrink-0 text-blue-500" strokeWidth={2} />
                                 <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Key Price Levels</h3>
                             </div>
-                            <div className="grid grid-cols-3 gap-3">
-                                <div className="bg-green-500/[0.06] border border-green-500/15 p-4 rounded-2xl text-center">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                                <div className="bg-green-500/[0.06] border border-green-500/15 p-2.5 sm:p-4 rounded-2xl text-center min-w-0">
                                     <p className="text-[8px] font-black text-green-600/70 dark:text-green-400/70 uppercase tracking-widest mb-1">Support</p>
-                                    <p className="text-sm sm:text-base font-black text-green-600 dark:text-green-400 font-mono">{priceSymbol}{formatPrice(support)}</p>
+                                    <FitText className="text-sm sm:text-base font-black text-green-600 dark:text-green-400 font-mono">{priceSymbol}{formatPrice(support)}</FitText>
                                 </div>
-                                <div className="bg-blue-500/[0.06] border border-blue-500/15 p-4 rounded-2xl text-center">
+                                <div className="bg-blue-500/[0.06] border border-blue-500/15 p-2.5 sm:p-4 rounded-2xl text-center min-w-0">
                                     <p className="text-[8px] font-black text-blue-600/70 dark:text-blue-400/70 uppercase tracking-widest mb-1">Current</p>
-                                    <p className="text-sm sm:text-base font-black text-zinc-900 dark:text-white font-mono">{priceSymbol}{formatPrice(currentPrice)}</p>
+                                    <FitText className="text-sm sm:text-base font-black text-zinc-900 dark:text-white font-mono">{priceSymbol}{formatPrice(currentPrice)}</FitText>
                                 </div>
-                                <div className="bg-red-500/[0.05] border border-red-500/15 p-4 rounded-2xl text-center">
+                                <div className="bg-red-500/[0.05] border border-red-500/15 p-2.5 sm:p-4 rounded-2xl text-center min-w-0">
                                     <p className="text-[8px] font-black text-red-600/70 dark:text-red-400/70 uppercase tracking-widest mb-1">Resistance</p>
-                                    <p className="text-sm sm:text-base font-black text-red-600 dark:text-red-400 font-mono">{priceSymbol}{formatPrice(resistance)}</p>
+                                    <FitText className="text-sm sm:text-base font-black text-red-600 dark:text-red-400 font-mono">{priceSymbol}{formatPrice(resistance)}</FitText>
                                 </div>
                             </div>
                             {/* Position within the support→resistance band */}

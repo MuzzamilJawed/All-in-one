@@ -2,6 +2,7 @@
 
 import { useCurrency } from "../context/CurrencyContext";
 import { currencySymbol as symbolFor, rateOf } from "../lib/currency";
+import FitText from "./FitText";
 
 interface PriceCardProps {
   title: string;
@@ -77,14 +78,14 @@ export default function PriceCard({
         ) : (
           <div className="space-y-3 sm:space-y-4 flex-1 flex flex-col">
             <div>
-              <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0">
                 <span className="text-base sm:text-xl font-medium text-zinc-400 shrink-0">{currencySymbol}</span>
-                <span className="text-xl sm:text-2xl lg:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono tabular-nums break-words min-w-0">
+                <FitText className="flex-1 text-xl sm:text-2xl lg:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter font-mono tabular-nums">
                   {(displayPrice || 0).toLocaleString(undefined, {
                     minimumFractionDigits: (displayPrice || 0) < 10 ? 4 : 2,
                     maximumFractionDigits: (displayPrice || 0) < 10 ? 4 : 2
                   })}
-                </span>
+                </FitText>
               </div>
               <div className="mt-2 flex items-center gap-3">
                 <p className={`text-sm font-black italic tracking-tight ${displayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>

@@ -6,6 +6,7 @@ import { useCurrency } from "../context/CurrencyContext";
 import { convertAmount, currencySymbol } from "../lib/currency";
 import { getTxns, computeHoldings, type Txn } from "../lib/portfolio";
 import { fetchAllPrices, priceKey, priceIn, type PriceBook } from "../lib/prices";
+import FitText from "./FitText";
 
 // Compact live portfolio snapshot for the dashboard — headline value + today's
 // and total change. Full holdings live on the /portfolio screen.
@@ -102,16 +103,16 @@ export default function PortfolioSummary() {
                     <p className="text-zinc-400 text-[10px] leading-relaxed mb-4 max-w-[240px]">
                         Record a Buy — stocks, crypto, forex or commodities — to track live value &amp; profit / loss here.
                     </p>
-                    <a href="/portfolio" className="inline-block text-[9px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/40">+ Add your first trade</a>
+                    <a href="/portfolio" className="inline-flex items-center px-2 py-2 min-h-[34px] text-[9px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest border-b border-blue-500/40">+ Add your first trade</a>
                 </div>
             ) : (
                 <div className="p-3.5 sm:p-4 space-y-3">
                     {/* Headline current value */}
                     <div>
                         <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">Current Value</p>
-                        <p className="text-xl sm:text-2xl font-black font-mono tabular-nums tracking-tighter text-zinc-900 dark:text-white leading-none">
+                        <FitText className="text-xl sm:text-2xl font-black font-mono tabular-nums tracking-tighter text-zinc-900 dark:text-white leading-none">
                             {loading && totals.value === 0 ? "…" : fmt(totals.value)}
-                        </p>
+                        </FitText>
                     </div>
 
                     {/* Change today vs total return */}
@@ -122,9 +123,9 @@ export default function PortfolioSummary() {
                         ].map((m) => {
                             const up = m.val >= 0;
                             return (
-                                <div key={m.label} className={`rounded-xl border px-2.5 py-2 ${up ? 'bg-green-500/[0.06] border-green-500/15' : 'bg-red-500/[0.06] border-red-500/15'}`}>
+                                <div key={m.label} className={`min-w-0 rounded-xl border px-2.5 py-2 ${up ? 'bg-green-500/[0.06] border-green-500/15' : 'bg-red-500/[0.06] border-red-500/15'}`}>
                                     <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{m.label}</p>
-                                    <p className={`text-[13px] font-black font-mono tabular-nums leading-none ${up ? 'text-green-500' : 'text-red-500'}`}>{signed(m.val)} <span className="text-[10px]">{up ? '▲' : '▼'}{Math.abs(m.pct).toFixed(2)}%</span></p>
+                                    <FitText className={`text-[13px] font-black font-mono tabular-nums leading-none ${up ? 'text-green-500' : 'text-red-500'}`}>{signed(m.val)} <span className="text-[10px]">{up ? '▲' : '▼'}{Math.abs(m.pct).toFixed(2)}%</span></FitText>
                                 </div>
                             );
                         })}
@@ -137,9 +138,9 @@ export default function PortfolioSummary() {
                             { label: "Invested", val: fmt(totals.invested), tone: "text-zinc-900 dark:text-white" },
                             { label: "Holdings", val: String(rows.length), tone: "text-zinc-900 dark:text-white" },
                         ].map((m) => (
-                            <div key={m.label} className="bg-white dark:bg-zinc-900/60 px-2.5 py-1.5">
+                            <div key={m.label} className="min-w-0 bg-white dark:bg-zinc-900/60 px-2.5 py-1.5">
                                 <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{m.label}</p>
-                                <p className={`text-[11px] sm:text-xs font-black font-mono tabular-nums leading-none ${m.tone}`}>{m.val}</p>
+                                <FitText className={`text-[11px] sm:text-xs font-black font-mono tabular-nums leading-none ${m.tone}`}>{m.val}</FitText>
                             </div>
                         ))}
                     </div>
