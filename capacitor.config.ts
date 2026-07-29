@@ -39,9 +39,13 @@ const config: CapacitorConfig = {
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,
     },
+    // Initial value only — <SafeArea> re-applies the style at runtime to match
+    // the active light/dark theme, otherwise the clock and signal icons end up
+    // white-on-white in light mode. `backgroundColor` is a no-op under the
+    // mandatory edge-to-edge of Android 15+; the app paints that strip itself.
     StatusBar: {
       style: 'DARK',
-      backgroundColor: '#050505',
+      overlaysWebView: true,
     },
   },
 };

@@ -396,7 +396,10 @@ function MarketTerminalContent() {
                 <aside
                     data-testid="equity-watch-list"
                     className={`fixed lg:relative inset-y-0 left-0 w-[300px] sm:w-[380px] h-full border-r border-zinc-200 dark:border-white/5 bg-white dark:bg-[#080808] lg:bg-white/40 lg:dark:bg-black/20 backdrop-blur-3xl lg:backdrop-blur-md flex flex-col shrink-0 overflow-hidden transform transition-transform duration-300 ease-in-out z-50 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                    <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-white/5 space-y-6">
+                    {/* The drawer is fixed from y=0, so on phones its first row lands
+                        under the floating nav button (and the status bar cutout in the
+                        native shell). Clear both before the view selector. */}
+                    <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-[calc(4rem_+_var(--sa-top))] lg:pt-6 border-b border-zinc-200 dark:border-white/5 space-y-6">
                         {/* Global View Selector */}
                         <div className="flex bg-zinc-100 dark:bg-white/5 p-1 rounded-xl border border-zinc-200 dark:border-white/5">
                             <button

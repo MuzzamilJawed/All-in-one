@@ -481,13 +481,15 @@ function ScoreBlocks({ score, max = 5 }: { score: number; max?: number }) {
 
 function SectionTitle({ num, label, color = "text-blue-500" }: { num?: string | number; label: string; color?: string }) {
     return (
-        <h2 className={`text-[9px] font-black uppercase tracking-[0.15em] ${color} mb-3 flex items-center gap-2`}>
+        // pr-11 keeps the title clear of the card's absolutely-positioned "?"
+        // button, which a wrapped heading otherwise runs underneath on a phone.
+        <h2 className={`text-[9px] font-black uppercase tracking-[0.15em] ${color} mb-3 pr-11 flex items-start gap-2`}>
             {num !== undefined && (
-                <span className="inline-flex items-center justify-center w-4 h-4 rounded text-[8px] font-black" style={{ backgroundColor: "currentColor" }}>
+                <span className="inline-flex shrink-0 items-center justify-center w-4 h-4 rounded text-[8px] font-black" style={{ backgroundColor: "currentColor" }}>
                     <span className="text-white">{num}</span>
                 </span>
             )}
-            {label}
+            <span className="min-w-0">{label}</span>
         </h2>
     );
 }
@@ -676,9 +678,9 @@ function ReportContent({ symbol }: { symbol: string }) {
                         </span>
                     </button>
                     <div className="flex items-center gap-3">
-                        <div className="flex gap-1 items-center">
-                            {report.dataSources.psx && <span className="text-[9px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 rounded font-bold">PSX ✓</span>}
-                            {report.dataSources.yahoo && <span className="text-[9px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded font-bold">Yahoo ✓</span>}
+                        <div className="hidden sm:flex gap-1 items-center shrink-0">
+                            {report.dataSources.psx && <span className="text-[9px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 rounded font-bold whitespace-nowrap">PSX ✓</span>}
+                            {report.dataSources.yahoo && <span className="text-[9px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded font-bold whitespace-nowrap">Yahoo ✓</span>}
                         </div>
                         <span className="text-[10px] text-zinc-400 hidden sm:block">
                             {new Date(report.generatedAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}
@@ -698,29 +700,31 @@ function ReportContent({ symbol }: { symbol: string }) {
                 <div ref={printRef} className="w-full px-4 py-6 lg:px-8 lg:py-8 space-y-4">
 
                     {/* ══ HEADER ══ */}
-                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6">
-                        <div className="flex flex-wrap items-start justify-between gap-6">
-                            <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/30 shrink-0">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-6">
+                        <div className="flex flex-wrap items-start justify-between gap-4 sm:gap-6">
+                            <div className="flex items-center gap-3 sm:gap-4 min-w-0 w-full sm:w-auto">
+                                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center text-white font-black text-lg sm:text-xl shadow-lg shadow-blue-500/30 shrink-0">
                                     {report.symbol.substring(0, 2)}
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">{report.name}</h1>
+                                        <h1 className="text-xl sm:text-3xl font-black uppercase tracking-tight break-words">{report.name}</h1>
                                         <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase tracking-widest rounded border border-blue-200 dark:border-blue-800">
                                             {report.exchange}: {report.symbol}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-zinc-400 mt-0.5 uppercase tracking-widest">
+                                    <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 uppercase tracking-widest">
                                         {report.sector}{report.industry ? ` • ${report.industry}` : ""} — Equity Research Report
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
-                                <div>
+                            {/* Phones get a 2-up grid so the figures line up in columns
+                                instead of wrapping into a ragged row. */}
+                            <div className="w-full sm:w-auto grid grid-cols-2 gap-3 sm:flex sm:items-center sm:gap-6 sm:flex-wrap">
+                                <div className="min-w-0">
                                     <p className="text-[9px] text-zinc-400 uppercase tracking-widest mb-0.5">Current Price</p>
-                                    <p className="text-2xl font-black font-mono">{fmtPrice(report.currentPrice, currency)}</p>
+                                    <p className="text-xl sm:text-2xl font-black font-mono">{fmtPrice(report.currentPrice, currency)}</p>
                                     {report.changePercent !== null && (
                                         <p className={`text-[10px] font-bold ${changePositive ? "text-green-500" : "text-red-500"}`}>
                                             {changePositive ? "▲" : "▼"} {fmt(Math.abs(report.changePercent ?? 0), 2)}%
@@ -729,26 +733,26 @@ function ReportContent({ symbol }: { symbol: string }) {
                                     )}
                                 </div>
                                 {report.targetPrice !== null && (
-                                    <div>
+                                    <div className="min-w-0">
                                         <p className="text-[9px] text-zinc-400 uppercase tracking-widest mb-0.5">12-Mo Target</p>
-                                        <p className="text-2xl font-black font-mono text-blue-500">{fmtPrice(report.targetPrice, currency)}</p>
+                                        <p className="text-xl sm:text-2xl font-black font-mono text-blue-500">{fmtPrice(report.targetPrice, currency)}</p>
                                     </div>
                                 )}
                                 {report.upsidePotential !== null && (
-                                    <div>
+                                    <div className="min-w-0">
                                         <p className="text-[9px] text-zinc-400 uppercase tracking-widest mb-0.5">Upside</p>
-                                        <p className={`text-2xl font-black ${report.upsidePotential >= 0 ? "text-green-500" : "text-red-500"}`}>
+                                        <p className={`text-xl sm:text-2xl font-black ${report.upsidePotential >= 0 ? "text-green-500" : "text-red-500"}`}>
                                             {report.upsidePotential >= 0 ? "+" : ""}{fmt(report.upsidePotential, 1)}%
                                         </p>
                                     </div>
                                 )}
                                 {report.marketCap !== null && (
-                                    <div>
+                                    <div className="min-w-0">
                                         <p className="text-[9px] text-zinc-400 uppercase tracking-widest mb-0.5">Market Cap</p>
-                                        <p className="text-lg font-black font-mono">{fmtLarge(report.marketCap, currency)}</p>
+                                        <p className="text-base sm:text-lg font-black font-mono">{fmtLarge(report.marketCap, currency)}</p>
                                     </div>
                                 )}
-                                <div className={`px-6 py-3 rounded-xl border-2 font-black text-2xl ${ratingStyle}`}>
+                                <div className={`col-span-2 sm:col-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl border-2 font-black text-xl sm:text-2xl text-center ${ratingStyle}`}>
                                     {report.rating}
                                 </div>
                             </div>
@@ -757,10 +761,10 @@ function ReportContent({ symbol }: { symbol: string }) {
                         {/* 52-week range bar */}
                         {rangePosition !== null && (
                             <div className="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                                <div className="flex justify-between text-[9px] font-bold text-zinc-400 mb-1.5 uppercase tracking-widest">
-                                    <span>52W Low: {fmtPrice(report.technical.fiftyTwoWeekLow, currency)}</span>
-                                    <span>52-Week Range Position</span>
-                                    <span>52W High: {fmtPrice(report.technical.fiftyTwoWeekHigh, currency)}</span>
+                                <div className="flex justify-between gap-2 text-[9px] font-bold text-zinc-400 mb-1.5 uppercase tracking-widest">
+                                    <span className="min-w-0">52W Low: {fmtPrice(report.technical.fiftyTwoWeekLow, currency)}</span>
+                                    <span className="hidden sm:inline shrink-0">52-Week Range Position</span>
+                                    <span className="min-w-0 text-right">52W High: {fmtPrice(report.technical.fiftyTwoWeekHigh, currency)}</span>
                                 </div>
                                 <div className="relative h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full">
                                     <div
@@ -895,7 +899,9 @@ function ReportContent({ symbol }: { symbol: string }) {
                         {/* 4 — Key Metrics */}
                         <Card glossaryTerms={["Gross Margin", "Operating Margin", "Net Profit Margin", "Return on Equity", "P/E (TTM)", "Forward P/E", "EV / EBITDA", "Price / Book", "EPS (TTM)", "Beta (vs Market)", "Debt / Equity", "Book Value / Share", "Quick Ratio", "Current Ratio", "Dividend Yield"]}>
                             <SectionTitle num={4} label="Key Financial Metrics (LTM)" />
-                            <div className="grid grid-cols-2 gap-x-4">
+                            {/* One column on phones — two 150px columns leave no room
+                                between a wrapped label and the next column's value. */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                                 {[
                                     { label: "Gross Margin", val: fmtPct(report.metrics.grossMargin), raw: report.metrics.grossMargin },
                                     { label: "Operating Margin", val: fmtPct(report.metrics.operatingMargin), raw: report.metrics.operatingMargin },
@@ -913,9 +919,9 @@ function ReportContent({ symbol }: { symbol: string }) {
                                     { label: "Current Ratio", val: report.metrics.currentRatio !== null ? fmt(report.metrics.currentRatio) : "—", raw: report.metrics.currentRatio },
                                     { label: "Dividend Yield", val: fmtPct(report.metrics.dividendYield), raw: report.metrics.dividendYield },
                                 ].map((item) => (
-                                    <div key={item.label} className={`flex justify-between items-center py-1.5 border-b border-zinc-50 dark:border-zinc-800/50 ${item.raw === null ? "opacity-50" : ""}`}>
-                                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{item.label}</span>
-                                        <span className={`text-[11px] font-black font-mono ${item.raw === null ? "text-zinc-400 italic" : "text-zinc-900 dark:text-white"}`}>
+                                    <div key={item.label} className={`flex justify-between items-center gap-3 py-1.5 border-b border-zinc-50 dark:border-zinc-800/50 ${item.raw === null ? "opacity-50" : ""}`}>
+                                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400 min-w-0">{item.label}</span>
+                                        <span className={`text-[11px] font-black font-mono shrink-0 ${item.raw === null ? "text-zinc-400 italic" : "text-zinc-900 dark:text-white"}`}>
                                             {item.val === "—" ? "N/A*" : item.val}
                                         </span>
                                     </div>
@@ -1212,9 +1218,11 @@ function ReportContent({ symbol }: { symbol: string }) {
                     )}
 
                     {/* ══ FINAL VERDICT ══ */}
-                    <div className="bg-white dark:bg-zinc-900 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-6">
-                        <div className="flex flex-wrap items-start justify-between gap-6">
-                            <div className="flex-1 min-w-0 sm:min-w-[280px]">
+                    <div className="bg-white dark:bg-zinc-900 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-4 sm:p-6">
+                        {/* Stacked on phones: side by side, the rating block refuses to
+                            shrink and squeezes the scorecard into an unreadable column. */}
+                        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-start justify-between gap-4 sm:gap-6">
+                            <div className="w-full sm:w-auto sm:flex-1 sm:min-w-[280px] order-2 sm:order-none">
                                 <SectionTitle num={13} label="Final Verdict — Composite Scorecard" />
                                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                                     {[
@@ -1232,9 +1240,9 @@ function ReportContent({ symbol }: { symbol: string }) {
                                     <p>Based on: operating margins, debt levels, P/E, revenue CAGR, and price trend</p>
                                 </div>
                             </div>
-                            <div className={`px-8 py-5 rounded-2xl border-2 text-center shrink-0 ${ratingStyle}`}>
+                            <div className={`w-full sm:w-auto px-5 sm:px-8 py-4 sm:py-5 rounded-2xl border-2 text-center shrink-0 order-1 sm:order-none ${ratingStyle}`}>
                                 <p className="text-[8px] font-black uppercase tracking-widest opacity-70 mb-1">Final Rating</p>
-                                <p className="text-4xl font-black">{report.rating}</p>
+                                <p className="text-3xl sm:text-4xl font-black">{report.rating}</p>
                                 <p className="text-[8px] opacity-60 mt-1">FOR PATIENT INVESTORS (2–3 YR)</p>
                                 {report.upsidePotential !== null && (
                                     <p className="text-[9px] font-bold mt-2">{report.upsidePotential >= 0 ? "+" : ""}{fmt(report.upsidePotential, 1)}% to target</p>

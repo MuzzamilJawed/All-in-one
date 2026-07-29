@@ -115,8 +115,14 @@ async function fetchPsxDetail(symbol: string): Promise<any> {
             });
             finTable.find('tbody tr').each((_, tr) => {
                 const label = $(tr).find('th, td').first().text().trim();
+                // The label cell is a <th> on some rows and a <td> on others. Only
+                // skip the first <td> when it IS the label, otherwise the label got
+                // pushed in as values[0] and every year's figure shifted a column.
+                const labelIsTh = $(tr).find('th').length > 0;
                 const values: string[] = [];
-                $(tr).find('td').each((i, td) => { if (i > 0 || !$(tr).find('th').length) values.push($(td).text().trim()); });
+                $(tr).find('td').each((i, td) => {
+                    if (labelIsTh || i > 0) values.push($(td).text().trim());
+                });
                 if (label) rows.push({ label, values });
             });
         }
