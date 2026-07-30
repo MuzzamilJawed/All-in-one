@@ -8,7 +8,9 @@ import { useSettings } from "../../context/SettingsContext";
 import StockCard from "../../components/StockCard";
 import FitText from "../../components/FitText";
 import { computePivotLevels, nextLevels } from "../../lib/levels";
-import { Radar, AlertTriangle, ArrowLeft, BarChart3, Newspaper, Star } from "lucide-react";
+import { circuitLimits, CIRCUIT_CAP } from "../../lib/stockSignals";
+import { Radar, AlertTriangle, ArrowLeft, BarChart3, Newspaper, Star, Lock } from "lucide-react";
+import { LOADING_CAPTION } from "../../lib/caption";
 
 interface Stock {
     symbol: string;
@@ -21,6 +23,8 @@ interface Stock {
     low: number;
     volume: string;
     sector?: string;
+    /** Last Day Closing Price — basis for the day's circuit limits. */
+    ldcp?: number | null;
 }
 
 export default function StockDetailPage() {
@@ -173,8 +177,8 @@ export default function StockDetailPage() {
                             if (lastIndex >= 0) {
                                 if (lastTime === liveTime || lastTime === todayStr) {
                                     history[lastIndex] = { ...history[lastIndex], ...liveCandle };
-                                } else if ((!useTimestamp && todayStr > (lastTime as string)) || 
-                                           (useTimestamp && (liveTime as number) > (lastTime as number))) {
+                                } else if ((!useTimestamp && todayStr > (lastTime as string)) ||
+                                    (useTimestamp && (liveTime as number) > (lastTime as number))) {
                                     history.push(liveCandle);
                                 }
                             } else {
@@ -189,7 +193,7 @@ export default function StockDetailPage() {
                 if (currentAsset && !isNaN(currentPrice)) {
                     const now = new Date();
                     const change = parseFloat(currentAsset.change || 0);
-                    const liveTime = tf === '1H' 
+                    const liveTime = tf === '1H'
                         ? Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()).getTime() / 1000)
                         : Math.floor(now.getTime() / 1000);
                     setCandles([{
@@ -233,8 +237,7 @@ export default function StockDetailPage() {
                         <div className="absolute inset-0 flex items-center justify-center text-blue-600"><Radar className="w-8 h-8" strokeWidth={2} /></div>
                     </div>
                     <div className="text-center">
-                        <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] mb-2">Initializing Satellite Link</p>
-                        <p className="text-zinc-500 font-bold uppercase text-[8px] tracking-[0.2em] animate-pulse">Syncing PSX Market Footprint for {symbol}</p>
+                        <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] animate-pulse">{LOADING_CAPTION}</p>
                     </div>
                 </div>
             </div>
@@ -268,6 +271,10 @@ export default function StockDetailPage() {
         ...(srNext.nextResistance != null ? [{ price: srNext.nextResistance, color: '#ef4444', title: 'Resistance' }] : []),
         ...(srNext.nextSupport != null ? [{ price: srNext.nextSupport, color: '#22c55e', title: 'Support' }] : []),
     ];
+
+    // The day's upper / lower lock prices — fixed for the session off LDCP.
+    const circuit = circuitLimits(stock.ldcp, stock.currentPrice, stock.change);
+    const fmtLock = (v: number) => `Rs.${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30">
@@ -325,6 +332,61 @@ export default function StockDetailPage() {
                         </div>
                     ))}
                 </div>
+
+                {/* Daily circuit limits — the prices PSX will halt trading at today */}
+                {circuit && (
+                    <div className="bg-white dark:bg-zinc-900/50 p-4 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-sm">
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                            <div className="min-w-0">
+                                <h2 className="text-base sm:text-xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Circuit Limits</h2>
+                                <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-widest mt-0.5">
+                                    ±{CIRCUIT_CAP}% of LDCP {fmtLock(circuit.ldcp)} · Today
+                                </p>
+                            </div>
+                            {(circuit.status === 'upper-lock' || circuit.status === 'lower-lock') && (
+                                <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${circuit.status === 'upper-lock'
+                                    ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+                                    : 'bg-red-500/15 text-red-600 dark:text-red-400'}`}>
+                                    <Lock className="w-3 h-3 shrink-0" strokeWidth={2.5} />
+                                    {circuit.status === 'upper-lock' ? 'Upper lock' : 'Lower lock'}
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                            <div className="min-w-0 rounded-xl sm:rounded-2xl bg-red-500/[0.06] border border-red-500/15 p-2.5 sm:p-4">
+                                <p className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-widest mb-1">Lower Lock</p>
+                                <FitText className="text-sm sm:text-xl font-black font-mono tabular-nums text-red-600 dark:text-red-400">
+                                    {fmtLock(circuit.lower)}
+                                </FitText>
+                                <p className="text-[8px] font-bold text-zinc-400 mt-1">{circuit.toLowerPct.toFixed(2)}% below</p>
+                            </div>
+                            <div className="min-w-0 rounded-xl sm:rounded-2xl bg-green-500/[0.06] border border-green-500/15 p-2.5 sm:p-4">
+                                <p className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest mb-1">Upper Lock</p>
+                                <FitText className="text-sm sm:text-xl font-black font-mono tabular-nums text-green-600 dark:text-green-400">
+                                    {fmtLock(circuit.upper)}
+                                </FitText>
+                                <p className="text-[8px] font-bold text-zinc-400 mt-1">{circuit.toUpperPct.toFixed(2)}% to go</p>
+                            </div>
+                        </div>
+
+                        {/* Where the price currently sits inside the allowed band */}
+                        <div className="mt-4">
+                            <div className="relative h-2 rounded-full bg-gradient-to-r from-red-500/40 via-zinc-200 dark:via-zinc-700 to-green-500/40">
+                                <div
+                                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-blue-600 border-2 border-white dark:border-zinc-900 shadow"
+                                    style={{ left: `${circuit.position}%` }}
+                                    title={`Trading at ${fmtLock(stock.currentPrice)}`}
+                                />
+                            </div>
+                            <div className="flex justify-between mt-1.5 text-[8px] font-black uppercase tracking-widest text-zinc-400">
+                                <span>{fmtLock(circuit.lower)}</span>
+                                <span className="text-zinc-500 dark:text-zinc-300">Now {fmtLock(stock.currentPrice)}</span>
+                                <span>{fmtLock(circuit.upper)}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Support / Resistance */}
                 {srLevels && (
@@ -421,178 +483,178 @@ export default function StockDetailPage() {
                         </div>
                     ) : deepDetails ? (
                         <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                            {/* Trading Limits */}
-                            <div className="bg-white dark:bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 space-y-6 shadow-sm">
-                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5 pb-3">Execution Bounds</p>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">Circuit Breaker</span>
-                                        <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.limits.circuitBreaker}</span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                                {/* Trading Limits */}
+                                <div className="bg-white dark:bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 space-y-6 shadow-sm">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5 pb-3">Execution Bounds</p>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase">Circuit Breaker</span>
+                                            <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.limits.circuitBreaker}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase">Day Range</span>
+                                            <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.performance.dayRange}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase">52-Week Range</span>
+                                            <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.performance.yearRange}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-t border-zinc-50 dark:border-white/5 pt-4">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase font-black">LDCP (Ref)</span>
+                                            <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">Rs.{deepDetails.limits.ldcp}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">Day Range</span>
-                                        <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.performance.dayRange}</span>
+                                </div>
+
+                                {/* Order Book */}
+                                <div className="bg-white dark:bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 space-y-6 shadow-sm">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5 pb-3">Order Imbalance</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-green-500/5 p-4 rounded-2xl border border-green-500/10">
+                                            <p className="text-[8px] font-black text-green-600 uppercase mb-1">Bid Price</p>
+                                            <p className="text-lg font-black text-green-600 font-mono italic">{deepDetails.orderBook.bid}</p>
+                                            <p className="text-[8px] font-bold text-zinc-500 uppercase mt-1 flex items-center gap-1.5 truncate">
+                                                <span className="w-1 h-1 bg-green-500 rounded-full"></span>
+                                                Vol: {deepDetails.orderBook.bidVol}
+                                            </p>
+                                        </div>
+                                        <div className="bg-red-500/5 p-4 rounded-2xl border border-red-500/10">
+                                            <p className="text-[8px] font-black text-red-600 uppercase mb-1">Ask Price</p>
+                                            <p className="text-lg font-black text-red-600 font-mono italic">{deepDetails.orderBook.ask}</p>
+                                            <p className="text-[8px] font-bold text-zinc-500 uppercase mt-1 flex items-center gap-1.5 truncate">
+                                                <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+                                                Vol: {deepDetails.orderBook.askVol}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">52-Week Range</span>
-                                        <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.performance.yearRange}</span>
+                                    <div className="flex justify-between items-center px-1">
+                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">Haircut / VAR</span>
+                                        <span className="text-[10px] font-black text-zinc-900 dark:text-white font-mono">{deepDetails.limits.haircut}% / {deepDetails.limits.var}%</span>
                                     </div>
-                                    <div className="flex justify-between items-center border-t border-zinc-50 dark:border-white/5 pt-4">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase font-black">LDCP (Ref)</span>
-                                        <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">Rs.{deepDetails.limits.ldcp}</span>
+                                </div>
+
+                                {/* Valuation Matrix */}
+                                <div className="bg-white dark:bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 space-y-6 shadow-sm">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5 pb-3">Valuation Matrix</p>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase">P/E Ratio (TTM)</span>
+                                            <span className="text-xs font-black text-blue-600 font-mono">{deepDetails.ratios.pe}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase">EPS (TTM)</span>
+                                            <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.ratios.eps}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase">Dividend Yield</span>
+                                            <span className="text-xs font-black text-green-500 font-mono">{deepDetails.ratios.divYield}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase">Beta 1Y</span>
+                                            <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.ratios.beta}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Performance & Profile */}
+                                <div className="bg-white dark:bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 space-y-6 shadow-sm">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5 pb-3">Market Performance</p>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-white/[0.03] rounded-xl">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase">YTD Change</span>
+                                            <span className={`text-xs font-black font-mono ${deepDetails.performance.ytd.includes('-') ? 'text-red-500' : 'text-green-500'}`}>{deepDetails.performance.ytd}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-white/[0.03] rounded-xl">
+                                            <span className="text-[10px] font-bold text-zinc-500 uppercase">1-Year Return</span>
+                                            <span className={`text-xs font-black font-mono ${deepDetails.performance.oneYear.includes('-') ? 'text-red-500' : 'text-green-500'}`}>{deepDetails.performance.oneYear}</span>
+                                        </div>
+                                        <div className="pt-2">
+                                            <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Market Cap</p>
+                                            <p className="text-sm font-black text-zinc-900 dark:text-white italic tracking-tighter truncate">{deepDetails.ratios.marketCap}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Order Book */}
-                            <div className="bg-white dark:bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 space-y-6 shadow-sm">
-                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5 pb-3">Order Imbalance</p>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-green-500/5 p-4 rounded-2xl border border-green-500/10">
-                                        <p className="text-[8px] font-black text-green-600 uppercase mb-1">Bid Price</p>
-                                        <p className="text-lg font-black text-green-600 font-mono italic">{deepDetails.orderBook.bid}</p>
-                                        <p className="text-[8px] font-bold text-zinc-500 uppercase mt-1 flex items-center gap-1.5 truncate">
-                                            <span className="w-1 h-1 bg-green-500 rounded-full"></span>
-                                            Vol: {deepDetails.orderBook.bidVol}
-                                        </p>
+                            {/* Financial Performance Matrix */}
+                            {deepDetails.financialHistory && deepDetails.financialHistory.years.length > 0 && (
+                                <div className="bg-white dark:bg-zinc-900/50 p-6 sm:p-10 rounded-[2.5rem] border border-zinc-200 dark:border-white/5 space-y-8 shadow-sm">
+                                    <div className="flex items-center justify-between border-b border-zinc-100 dark:border-white/5 pb-6">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Performance Matrix</p>
+                                            <h4 className="text-xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Financial History</h4>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest">Currency: PKR (Millions)</p>
+                                            <p className="text-zinc-400 text-[8px] font-black uppercase tracking-widest">Reporting: Annualized</p>
+                                        </div>
                                     </div>
-                                    <div className="bg-red-500/5 p-4 rounded-2xl border border-red-500/10">
-                                        <p className="text-[8px] font-black text-red-600 uppercase mb-1">Ask Price</p>
-                                        <p className="text-lg font-black text-red-600 font-mono italic">{deepDetails.orderBook.ask}</p>
-                                        <p className="text-[8px] font-bold text-zinc-500 uppercase mt-1 flex items-center gap-1.5 truncate">
-                                            <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                                            Vol: {deepDetails.orderBook.askVol}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex justify-between items-center px-1">
-                                    <span className="text-[10px] font-bold text-zinc-500 uppercase">Haircut / VAR</span>
-                                    <span className="text-[10px] font-black text-zinc-900 dark:text-white font-mono">{deepDetails.limits.haircut}% / {deepDetails.limits.var}%</span>
-                                </div>
-                            </div>
 
-                            {/* Valuation Matrix */}
-                            <div className="bg-white dark:bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 space-y-6 shadow-sm">
-                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5 pb-3">Valuation Matrix</p>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">P/E Ratio (TTM)</span>
-                                        <span className="text-xs font-black text-blue-600 font-mono">{deepDetails.ratios.pe}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">EPS (TTM)</span>
-                                        <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.ratios.eps}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">Dividend Yield</span>
-                                        <span className="text-xs font-black text-green-500 font-mono">{deepDetails.ratios.divYield}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">Beta 1Y</span>
-                                        <span className="text-xs font-black text-zinc-900 dark:text-white font-mono">{deepDetails.ratios.beta}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Performance & Profile */}
-                            <div className="bg-white dark:bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5 space-y-6 shadow-sm">
-                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5 pb-3">Market Performance</p>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-white/[0.03] rounded-xl">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">YTD Change</span>
-                                        <span className={`text-xs font-black font-mono ${deepDetails.performance.ytd.includes('-') ? 'text-red-500' : 'text-green-500'}`}>{deepDetails.performance.ytd}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-white/[0.03] rounded-xl">
-                                        <span className="text-[10px] font-bold text-zinc-500 uppercase">1-Year Return</span>
-                                        <span className={`text-xs font-black font-mono ${deepDetails.performance.oneYear.includes('-') ? 'text-red-500' : 'text-green-500'}`}>{deepDetails.performance.oneYear}</span>
-                                    </div>
-                                    <div className="pt-2">
-                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Market Cap</p>
-                                        <p className="text-sm font-black text-zinc-900 dark:text-white italic tracking-tighter truncate">{deepDetails.ratios.marketCap}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Financial Performance Matrix */}
-                        {deepDetails.financialHistory && deepDetails.financialHistory.years.length > 0 && (
-                            <div className="bg-white dark:bg-zinc-900/50 p-6 sm:p-10 rounded-[2.5rem] border border-zinc-200 dark:border-white/5 space-y-8 shadow-sm">
-                                <div className="flex items-center justify-between border-b border-zinc-100 dark:border-white/5 pb-6">
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Performance Matrix</p>
-                                        <h4 className="text-xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">Financial History</h4>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-zinc-500 text-[8px] font-black uppercase tracking-widest">Currency: PKR (Millions)</p>
-                                        <p className="text-zinc-400 text-[8px] font-black uppercase tracking-widest">Reporting: Annualized</p>
-                                    </div>
-                                </div>
-
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr>
-                                                <th className="text-left py-4 pr-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] sticky left-0 z-10 bg-white dark:bg-zinc-900">Key Metric</th>
-                                                {deepDetails.financialHistory.years.map((year: string) => (
-                                                    <th key={year} className="text-right py-4 px-6 text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-[0.2em] bg-zinc-50 dark:bg-white/[0.02] first:rounded-l-xl last:rounded-r-xl">
-                                                        FY {year}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-zinc-50 dark:divide-white/5">
-                                            {deepDetails.financialHistory.data.map((row: any, i: number) => (
-                                                <tr key={i} className="group hover:bg-zinc-50 dark:hover:bg-white/[0.01] transition-colors">
-                                                    <td className="py-5 text-xs font-black text-zinc-500 uppercase group-hover:text-blue-500 transition-colors italic pr-4 sticky left-0 z-10 bg-white dark:bg-zinc-900">
-                                                        {row.metric}
-                                                    </td>
-                                                    {row.values.map((val: string, j: number) => (
-                                                        <td key={j} className={`text-right py-5 px-6 font-mono text-xs font-bold ${val.includes('(') || val.includes('-') ? 'text-red-500' : 'text-zinc-900 dark:text-white'}`}>
-                                                            {val}
-                                                        </td>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead>
+                                                <tr>
+                                                    <th className="text-left py-4 pr-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] sticky left-0 z-10 bg-white dark:bg-zinc-900">Key Metric</th>
+                                                    {deepDetails.financialHistory.years.map((year: string) => (
+                                                        <th key={year} className="text-right py-4 px-6 text-[10px] font-black text-zinc-900 dark:text-white uppercase tracking-[0.2em] bg-zinc-50 dark:bg-white/[0.02] first:rounded-l-xl last:rounded-r-xl">
+                                                            FY {year}
+                                                        </th>
                                                     ))}
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody className="divide-y divide-zinc-50 dark:divide-white/5">
+                                                {deepDetails.financialHistory.data.map((row: any, i: number) => (
+                                                    <tr key={i} className="group hover:bg-zinc-50 dark:hover:bg-white/[0.01] transition-colors">
+                                                        <td className="py-5 text-xs font-black text-zinc-500 uppercase group-hover:text-blue-500 transition-colors italic pr-4 sticky left-0 z-10 bg-white dark:bg-zinc-900">
+                                                            {row.metric}
+                                                        </td>
+                                                        {row.values.map((val: string, j: number) => (
+                                                            <td key={j} className={`text-right py-5 px-6 font-mono text-xs font-bold ${val.includes('(') || val.includes('-') ? 'text-red-500' : 'text-zinc-900 dark:text-white'}`}>
+                                                                {val}
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* Company Profile (Full-Width Detail) */}
-                        <div className="bg-blue-600/[0.02] dark:bg-blue-600/[0.02] p-6 sm:p-10 rounded-[2.5rem] border border-blue-600/10 flex flex-col xl:flex-row gap-8 items-start xl:items-center justify-between relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] grayscale pointer-events-none group-hover:opacity-10 transition-opacity">
-                                <span className="text-7xl sm:text-9xl font-black italic uppercase leading-none">{stock.symbol}</span>
-                            </div>
-                            <div className="space-y-2 relative z-10">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <span className="text-[9px] font-black text-blue-500 uppercase tracking-[0.3em] bg-blue-600/10 px-2 py-1 rounded-md">Equity Profile</span>
-                                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em]">{deepDetails.profile.registration}</span>
+                            {/* Company Profile (Full-Width Detail) */}
+                            <div className="bg-blue-600/[0.02] dark:bg-blue-600/[0.02] p-6 sm:p-10 rounded-[2.5rem] border border-blue-600/10 flex flex-col xl:flex-row gap-8 items-start xl:items-center justify-between relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-8 opacity-[0.03] grayscale pointer-events-none group-hover:opacity-10 transition-opacity">
+                                    <span className="text-7xl sm:text-9xl font-black italic uppercase leading-none">{stock.symbol}</span>
                                 </div>
-                                <h4 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">{stock.name}</h4>
-                                <p className="text-xs font-black text-zinc-500 uppercase tracking-widest">{stock.sector} Segment / Specialized Board</p>
-                                <div className="flex flex-wrap gap-x-6 sm:gap-x-12 gap-y-6 relative z-10 mt-6">
-                                    <div>
-                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1 shadow-sm">Shares Outstanding</p>
-                                        <p className="text-sm font-black text-zinc-900 dark:text-white font-mono">{deepDetails.profile.shares}</p>
+                                <div className="space-y-2 relative z-10">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="text-[9px] font-black text-blue-500 uppercase tracking-[0.3em] bg-blue-600/10 px-2 py-1 rounded-md">Equity Profile</span>
+                                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em]">{deepDetails.profile.registration}</span>
                                     </div>
-                                    <div>
-                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1 shadow-sm">Free Float</p>
-                                        <p className="text-sm font-black text-zinc-900 dark:text-white font-mono">{deepDetails.profile.freeFloat}</p>
-                                        <p className="text-[8px] font-bold text-blue-500 uppercase mt-1">{deepDetails.profile.freeFloatPercentage} Liquidity</p>
-                                    </div>
-                                    <div className="hidden sm:block">
-                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Mkt Cap (000's)</p>
-                                        <p className="text-sm font-black text-zinc-900 dark:text-white font-mono">Rs.{deepDetails.profile.marketCapDetailed}</p>
-                                    </div>
-                                    <div className="hidden md:block">
-                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Incorporation</p>
-                                        <p className="text-sm font-black text-zinc-900 dark:text-white font-mono">{deepDetails.profile.incorporation}</p>
+                                    <h4 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tighter">{stock.name}</h4>
+                                    <p className="text-xs font-black text-zinc-500 uppercase tracking-widest">{stock.sector} Segment / Specialized Board</p>
+                                    <div className="flex flex-wrap gap-x-6 sm:gap-x-12 gap-y-6 relative z-10 mt-6">
+                                        <div>
+                                            <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1 shadow-sm">Shares Outstanding</p>
+                                            <p className="text-sm font-black text-zinc-900 dark:text-white font-mono">{deepDetails.profile.shares}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1 shadow-sm">Free Float</p>
+                                            <p className="text-sm font-black text-zinc-900 dark:text-white font-mono">{deepDetails.profile.freeFloat}</p>
+                                            <p className="text-[8px] font-bold text-blue-500 uppercase mt-1">{deepDetails.profile.freeFloatPercentage} Liquidity</p>
+                                        </div>
+                                        <div className="hidden sm:block">
+                                            <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Mkt Cap (000's)</p>
+                                            <p className="text-sm font-black text-zinc-900 dark:text-white font-mono">Rs.{deepDetails.profile.marketCapDetailed}</p>
+                                        </div>
+                                        <div className="hidden md:block">
+                                            <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Incorporation</p>
+                                            <p className="text-sm font-black text-zinc-900 dark:text-white font-mono">{deepDetails.profile.incorporation}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
                         </>
                     ) : (
                         <div className="p-6 sm:p-12 bg-zinc-50 dark:bg-white/[0.02] rounded-[2.5rem] border border-dashed border-zinc-200 dark:border-white/10 text-center">

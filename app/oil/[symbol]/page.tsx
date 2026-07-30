@@ -13,6 +13,7 @@ import { rateOf } from "../../lib/currency";
 import { useToast } from "../../context/ToastContext";
 import { fetchOilPrices } from "../../lib/api";
 import { type OilAlert, type AlertCondition, loadAlerts, persistAlerts, makeAlertId } from "../../lib/oilAlerts";
+import { LOADING_CAPTION } from "../../lib/caption";
 
 export default function OilDetailPage() {
     const params = useParams();
@@ -66,7 +67,7 @@ export default function OilDetailPage() {
             const now = new Date();
             if (timeframe === "1H") now.setMinutes(0, 0, 0);
             else now.setHours(0, 0, 0, 0);
-            
+
             const nowSec = Math.floor(now.getTime() / 1000);
             const interval = timeframe === "1H" ? 3600 : timeframe === "1D" ? 86400 : 604800;
             const count = 100;
@@ -112,7 +113,7 @@ export default function OilDetailPage() {
             <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">Synchronizing Market Feeds...</p>
+                    <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">{LOADING_CAPTION}</p>
                 </div>
             </div>
         );
@@ -160,7 +161,7 @@ export default function OilDetailPage() {
         }
         const targetUsd = tableCurrency === 'USD' ? parsed
             : tableCurrency === 'PKR' ? parsed / rate
-            : parsed / rateOf(rates, tableCurrency);
+                : parsed / rateOf(rates, tableCurrency);
         const triggered = alertCondition === 'above' ? item.price >= targetUsd : item.price <= targetUsd;
         const next: OilAlert[] = [
             { id: makeAlertId(), key: symbol, name: item.name, condition: alertCondition, targetUsd, createdAt: Date.now(), triggered },

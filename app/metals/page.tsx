@@ -9,7 +9,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { useCurrency } from "../context/CurrencyContext";
 import CurrencyToggle from "../components/CurrencyToggle";
+import FitText from "../components/FitText";
 import { rateOf } from "../lib/currency";
+import { LOADING_CAPTION } from "../lib/caption";
 // Use internal API routes to avoid CORS and run scraping/server code server-side
 
 export default function MetalsPage() {
@@ -175,7 +177,7 @@ export default function MetalsPage() {
         : rateOf(fxRates, 'PKR');
       const factor = tableCurrency === 'USD' ? 1
         : tableCurrency === 'PKR' ? exchangeRate
-        : rateOf(fxRates, tableCurrency);
+          : rateOf(fxRates, tableCurrency);
 
       const getPrice = (usdPrice: number) => {
         if (!usdPrice) return undefined;
@@ -421,9 +423,9 @@ export default function MetalsPage() {
   const getMetalOunce = (metal: string) => {
     const src =
       metal === 'gold' ? rawMarketData?.gold?.ounce24k :
-      metal === 'silver' ? rawMarketData?.silver?.ounce :
-      metal === 'platinum' ? rawMarketData?.platinum?.ounce :
-      metal === 'palladium' ? rawMarketData?.palladium?.ounce : null;
+        metal === 'silver' ? rawMarketData?.silver?.ounce :
+          metal === 'platinum' ? rawMarketData?.platinum?.ounce :
+            metal === 'palladium' ? rawMarketData?.palladium?.ounce : null;
     if (!src) return 0;
     return conv(src.usdPrice, src.pkrPrice) || 0;
   };
@@ -468,21 +470,22 @@ export default function MetalsPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       <div className="safe-top sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
         <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 max-w-[1600px] mx-auto">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
-            <div>
-              <h1 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase italic tracking-tighter">
-                <Gem className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Precious Metals
-                <span className="bg-blue-500 text-white text-[8px] sm:text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
+          <div className="flex flex-row justify-between items-center gap-3 sm:gap-6">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase italic tracking-tighter min-w-0">
+                <Gem className="w-5 h-5 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} />
+                <FitText className="min-w-0 flex-1">Precious Metals</FitText>
+                <span className="hidden sm:inline-block bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse shrink-0">
                   Live
                 </span>
               </h1>
               <p className="hidden sm:flex text-zinc-500 dark:text-zinc-400 text-[10px] mt-1 items-center gap-2 uppercase font-black tracking-widest">
                 <span className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500' : 'bg-green-500'} animate-pulse`}></span>
-                {loading ? "Fetching latest market data..." : `Last updated: ${new Date().toLocaleString()}`}
+                {loading ? LOADING_CAPTION : `Last updated: ${new Date().toLocaleString()}`}
               </p>
             </div>
 
-            <CurrencyToggle className="w-full sm:w-auto" />
+            <div className="shrink-0"><CurrencyToggle /></div>
           </div>
         </div>
       </div>

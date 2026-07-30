@@ -10,10 +10,12 @@ import { useRouter } from "next/navigation";
 import { useSettings } from "../context/SettingsContext";
 import { useCurrency } from "../context/CurrencyContext";
 import CurrencyToggle from "../components/CurrencyToggle";
+import FitText from "../components/FitText";
 import { rateOf } from "../lib/currency";
 import { useToast } from "../context/ToastContext";
 import { fetchOilPrices } from "../lib/api";
 import { type OilAlert, type AlertCondition, loadAlerts, persistAlerts, makeAlertId } from "../lib/oilAlerts";
+import { LOADING_CAPTION } from "../lib/caption";
 
 type SortKey = "name" | "price" | "changePercent" | "weekly" | "monthly" | "yearly";
 
@@ -164,7 +166,7 @@ export default function OilPage() {
     const rate = item.pkrPrice && item.price ? item.pkrPrice / item.price : rateOf(rates, 'PKR');
     const targetUsd = tableCurrency === 'USD' ? parsed
       : tableCurrency === 'PKR' ? parsed / rate
-      : parsed / rateOf(rates, tableCurrency);
+        : parsed / rateOf(rates, tableCurrency);
     const triggered = alertCondition === 'above' ? item.price >= targetUsd : item.price <= targetUsd;
     const newAlert: OilAlert = {
       id: makeAlertId(),
@@ -227,20 +229,34 @@ export default function OilPage() {
       {/* Header */}
       <div className="safe-top sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
         <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 max-w-[1600px] mx-auto">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
-            <div>
-              <h1 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 tracking-tighter uppercase italic">
-                <Fuel className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Energy Markets
-                <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
+          <div className="flex flex-row justify-between items-center gap-3 sm:gap-6">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 tracking-tighter uppercase italic min-w-0">
+                <Fuel className="w-5 h-5 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} />
+                <FitText className="min-w-0 flex-1">Energy Markets</FitText>
+                {/* Decorative on a phone — the status line below already says it's live. */}
+                <span className="hidden sm:inline-block bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse shrink-0">
                   Live
                 </span>
               </h1>
               <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1 sm:mt-2 flex items-center gap-2">
                 <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full ${loading ? 'bg-amber-500' : 'bg-green-500'} animate-pulse`}></span>
-                {loading ? "Synchronizing satellite Feeds..." : `Terminal Active - ${new Date().toLocaleTimeString()}`}
+                {loading ? LOADING_CAPTION : `Terminal Active - ${new Date().toLocaleTimeString()}`}
               </p>
             </div>
-            <CurrencyToggle className="w-full sm:w-auto" />
+            {/* Top-right controls: chart shortcut replaces the full-width Graph
+                Analysis banner that used to sit in the page body. */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => router.push('/oil/analysis')}
+                aria-label="Open graph analysis"
+                title="Graph analysis — candlestick, momentum, performance matrix"
+                className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-90 transition-all"
+              >
+                <LineChart className="w-[18px] h-[18px]" strokeWidth={2.5} />
+              </button>
+              <CurrencyToggle />
+            </div>
           </div>
         </div>
       </div>
@@ -392,139 +408,122 @@ export default function OilPage() {
           </div>
         </div>
 
-        {/* Graph Analysis entry point — full interactive candlestick + momentum + matrix */}
-        <button
-          onClick={() => router.push('/oil/analysis')}
-          className="group w-full flex items-center justify-between gap-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl sm:rounded-[2rem] p-5 sm:p-8 shadow-lg shadow-blue-600/20 hover:shadow-xl transition-all text-left"
-        >
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-2xl bg-white/15 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <LineChart className="w-6 h-6" strokeWidth={2.5} />
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-lg sm:text-2xl font-black uppercase italic tracking-tighter leading-none">Graph Analysis</h2>
-              <p className="text-blue-100/80 text-[10px] sm:text-xs font-black uppercase tracking-widest mt-1.5">Interactive candlestick · momentum · performance matrix</p>
-            </div>
-          </div>
-          <span className="text-2xl sm:text-3xl font-black shrink-0 group-hover:translate-x-1 transition-transform">→</span>
-        </button>
-
         {/* Market Intelligence & Price Alerts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12 items-start">
-            {/* Real market intelligence */}
-            <div className="bg-zinc-900 text-white rounded-2xl sm:rounded-[3rem] p-5 sm:p-10 relative overflow-hidden border border-white/5">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/20 to-transparent pointer-events-none"></div>
-              <h3 className="relative z-10 text-xl font-black uppercase italic tracking-tighter mb-6">Market Intelligence</h3>
-              <div className="relative z-10 space-y-5">
-                <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Active Feeds</span>
-                  <span className="font-mono font-black">{intel.total}</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Advancing</span>
-                  <span className="font-mono font-black text-green-500">{intel.advancers} ▲</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Declining</span>
-                  <span className="font-mono font-black text-red-500">{intel.decliners} ▼</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Avg 24h Move</span>
-                  <span className={`font-mono font-black ${intel.avg >= 0 ? 'text-green-500' : 'text-red-500'}`}>{intel.avg >= 0 ? '+' : ''}{intel.avg.toFixed(2)}%</span>
-                </div>
-                {intel.volatile && (
-                  <div className="pt-2">
-                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Most Volatile</p>
-                    <div className="flex items-center justify-between">
-                      <span className="font-black uppercase italic text-sm tracking-tight">{intel.volatile.name}</span>
-                      <span className={`font-mono font-black text-sm ${(intel.volatile.changePercent || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {(intel.volatile.changePercent || 0) >= 0 ? '+' : ''}{(intel.volatile.changePercent || 0).toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                )}
+          {/* Real market intelligence */}
+          <div className="bg-zinc-900 text-white rounded-2xl sm:rounded-[3rem] p-5 sm:p-10 relative overflow-hidden border border-white/5">
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/20 to-transparent pointer-events-none"></div>
+            <h3 className="relative z-10 text-xl font-black uppercase italic tracking-tighter mb-6">Market Intelligence</h3>
+            <div className="relative z-10 space-y-5">
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Active Feeds</span>
+                <span className="font-mono font-black">{intel.total}</span>
               </div>
-            </div>
-
-            {/* Functional Price Alerts */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3rem] p-5 sm:p-8 border border-zinc-200 dark:border-zinc-800">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Price Alerts</h3>
-                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">
-                    {alerts.length > 0 ? `${alerts.filter(a => a.triggered).length} triggered · ${alerts.length} total` : 'Track your entry levels'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => { setShowAlertForm((v) => !v); setAlertKey(allEnergy[0]?.key || ''); }}
-                  className={`text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-all ${showAlertForm ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'}`}
-                >
-                  {showAlertForm ? 'Close' : '＋ New'}
-                </button>
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Advancing</span>
+                <span className="font-mono font-black text-green-500">{intel.advancers} ▲</span>
               </div>
-
-              {showAlertForm && (
-                <div className="mb-5 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-white/5 space-y-3">
-                  <select
-                    value={alertKey || allEnergy[0]?.key || ''}
-                    onChange={(e) => setAlertKey(e.target.value)}
-                    className="w-full bg-white dark:bg-zinc-800 rounded-xl px-3 py-2.5 text-[11px] font-black uppercase tracking-widest border border-zinc-200 dark:border-zinc-700 outline-none focus:ring-2 focus:ring-blue-500 dark:text-zinc-200"
-                  >
-                    {allEnergy.map((i) => (<option key={i.key} value={i.key}>{i.name}</option>))}
-                  </select>
-                  <div className="flex gap-2">
-                    <div className="flex bg-white dark:bg-zinc-800 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700">
-                      {(['above', 'below'] as AlertCondition[]).map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => setAlertCondition(c)}
-                          className={`px-3 py-1.5 text-[10px] font-black rounded-lg uppercase tracking-widest transition-all ${alertCondition === c ? (c === 'above' ? 'bg-green-500 text-white' : 'bg-red-500 text-white') : 'text-zinc-500'}`}
-                        >
-                          {c === 'above' ? '≥ Above' : '≤ Below'}
-                        </button>
-                      ))}
-                    </div>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      value={alertPrice}
-                      onChange={(e) => setAlertPrice(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddAlert()}
-                      placeholder={`Target (${tableCurrency})`}
-                      className="flex-1 min-w-0 bg-white dark:bg-zinc-800 rounded-xl px-3 py-2 text-[11px] font-bold border border-zinc-200 dark:border-zinc-700 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
-                    />
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Declining</span>
+                <span className="font-mono font-black text-red-500">{intel.decliners} ▼</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Avg 24h Move</span>
+                <span className={`font-mono font-black ${intel.avg >= 0 ? 'text-green-500' : 'text-red-500'}`}>{intel.avg >= 0 ? '+' : ''}{intel.avg.toFixed(2)}%</span>
+              </div>
+              {intel.volatile && (
+                <div className="pt-2">
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Most Volatile</p>
+                  <div className="flex items-center justify-between">
+                    <span className="font-black uppercase italic text-sm tracking-tight">{intel.volatile.name}</span>
+                    <span className={`font-mono font-black text-sm ${(intel.volatile.changePercent || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {(intel.volatile.changePercent || 0) >= 0 ? '+' : ''}{(intel.volatile.changePercent || 0).toFixed(2)}%
+                    </span>
                   </div>
-                  <button onClick={handleAddAlert} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-xl transition-all">
-                    Set Alert
-                  </button>
                 </div>
               )}
-
-              <div className="space-y-3">
-                {alerts.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <Bell className="w-8 h-8 mx-auto mb-2 text-zinc-400" strokeWidth={2} />
-                    <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">No alerts yet</p>
-                    <p className="text-zinc-400 text-[10px] mt-1">Get notified when a contract hits your price.</p>
-                  </div>
-                ) : alerts.map((al) => (
-                  <div key={al.id} className={`flex items-center justify-between gap-2 p-4 rounded-2xl border transition-colors ${al.triggered ? 'bg-red-500/5 border-red-500/20' : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-100 dark:border-white/5'}`}>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-black uppercase dark:text-zinc-200 tracking-tight truncate">{al.name}</p>
-                      <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
-                        {al.condition === 'above' ? '≥' : '≤'} {displayTarget(al)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${al.triggered ? 'bg-red-500 text-white' : 'bg-blue-500/10 text-blue-500'}`}>
-                        {al.triggered ? 'Triggered' : 'Active'}
-                      </span>
-                      <button onClick={() => handleRemoveAlert(al.id)} className="w-6 h-6 rounded-lg flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-500/10 text-[11px] transition-colors" title="Remove alert">✕</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
+          </div>
+
+          {/* Functional Price Alerts */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3rem] p-5 sm:p-8 border border-zinc-200 dark:border-zinc-800">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-xl font-black uppercase italic tracking-tighter dark:text-white">Price Alerts</h3>
+                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">
+                  {alerts.length > 0 ? `${alerts.filter(a => a.triggered).length} triggered · ${alerts.length} total` : 'Track your entry levels'}
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowAlertForm((v) => !v); setAlertKey(allEnergy[0]?.key || ''); }}
+                className={`text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl transition-all ${showAlertForm ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'}`}
+              >
+                {showAlertForm ? 'Close' : '＋ New'}
+              </button>
+            </div>
+
+            {showAlertForm && (
+              <div className="mb-5 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-white/5 space-y-3">
+                <select
+                  value={alertKey || allEnergy[0]?.key || ''}
+                  onChange={(e) => setAlertKey(e.target.value)}
+                  className="w-full bg-white dark:bg-zinc-800 rounded-xl px-3 py-2.5 text-[11px] font-black uppercase tracking-widest border border-zinc-200 dark:border-zinc-700 outline-none focus:ring-2 focus:ring-blue-500 dark:text-zinc-200"
+                >
+                  {allEnergy.map((i) => (<option key={i.key} value={i.key}>{i.name}</option>))}
+                </select>
+                <div className="flex gap-2">
+                  <div className="flex bg-white dark:bg-zinc-800 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700">
+                    {(['above', 'below'] as AlertCondition[]).map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setAlertCondition(c)}
+                        className={`px-3 py-1.5 text-[10px] font-black rounded-lg uppercase tracking-widest transition-all ${alertCondition === c ? (c === 'above' ? 'bg-green-500 text-white' : 'bg-red-500 text-white') : 'text-zinc-500'}`}
+                      >
+                        {c === 'above' ? '≥ Above' : '≤ Below'}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={alertPrice}
+                    onChange={(e) => setAlertPrice(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddAlert()}
+                    placeholder={`Target (${tableCurrency})`}
+                    className="flex-1 min-w-0 bg-white dark:bg-zinc-800 rounded-xl px-3 py-2 text-[11px] font-bold border border-zinc-200 dark:border-zinc-700 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                  />
+                </div>
+                <button onClick={handleAddAlert} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-xl transition-all">
+                  Set Alert
+                </button>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {alerts.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Bell className="w-8 h-8 mx-auto mb-2 text-zinc-400" strokeWidth={2} />
+                  <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">No alerts yet</p>
+                  <p className="text-zinc-400 text-[10px] mt-1">Get notified when a contract hits your price.</p>
+                </div>
+              ) : alerts.map((al) => (
+                <div key={al.id} className={`flex items-center justify-between gap-2 p-4 rounded-2xl border transition-colors ${al.triggered ? 'bg-red-500/5 border-red-500/20' : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-100 dark:border-white/5'}`}>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-black uppercase dark:text-zinc-200 tracking-tight truncate">{al.name}</p>
+                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
+                      {al.condition === 'above' ? '≥' : '≤'} {displayTarget(al)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${al.triggered ? 'bg-red-500 text-white' : 'bg-blue-500/10 text-blue-500'}`}>
+                      {al.triggered ? 'Triggered' : 'Active'}
+                    </span>
+                    <button onClick={() => handleRemoveAlert(al.id)} className="w-6 h-6 rounded-lg flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-500/10 text-[11px] transition-colors" title="Remove alert">✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -7,8 +7,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { useCurrency } from "../context/CurrencyContext";
 import CurrencyToggle from "../components/CurrencyToggle";
+import FitText from "../components/FitText";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
+import { LOADING_CAPTION } from "../lib/caption";
 
 const PER_PAGE = 24;
 
@@ -162,17 +164,20 @@ export default function ForexPage() {
             </div>
 
             <div className="max-w-[1600px] mx-auto p-4 sm:p-8 pt-[calc(1rem_+_var(--sa-top))] sm:pt-[calc(2rem_+_var(--sa-top))] relative z-10">
-                <header className="mb-8 sm:mb-12 pl-12 lg:pl-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sm:gap-8">
-                    <div>
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                            <h1 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none inline-flex items-center gap-2"><ArrowRightLeft className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Forex Terminal</h1>
-                            <div className="px-2 py-0.5 sm:px-3 sm:py-1 bg-green-500/10 border border-green-500/20 rounded-full">
-                                <span className="text-[8px] sm:text-[10px] text-green-500 font-black uppercase tracking-widest animate-pulse">Syncing</span>
+                <header className="mb-8 sm:mb-12 pl-12 lg:pl-0 flex flex-row justify-between items-start md:items-center gap-3 sm:gap-8">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 min-w-0">
+                            <h1 className="text-lg sm:text-4xl font-black text-zinc-900 dark:text-white italic uppercase tracking-tighter leading-none inline-flex items-center gap-2 min-w-0">
+                                <ArrowRightLeft className="w-5 h-5 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} />
+                                <FitText className="min-w-0 flex-1">Forex Terminal</FitText>
+                            </h1>
+                            <div className="hidden sm:block px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+                                <span className="text-[10px] text-green-500 font-black uppercase tracking-widest animate-pulse">Syncing</span>
                             </div>
                         </div>
                         <p className="text-zinc-500 dark:text-zinc-500 text-[10px] sm:text-sm font-bold tracking-tight">Real-time cross-currency velocity & volatility synthesis</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0">
                         <span className="hidden sm:block text-[9px] font-black text-zinc-400 uppercase tracking-widest">Quoted in</span>
                         <CurrencyToggle />
                     </div>
@@ -189,109 +194,109 @@ export default function ForexPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-12">
                     {/* Market Watch Table Sidebar — matches the chart column height, scrolls inside */}
                     <div className="lg:col-span-1 lg:relative">
-                      <div className="max-h-[400px] lg:max-h-none lg:absolute lg:inset-0 bg-white dark:bg-zinc-900/40 rounded-[1.5rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col shadow-2xl">
-                        <div className="p-3 sm:p-4 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900/50 shrink-0 space-y-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                                <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Market Watch</h2>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 tabular-nums">
-                                    {forexRates.length}{total ? `/${total}` : ''}
-                                </span>
+                        <div className="max-h-[400px] lg:max-h-none lg:absolute lg:inset-0 bg-white dark:bg-zinc-900/40 rounded-[1.5rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col shadow-2xl">
+                            <div className="p-3 sm:p-4 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900/50 shrink-0 space-y-2.5">
+                                <div className="flex items-center justify-between gap-2">
+                                    <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Market Watch</h2>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 tabular-nums">
+                                        {forexRates.length}{total ? `/${total}` : ''}
+                                    </span>
+                                </div>
+                                {/* Searches every currency on the server, not just the loaded pages */}
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" strokeWidth={2.5} />
+                                    <input
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        placeholder="Search currency…"
+                                        aria-label="Search currency"
+                                        autoComplete="off"
+                                        className="w-full bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl pl-8 pr-8 py-2 text-[11px] font-black uppercase tracking-widest text-zinc-900 dark:text-white placeholder:text-zinc-400 placeholder:normal-case placeholder:tracking-normal outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                    />
+                                    {search && (
+                                        <button
+                                            onClick={() => setSearch("")}
+                                            aria-label="Clear search"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                        >
+                                            <X className="w-3.5 h-3.5" strokeWidth={3} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                            {/* Searches every currency on the server, not just the loaded pages */}
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" strokeWidth={2.5} />
-                                <input
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search currency…"
-                                    aria-label="Search currency"
-                                    autoComplete="off"
-                                    className="w-full bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl pl-8 pr-8 py-2 text-[11px] font-black uppercase tracking-widest text-zinc-900 dark:text-white placeholder:text-zinc-400 placeholder:normal-case placeholder:tracking-normal outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                />
-                                {search && (
-                                    <button
-                                        onClick={() => setSearch("")}
-                                        aria-label="Clear search"
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-                                    >
-                                        <X className="w-3.5 h-3.5" strokeWidth={3} />
-                                    </button>
+                            <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="sticky top-0 z-20 bg-zinc-50/90 dark:bg-zinc-900/90 backdrop-blur-md">
+                                        <tr className="border-b border-zinc-200 dark:border-white/5">
+                                            <th className="pl-4 pr-2 py-3 text-[9px] font-black uppercase text-zinc-400 tracking-widest">Asset</th>
+                                            <th className="px-2 py-3 text-[9px] font-black uppercase text-zinc-400 tracking-widest text-right">Price</th>
+                                            <th className="pl-2 pr-4 py-3 text-[9px] font-black uppercase text-zinc-400 tracking-widest text-right">24h%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
+                                        {loading && forexRates.length === 0 && (
+                                            <tr>
+                                                <td colSpan={3} className="px-6 py-16 text-center">
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                                        <p className="text-zinc-500 font-black uppercase text-[9px] tracking-widest">{LOADING_CAPTION}</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {!loading && forexRates.length === 0 && (
+                                            <tr>
+                                                <td colSpan={3} className="px-6 py-16 text-center">
+                                                    <p className="text-zinc-500 font-black uppercase text-[9px] tracking-widest">
+                                                        {search ? `No currency matches “${search}”` : 'No currencies available'}
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {forexRates.map((rate) => (
+                                            <tr
+                                                key={rate.code}
+                                                onClick={() => setSelectedPair(rate)}
+                                                className={`group cursor-pointer transition-colors duration-200 ${selectedPair?.code === rate.code
+                                                    ? 'bg-blue-600/10 dark:bg-blue-600/20'
+                                                    : 'hover:bg-zinc-50 dark:hover:bg-white/5'
+                                                    }`}
+                                            >
+                                                <td className="pl-4 pr-2 py-3.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-1 h-1 shrink-0 rounded-full ${selectedPair?.code === rate.code ? 'bg-blue-500 animate-pulse' : 'bg-transparent'}`}></div>
+                                                        <div className="min-w-0">
+                                                            <div className={`text-xs sm:text-sm font-black tracking-tighter uppercase italic ${selectedPair?.code === rate.code ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-white'}`}>{rate.code}</div>
+                                                            <div className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider truncate max-w-[58px]" title={rate.name}>{rate.name}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className={`px-2 py-3.5 text-right font-mono text-xs font-black tracking-tighter tabular-nums whitespace-nowrap ${selectedPair?.code === rate.code ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-white'}`}>
+                                                    {(conv(rate.usdPrice, rate.pkrPrice) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: (conv(rate.usdPrice, rate.pkrPrice) ?? 0) >= 10 ? 2 : 4 })}
+                                                </td>
+                                                <td className={`pl-2 pr-4 py-3.5 text-right text-[9px] font-black tabular-nums whitespace-nowrap ${rate.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                    {rate.changePercent >= 0 ? '▲' : '▼'}{Math.abs(rate.changePercent).toFixed(2)}%
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                {/* Infinite-scroll trigger + status */}
+                                <div ref={sentinelRef} className="h-1"></div>
+                                {loadingMore && (
+                                    <div className="py-4 flex items-center justify-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Loading more…</span>
+                                    </div>
+                                )}
+                                {!hasMore && forexRates.length > 0 && (
+                                    <div className="py-4 text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                        — All {forexRates.length} currencies —
+                                    </div>
                                 )}
                             </div>
                         </div>
-                        <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="sticky top-0 z-20 bg-zinc-50/90 dark:bg-zinc-900/90 backdrop-blur-md">
-                                    <tr className="border-b border-zinc-200 dark:border-white/5">
-                                        <th className="pl-4 pr-2 py-3 text-[9px] font-black uppercase text-zinc-400 tracking-widest">Asset</th>
-                                        <th className="px-2 py-3 text-[9px] font-black uppercase text-zinc-400 tracking-widest text-right">Price</th>
-                                        <th className="pl-2 pr-4 py-3 text-[9px] font-black uppercase text-zinc-400 tracking-widest text-right">24h%</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-                                    {loading && forexRates.length === 0 && (
-                                        <tr>
-                                            <td colSpan={3} className="px-6 py-16 text-center">
-                                                <div className="flex flex-col items-center gap-3">
-                                                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                                    <p className="text-zinc-500 font-black uppercase text-[9px] tracking-widest">Loading...</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {!loading && forexRates.length === 0 && (
-                                        <tr>
-                                            <td colSpan={3} className="px-6 py-16 text-center">
-                                                <p className="text-zinc-500 font-black uppercase text-[9px] tracking-widest">
-                                                    {search ? `No currency matches “${search}”` : 'No currencies available'}
-                                                </p>
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {forexRates.map((rate) => (
-                                        <tr
-                                            key={rate.code}
-                                            onClick={() => setSelectedPair(rate)}
-                                            className={`group cursor-pointer transition-colors duration-200 ${selectedPair?.code === rate.code
-                                                    ? 'bg-blue-600/10 dark:bg-blue-600/20'
-                                                    : 'hover:bg-zinc-50 dark:hover:bg-white/5'
-                                                }`}
-                                        >
-                                            <td className="pl-4 pr-2 py-3.5">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-1 h-1 shrink-0 rounded-full ${selectedPair?.code === rate.code ? 'bg-blue-500 animate-pulse' : 'bg-transparent'}`}></div>
-                                                    <div className="min-w-0">
-                                                        <div className={`text-xs sm:text-sm font-black tracking-tighter uppercase italic ${selectedPair?.code === rate.code ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-white'}`}>{rate.code}</div>
-                                                        <div className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider truncate max-w-[58px]" title={rate.name}>{rate.name}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className={`px-2 py-3.5 text-right font-mono text-xs font-black tracking-tighter tabular-nums whitespace-nowrap ${selectedPair?.code === rate.code ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-white'}`}>
-                                                {(conv(rate.usdPrice, rate.pkrPrice) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: (conv(rate.usdPrice, rate.pkrPrice) ?? 0) >= 10 ? 2 : 4 })}
-                                            </td>
-                                            <td className={`pl-2 pr-4 py-3.5 text-right text-[9px] font-black tabular-nums whitespace-nowrap ${rate.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                                {rate.changePercent >= 0 ? '▲' : '▼'}{Math.abs(rate.changePercent).toFixed(2)}%
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-
-                            {/* Infinite-scroll trigger + status */}
-                            <div ref={sentinelRef} className="h-1"></div>
-                            {loadingMore && (
-                                <div className="py-4 flex items-center justify-center gap-2">
-                                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Loading more…</span>
-                                </div>
-                            )}
-                            {!hasMore && forexRates.length > 0 && (
-                                <div className="py-4 text-center text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                                    — All {forexRates.length} currencies —
-                                </div>
-                            )}
-                        </div>
-                      </div>
                     </div>
 
                     {/* Main Chart Terminal */}

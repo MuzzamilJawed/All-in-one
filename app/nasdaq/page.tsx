@@ -355,31 +355,31 @@ export default function NasdaqPage() {
                         <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 sm:gap-4 w-full lg:w-auto">
                             {/* Dropdowns — collapsible on mobile, always shown on desktop */}
                             <div className={`${showFilters ? 'flex' : 'hidden'} lg:flex flex-col sm:flex-row flex-wrap items-center gap-3 sm:gap-4 w-full lg:w-auto`}>
-                            <div className="relative group/select w-full sm:w-auto">
-                                <select
-                                    value={categoryFilter}
-                                    onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="w-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-5 py-3.5 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer sm:min-w-[180px]"
-                                >
-                                    <option value="all">Pipeline: General</option>
-                                    <option value="gainers">Top Velocity</option>
-                                    <option value="active">High Liquidity</option>
-                                    <option value="losers">Market Decliners</option>
-                                </select>
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 group-hover/select:translate-y-[2px] transition-transform text-[10px]">▼</div>
-                            </div>
+                                <div className="relative group/select w-full sm:w-auto">
+                                    <select
+                                        value={categoryFilter}
+                                        onChange={(e) => setCategoryFilter(e.target.value)}
+                                        className="w-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-5 py-3.5 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer sm:min-w-[180px]"
+                                    >
+                                        <option value="all">Pipeline: General</option>
+                                        <option value="gainers">Top Velocity</option>
+                                        <option value="active">High Liquidity</option>
+                                        <option value="losers">Market Decliners</option>
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 group-hover/select:translate-y-[2px] transition-transform text-[10px]">▼</div>
+                                </div>
 
-                            <div className="relative group/select w-full sm:w-auto">
-                                <select
-                                    value={filter}
-                                    onChange={(e) => setFilter(e.target.value)}
-                                    className="w-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-5 py-3.5 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer sm:min-w-[180px]"
-                                >
-                                    <option value="all">Sector: Total</option>
-                                    {sectors.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 group-hover/select:translate-y-[2px] transition-transform text-[10px]">▼</div>
-                            </div>
+                                <div className="relative group/select w-full sm:w-auto">
+                                    <select
+                                        value={filter}
+                                        onChange={(e) => setFilter(e.target.value)}
+                                        className="w-full bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-5 py-3.5 sm:px-6 sm:py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer sm:min-w-[180px]"
+                                    >
+                                        <option value="all">Sector: Total</option>
+                                        {sectors.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 group-hover/select:translate-y-[2px] transition-transform text-[10px]">▼</div>
+                                </div>
                             </div>
 
                             {/* View Switcher Toggle — stays visible on mobile */}
@@ -427,14 +427,14 @@ export default function NasdaqPage() {
                             </button>
                         </div>
 
-                        <div className="flex items-center gap-4 shrink-0">
+                        {/* <div className="flex items-center gap-4 shrink-0">
                             <button
                                 onClick={() => { setFilter('all'); setCategoryFilter('all'); setSelectedIndex(null); setSearchTerm(""); setActiveWatchlistId(null); }}
                                 className="text-[9px] font-black text-blue-600 hover:text-red-500 uppercase tracking-widest transition-colors flex items-center gap-2"
                             >
                                 ↺ Reset Analytics
                             </button>
-                        </div>
+                        </div> */}
                     </div>
 
                     {isCreatingWatchlist && (

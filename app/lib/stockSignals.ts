@@ -63,6 +63,58 @@ export const prevClose = (price?: number, change?: number): number | null => {
     return price - change;
 };
 
+export interface CircuitLimits {
+    /** Last Day Closing Price the caps are measured from. */
+    ldcp: number;
+    /** Highest price the scrip may trade at today. */
+    upper: number;
+    /** Lowest price the scrip may trade at today. */
+    lower: number;
+    /** How far the current price still has to run, in percent (0 when locked). */
+    toUpperPct: number;
+    toLowerPct: number;
+    /** Where the price sits between the two caps, 0..100. */
+    position: number;
+    status: CircuitStatus;
+}
+
+/**
+ * The day's upper/lower lock prices for a PSX scrip.
+ *
+ * PSX caps a scrip's daily move at ±CIRCUIT_CAP% of its last day close, so the
+ * band is fixed for the whole session and only moves when LDCP does — i.e. once
+ * per day. Pass the feed's `ldcp` when you have it; otherwise it is derived from
+ * price − change, which is the same number.
+ */
+export const circuitLimits = (
+    ldcpOrNull?: number | null,
+    currentPrice?: number,
+    change?: number,
+): CircuitLimits | null => {
+    const ldcp = ldcpOrNull ?? prevClose(currentPrice, change);
+    if (ldcp == null || !(ldcp > 0) || currentPrice == null) return null;
+
+    const band = ldcp * (CIRCUIT_CAP / 100);
+    const upper = ldcp + band;
+    const lower = ldcp - band;
+
+    const toUpperPct = Math.max(0, ((upper - currentPrice) / currentPrice) * 100);
+    const toLowerPct = Math.max(0, ((currentPrice - lower) / currentPrice) * 100);
+    const position = upper > lower
+        ? Math.max(0, Math.min(100, ((currentPrice - lower) / (upper - lower)) * 100))
+        : 50;
+
+    return {
+        ldcp,
+        upper,
+        lower,
+        toUpperPct,
+        toLowerPct,
+        position,
+        status: circuitStatus(((currentPrice - ldcp) / ldcp) * 100),
+    };
+};
+
 interface SignalStock {
     changePercent?: number;
     currentPrice?: number;

@@ -248,9 +248,12 @@ export async function GET() {
         // Valid data check
         if (!isNaN(price)) {
           stocks.push({
-            symbol: symbol, 
+            symbol: symbol,
             name: rawName,
             currentPrice: price,
+            // Last Day Closing Price — the basis PSX applies its daily circuit
+            // breaker to, so the client can show exact upper/lower lock levels.
+            ldcp: isNaN(ldcp) ? null : ldcp,
             change: isNaN(change) ? 0 : change,
             changePercent: (ldcp > 0 && !isNaN(change)) ? (change / ldcp) * 100 : 0,
             open: parseFloat(tds.eq(2).text().replace(/,/g, '')) || 0,

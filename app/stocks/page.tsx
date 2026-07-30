@@ -13,10 +13,27 @@ import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import SectorHeatmap from "../components/SectorHeatmap";
 import CompareTray from "../components/CompareTray";
 import PageSkeleton from "../components/PageSkeleton";
+import FitText from "../components/FitText";
 import { computeSignals, dayRangePosition, toneClasses, parseVolume } from "../lib/stockSignals";
 import { rollLeaders } from "../lib/stockPrefs";
 
 const ANALYSIS_OPEN_KEY = "psx.analysis.open";
+
+/**
+ * "25,369,263,260" → "25.4B". The feed hands back pre-formatted strings, so
+ * strip the separators before scaling. Anything unparseable passes through.
+ */
+function abbreviateCount(raw?: string | number | null): string {
+    if (raw == null) return "—";
+    const n = typeof raw === "number" ? raw : parseFloat(String(raw).replace(/,/g, ""));
+    if (!Number.isFinite(n)) return String(raw);
+    const abs = Math.abs(n);
+    if (abs >= 1e12) return (n / 1e12).toFixed(1).replace(/\.0$/, "") + "T";
+    if (abs >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B";
+    if (abs >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+    if (abs >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+    return n.toLocaleString();
+}
 
 export default function StocksPage() {
     return (
@@ -83,6 +100,13 @@ function StocksContent() {
     // Market Analysis panel: collapsed keeps only the headline + active filters.
     const [analysisOpen, setAnalysisOpen] = useState(true);
     const searchRef = useRef<HTMLInputElement | null>(null);
+    // Collapsed panel: the search is an icon that grows into a full field on focus.
+    const collapsedSearchRef = useRef<HTMLInputElement | null>(null);
+    const [searchFocused, setSearchFocused] = useState(false);
+    const searchExpanded = searchFocused || searchTerm.trim().length > 0;
+    // While the collapsed search is open the toggle keeps only its icons, so the
+    // field has room to grow. Desktop always has space for the labels.
+    const labelWhenSearching = searchExpanded && !analysisOpen ? "hidden sm:inline" : "";
     const PAGE_SIZE = 24; // infinite-scroll: how many rows/cards to reveal per step
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -258,14 +282,6 @@ function StocksContent() {
             try { localStorage.setItem(ANALYSIS_OPEN_KEY, next ? '1' : '0'); } catch { /* private mode */ }
             return next;
         });
-    };
-
-    // Collapsed shortcut: open the panel and drop the caret straight into search.
-    const openAndSearch = () => {
-        setAnalysisOpen(true);
-        try { localStorage.setItem(ANALYSIS_OPEN_KEY, '1'); } catch { /* private mode */ }
-        setShowFilters(true);
-        requestAnimationFrame(() => searchRef.current?.focus());
     };
 
     // Fetch the session (day) high/low for the currently selected index
@@ -464,7 +480,28 @@ function StocksContent() {
         return () => io.disconnect();
     }, [filteredStocks.length, viewType, visibleCount]);
 
+    // The heatmap toggle is desktop-only, so a shared ?v=heatmap link (or resizing
+    // down) would otherwise strand a phone on a view it can't switch away from.
+    useEffect(() => {
+        if (viewType !== 'heatmap') return;
+        const check = () => { if (window.innerWidth < 640) setViewType('card'); };
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, [viewType]);
+
     const paginatedStocks = filteredStocks.slice(0, visibleCount);
+
+    // Percentage split behind the phone breadth bar. The feed's `total` is not
+    // always the sum (it reports 0 on some sessions), so derive it.
+    const breadthSplit = (() => {
+        const adv = Number(marketStats?.advanced) || 0;
+        const dec = Number(marketStats?.declined) || 0;
+        const unch = Number(marketStats?.unchanged) || 0;
+        const sum = adv + dec + unch;
+        if (!sum) return { adv: 0, dec: 0, unch: 100 };
+        return { adv: (adv / sum) * 100, dec: (dec / sum) * 100, unch: (unch / sum) * 100 };
+    })();
 
     const SortIcon = ({ column }: { column: keyof Stock }) => {
         const isActive = sortConfig?.key === column;
@@ -487,19 +524,23 @@ function StocksContent() {
                 </div>
             )}
 
-            <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+            {/* Header + Market Pulse pin as one block. They used to stick separately
+                with the strip offset by a hardcoded 65px, which never matched the real
+                header height — leaving a slit that page content scrolled through. */}
+            <div className="sticky top-0 z-40">
+            <header className="safe-top bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
                 <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
                     <div>
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
                             <CandlestickChart className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Market <span className="text-blue-500">Explorer</span>
                         </h1>
-                        <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1">Real-Time Terminal</p>
+                        <p className="hidden sm:block text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Real-Time Terminal</p>
                     </div>
                 </div>
             </header>
 
             {indices.length > 0 && (
-                <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-x-auto no-scrollbar shadow-sm sticky top-[calc(65px_+_var(--sa-top))] sm:top-[calc(73px_+_var(--sa-top))] z-30">
+                <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-x-auto no-scrollbar shadow-sm">
                     <div className="max-w-[1600px] mx-auto px-4 sm:px-8 flex items-center gap-6 sm:gap-10">
                         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 border-r border-zinc-200 dark:border-white/10 pr-4 sm:pr-10">
                             <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
@@ -528,6 +569,7 @@ function StocksContent() {
                     </div>
                 </div>
             )}
+            </div>
 
             {marketStats && (
                 <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 w-full">
@@ -539,26 +581,55 @@ function StocksContent() {
                                         <span className={`w-2 h-2 rounded-full ${marketStats.status.toLowerCase().includes('open') ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
                                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exchange {marketStats.status}</p>
                                     </div>
-                                    <div className="flex flex-wrap items-baseline gap-4">
+                                    {/* Phones get abbreviated figures — 25,369,263,260 is
+                                        eleven digits of precision nobody reads on a list screen. */}
+                                    <div className="flex flex-wrap items-baseline gap-3 sm:gap-4">
                                         <div>
                                             <p className="text-[9px] font-bold text-zinc-400 uppercase">Volume</p>
-                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">{marketStats.volume}</p>
+                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">
+                                                <span className="sm:hidden">{abbreviateCount(marketStats.volume)}</span>
+                                                <span className="hidden sm:inline">{marketStats.volume}</span>
+                                            </p>
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-bold text-zinc-400 uppercase">Value (PKR)</p>
-                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">{marketStats.value}</p>
+                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">
+                                                <span className="sm:hidden">{abbreviateCount(marketStats.value)}</span>
+                                                <span className="hidden sm:inline">{marketStats.value}</span>
+                                            </p>
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-bold text-zinc-400 uppercase">Trades</p>
-                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">{marketStats.trades}</p>
+                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">
+                                                <span className="sm:hidden">{abbreviateCount(marketStats.trades)}</span>
+                                                <span className="hidden sm:inline">{marketStats.trades}</span>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div className="flex-1 py-3 sm:py-4 md:pl-8 flex items-center justify-between">
                                 <div className="space-y-1 w-full">
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Market Breadth (Symbol Statistics)</p>
-                                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
+                                        <span className="sm:hidden">Breadth</span>
+                                        <span className="hidden sm:inline">Market Breadth (Symbol Statistics)</span>
+                                    </p>
+
+                                    {/* Phone: one advance/decline bar instead of four chips. */}
+                                    <div className="sm:hidden">
+                                        <div className="flex items-baseline justify-between text-[11px] font-black mb-1.5">
+                                            <span className="text-green-600">▲ {marketStats.advanced}</span>
+                                            <span className="text-zinc-400 text-[9px] uppercase tracking-widest">{marketStats.unchanged} unch</span>
+                                            <span className="text-red-600">{marketStats.declined} ▼</span>
+                                        </div>
+                                        <div className="flex h-1.5 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
+                                            <div className="bg-green-500" style={{ width: `${breadthSplit.adv}%` }} />
+                                            <div className="bg-zinc-400 dark:bg-zinc-600" style={{ width: `${breadthSplit.unch}%` }} />
+                                            <div className="bg-red-500" style={{ width: `${breadthSplit.dec}%` }} />
+                                        </div>
+                                    </div>
+
+                                    <div className="hidden sm:grid grid-cols-4 gap-1.5 sm:gap-2">
                                         <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-100/50 dark:border-green-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
                                             <p className="text-[7px] sm:text-[8px] font-black text-green-600/80 uppercase mb-0.5">Adv</p>
                                             <p className="text-xs sm:text-sm font-black text-green-600 leading-none">{marketStats.advanced}</p>
@@ -584,40 +655,59 @@ function StocksContent() {
             )}
 
             {selectedIndex && (
-                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-900/40 dark:to-indigo-900/40 p-4 sm:p-6 text-white border border-blue-500/20 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-3">
-                                <h2 className="text-2xl font-black tracking-tight">{selectedIndex.name}</h2>
-                                <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md">Active Index</span>
-                            </div>
-                            <p className="text-blue-100 text-sm font-medium">Detailed performance metrics and component summary</p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-4 sm:gap-8">
-                            <div className="text-center md:text-left">
-                                <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mb-1">Index Points</p>
-                                <p className="text-xl sm:text-3xl font-black font-mono leading-none">{selectedIndex.value.toLocaleString()}</p>
-                            </div>
-                            <div className="text-center md:text-left">
-                                <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mb-1">Session Change</p>
-                                <p className={`text-lg sm:text-2xl font-black font-mono leading-none flex items-center justify-end gap-1 ${selectedIndex.change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                                    {selectedIndex.change >= 0 ? '▲' : '▼'}{Math.abs(selectedIndex.change).toFixed(2)}
-                                </p>
-                            </div>
-                            {(indexDayRange.high != null || indexDayRange.low != null) && (
-                                <div className="text-center md:text-left">
-                                    <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mb-1">Day High / Low</p>
-                                    <p className="text-lg sm:text-2xl font-black font-mono leading-none flex items-center justify-end gap-1.5">
-                                        <span className="text-green-300">
-                                            {indexDayRange.high != null ? indexDayRange.high.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
-                                        </span>
-                                        <span className="text-blue-200/70 text-lg">/</span>
-                                        <span className="text-red-300">
-                                            {indexDayRange.low != null ? indexDayRange.low.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
-                                        </span>
-                                    </p>
+                /* Sits inside the page gutter like every other card — it used to render
+                   full-bleed with square corners because it was outside this wrapper. */
+                <div className="px-4 sm:px-8 max-w-[1700px] mx-auto w-full">
+                    <div className="bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-900/40 dark:to-indigo-900/40 px-4 py-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] text-white border border-blue-500/20 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-6">
+                            <div className="min-w-0 w-full md:w-auto flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                        <h2 className="text-base sm:text-2xl font-black tracking-tight truncate">{selectedIndex.name}</h2>
+                                        <span className="bg-white/20 text-white text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md shrink-0 whitespace-nowrap">Active Index</span>
+                                    </div>
+                                    <p className="hidden sm:block text-blue-100 text-sm font-medium mt-1">Detailed performance metrics and component summary</p>
                                 </div>
-                            )}
+                                <button
+                                    onClick={() => { setSelectedIndex(null); setIndexFilter("all"); }}
+                                    aria-label="Clear active index"
+                                    title="Clear active index"
+                                    className="md:hidden shrink-0 -mr-1 w-8 h-8 flex items-center justify-center rounded-lg bg-white/15 hover:bg-white/25 active:scale-90 transition-all"
+                                >
+                                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                </button>
+                            </div>
+
+                            {/* Phones read this as label→value rows; a 2-up grid left the
+                                columns ragged because the figures differ in width. */}
+                            <div className="w-full md:w-auto flex flex-col md:flex-row md:flex-wrap md:items-center divide-y divide-white/10 md:divide-y-0 md:gap-8">
+                                <div className="min-w-0 flex items-baseline justify-between gap-3 py-1.5 md:block md:py-0">
+                                    <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest md:mb-1 shrink-0">Index Points</p>
+                                    <FitText className="min-w-0 text-right md:text-left text-base sm:text-3xl font-black font-mono leading-none">
+                                        {selectedIndex.value.toLocaleString()}
+                                    </FitText>
+                                </div>
+                                <div className="min-w-0 flex items-baseline justify-between gap-3 py-1.5 md:block md:py-0">
+                                    <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest md:mb-1 shrink-0">Session Change</p>
+                                    <FitText className={`min-w-0 text-right md:text-left text-base sm:text-2xl font-black font-mono leading-none ${selectedIndex.change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                                        {selectedIndex.change >= 0 ? '▲' : '▼'}{Math.abs(selectedIndex.change).toFixed(2)}
+                                    </FitText>
+                                </div>
+                                {(indexDayRange.high != null || indexDayRange.low != null) && (
+                                    <div className="min-w-0 flex items-baseline justify-between gap-3 py-1.5 md:block md:py-0">
+                                        <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest md:mb-1 shrink-0">Day High / Low</p>
+                                        <FitText className="min-w-0 text-right md:text-left text-base sm:text-2xl font-black font-mono leading-none">
+                                            <span className="text-green-300">
+                                                {indexDayRange.high != null ? indexDayRange.high.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                                            </span>
+                                            <span className="text-blue-200/70 mx-1.5">/</span>
+                                            <span className="text-red-300">
+                                                {indexDayRange.low != null ? indexDayRange.low.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                                            </span>
+                                        </FitText>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -625,9 +715,12 @@ function StocksContent() {
 
             <div className={`px-4 sm:px-8 py-5 sm:py-10 max-w-[1700px] mx-auto w-full space-y-5 sm:space-y-10 ${compareStocks.length > 0 ? 'pb-64' : ''}`}>
                 {/* Unified Market Control Ribbon */}
-                <div className={`bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 transition-all ${analysisOpen ? 'p-4 sm:p-8 space-y-5 sm:space-y-8' : 'px-4 sm:px-8 py-3.5 sm:py-5'}`}>
+                {/* gap-* rather than space-y-*: the filter panels below collapse to
+                    display:none on phones, and space-y still reserved their margin,
+                    leaving dead space under the Filters button. */}
+                <div className={`bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 transition-all ${analysisOpen ? 'p-4 sm:p-8 flex flex-col gap-4 sm:gap-8' : 'px-4 sm:px-8 py-3.5 sm:py-5'}`}>
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
-                        <div className={`flex-1 w-full ${analysisOpen ? 'space-y-6' : ''}`}>
+                        <div className={`flex-1 w-full ${analysisOpen ? 'flex flex-col gap-4 sm:gap-6' : ''}`}>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <div className="space-y-1 min-w-0">
                                     <button
@@ -645,7 +738,8 @@ function StocksContent() {
                                     </button>
                                     <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                                         <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span>
-                                        Monitoring {filteredStocks.length} Real-Time Assets
+                                        <span className="sm:hidden">{filteredStocks.length} assets</span>
+                                        <span className="hidden sm:inline">Monitoring {filteredStocks.length} Real-Time Assets</span>
                                     </p>
                                     {/* Collapsed: keep the active filters visible so the list is never unexplained */}
                                     {!analysisOpen && (
@@ -659,31 +753,55 @@ function StocksContent() {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    {/* Collapsed panel: the search sits as an icon until tapped,
+                                        then takes the row. The view toggle drops its labels while
+                                        it is open so the input has somewhere to grow. */}
                                     {!analysisOpen && (
-                                        <button
-                                            onClick={openAndSearch}
-                                            title="Search symbols"
-                                            className="shrink-0 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-400 hover:text-blue-600 hover:border-blue-500 transition-all"
-                                        >
-                                            <Search className="w-4 h-4" strokeWidth={3} />
-                                        </button>
+                                        <div className={`relative shrink-0 transition-[flex-grow,width] duration-300 ease-out ${searchExpanded ? 'flex-1 w-auto' : 'w-9 sm:w-10'}`}>
+                                            <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" strokeWidth={3} />
+                                            <input
+                                                ref={collapsedSearchRef}
+                                                type="text"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                onFocus={() => setSearchFocused(true)}
+                                                onBlur={() => setSearchFocused(false)}
+                                                placeholder={searchExpanded ? "Search symbol..." : ""}
+                                                aria-label="Search symbols"
+                                                title="Search symbols"
+                                                className={`w-full h-9 sm:h-10 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[11px] font-black uppercase tracking-widest outline-none transition-all placeholder:text-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-600/40 pl-8 sm:pl-9 ${searchExpanded ? 'pr-8 cursor-text' : 'pr-0 cursor-pointer'}`}
+                                            />
+                                            {searchExpanded && searchTerm && (
+                                                <button
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={() => { setSearchTerm(""); collapsedSearchRef.current?.focus(); }}
+                                                    aria-label="Clear search"
+                                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                                                >
+                                                    <X className="w-3.5 h-3.5" strokeWidth={3} />
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
-                                    <div className="flex flex-1 sm:flex-none h-fit bg-zinc-100 dark:bg-white/5 p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/10">
+                                    <div className={`flex h-fit bg-zinc-100 dark:bg-white/5 p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/10 ${searchExpanded && !analysisOpen ? 'shrink-0' : 'flex-1 sm:flex-none'}`}>
                                         <button
                                             onClick={() => setViewType('card')}
                                             className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'card' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
                                         >
-                                            <LayoutGrid className="w-3.5 h-3.5" strokeWidth={2.5} /> Card
+                                            <LayoutGrid className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
+                                            <span className={labelWhenSearching}>Card</span>
                                         </button>
                                         <button
                                             onClick={() => setViewType('table')}
                                             className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'table' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
                                         >
-                                            <Table className="w-3.5 h-3.5" strokeWidth={2.5} /> Table
+                                            <Table className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
+                                            <span className={labelWhenSearching}>Table</span>
                                         </button>
+                                        {/* Heatmap needs width to be legible — desktop only. */}
                                         <button
                                             onClick={() => setViewType('heatmap')}
-                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'heatmap' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                            className={`hidden sm:flex flex-1 sm:flex-none items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'heatmap' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
                                         >
                                             <Grid3x3 className="w-3.5 h-3.5" strokeWidth={2.5} /> Heatmap
                                         </button>
@@ -701,7 +819,7 @@ function StocksContent() {
                                         placeholder="Search Symbol..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl pl-12 pr-4 py-3.5 sm:py-4 text-xs font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-zinc-500"
+                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl pl-12 pr-4 py-3 sm:py-4 text-xs font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-zinc-500"
                                     />
                                 </div>
                                 <button
@@ -713,7 +831,9 @@ function StocksContent() {
                             </div>
 
                             {/* Filter dropdowns — collapsible on mobile, always shown on desktop */}
-                            <div className={`${analysisOpen ? (showFilters ? 'grid' : 'hidden') : 'hidden'} ${analysisOpen ? 'lg:grid' : ''} grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4`}>
+                            {/* One column on phones: two 150px columns clipped the option
+                                text ("Sectors: Global…") halfway through. */}
+                            <div className={`${analysisOpen ? (showFilters ? 'grid' : 'hidden') : 'hidden'} ${analysisOpen ? 'lg:grid' : ''} grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4`}>
                                 <div className="relative group">
                                     <select
                                         value={indexFilter || "all"}
@@ -723,7 +843,7 @@ function StocksContent() {
                                             const idxObj = indices.find(i => i.name === val);
                                             setSelectedIndex(idxObj || null);
                                         }}
-                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 sm:px-6 py-3.5 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
+                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl pl-4 sm:pl-6 pr-10 py-3 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-widest truncate appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
                                     >
                                         <option value="all">Index: All Market</option>
                                         {indices.map(idx => (
@@ -737,7 +857,7 @@ function StocksContent() {
                                     <select
                                         value={filter}
                                         onChange={(e) => setFilter(e.target.value)}
-                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 sm:px-6 py-3.5 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
+                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl pl-4 sm:pl-6 pr-10 py-3 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-widest truncate appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
                                     >
                                         <option value="all">Sectors: Global</option>
                                         {sectors.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
@@ -745,11 +865,14 @@ function StocksContent() {
                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[10px]">▼</div>
                                 </div>
 
-                                <div className="relative group col-span-2 lg:col-span-1">
+                                {/* Span must track the column count — a hard col-span-2 in a
+                                    one-column grid spawns an implicit column and collapses
+                                    its siblings to zero width. */}
+                                <div className="relative group col-span-1 sm:col-span-2 lg:col-span-1">
                                     <select
                                         value={categoryFilter}
                                         onChange={(e) => setCategoryFilter(e.target.value)}
-                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 sm:px-6 py-3.5 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-widest appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
+                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl pl-4 sm:pl-6 pr-10 py-3 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-widest truncate appearance-none outline-none focus:ring-2 focus:ring-blue-600 transition-all cursor-pointer"
                                     >
                                         <option value="all">Market View: General</option>
                                         <option value="gainers">Top Performers</option>
@@ -762,12 +885,15 @@ function StocksContent() {
                         </div>
                     </div>
 
-                    <div className={`${analysisOpen ? (showFilters ? 'flex' : 'hidden') : 'hidden'} ${analysisOpen ? 'lg:flex' : ''} flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 pt-5 sm:pt-6 border-t border-zinc-100 dark:border-white/5`}>
-                        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2 w-full lg:w-auto">
-                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] whitespace-nowrap">Watchlist Monitor:</span>
+                    <div className={`${analysisOpen ? (showFilters ? 'flex' : 'hidden') : 'hidden'} ${analysisOpen ? 'lg:flex' : ''} flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-6 pt-4 sm:pt-6 border-t border-zinc-100 dark:border-white/5`}>
+                        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-1 -mx-1 px-1 w-full lg:w-auto">
+                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] whitespace-nowrap shrink-0">
+                                <span className="sm:hidden">Watchlist:</span>
+                                <span className="hidden sm:inline">Watchlist Monitor:</span>
+                            </span>
                             <button
                                 onClick={() => setActiveWatchlistId(null)}
-                                className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${!activeWatchlistId ? 'bg-blue-600 text-white shadow-lg' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:text-zinc-300'}`}
+                                className={`shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 min-h-[34px] rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${!activeWatchlistId ? 'bg-blue-600 text-white shadow-lg' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:text-zinc-300'}`}
                             >
                                 Total Market
                             </button>
@@ -775,39 +901,42 @@ function StocksContent() {
                                 <button
                                     key={wl._id}
                                     onClick={() => setActiveWatchlistId(wl._id)}
-                                    className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${activeWatchlistId === wl._id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:text-zinc-300'}`}
+                                    className={`shrink-0 px-4 sm:px-5 py-2 min-h-[34px] rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${activeWatchlistId === wl._id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:text-zinc-300'}`}
                                 >
-                                    <Folder className="w-3.5 h-3.5" strokeWidth={2.5} /> {wl.name}
+                                    <Folder className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} /> <span className="max-w-[9rem] truncate">{wl.name}</span>
                                 </button>
                             ))}
                             <button
                                 onClick={() => setIsCreatingWatchlist(!isCreatingWatchlist)}
-                                className="px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border border-dashed border-zinc-300 dark:border-white/10 text-zinc-400 hover:border-blue-500 hover:text-blue-500 transition-all shrink-0"
+                                className="shrink-0 whitespace-nowrap px-4 sm:px-5 py-2 min-h-[34px] rounded-xl text-[9px] font-black uppercase tracking-widest border border-dashed border-zinc-300 dark:border-white/10 text-zinc-400 hover:border-blue-500 hover:text-blue-500 transition-all"
                             >
                                 + Create New
                             </button>
                         </div>
 
-                        <div className="flex items-center gap-3 sm:gap-4 shrink-0 flex-wrap">
+                        {/* Chips rather than bare 9px labels — these were well under a
+                            comfortable tap target and read as static text. */}
+                        <div className="grid grid-cols-3 sm:flex sm:items-center gap-2 sm:gap-4 shrink-0 w-full sm:w-auto">
                             <button
                                 onClick={() => { setCompareMode(m => !m); if (compareMode) setCompareSymbols([]); }}
-                                className={`text-[9px] font-black uppercase tracking-widest transition-colors ${compareMode ? 'text-blue-600' : 'text-zinc-400 hover:text-blue-600'}`}
+                                className={`inline-flex items-center justify-center gap-1 px-2 py-2 min-h-[36px] rounded-xl text-[9px] font-black uppercase tracking-widest transition-colors bg-zinc-100 dark:bg-white/5 sm:bg-transparent sm:dark:bg-transparent sm:px-0 sm:py-0 sm:min-h-0 ${compareMode ? 'text-blue-600' : 'text-zinc-400 hover:text-blue-600'}`}
                                 title="Select cards to compare side by side"
                             >
-                                <span className="inline-flex items-center gap-1"><Scale className="w-3 h-3" strokeWidth={2.5} /> Compare{compareMode ? ' On' : ''}</span>
+                                <Scale className="w-3 h-3 shrink-0" strokeWidth={2.5} /> Compare{compareMode ? ' On' : ''}
                             </button>
                             <button
                                 onClick={exportCSV}
-                                className="text-[9px] font-black text-zinc-400 hover:text-blue-600 uppercase tracking-widest transition-colors"
+                                className="inline-flex items-center justify-center gap-1 px-2 py-2 min-h-[36px] rounded-xl text-[9px] font-black text-zinc-400 hover:text-blue-600 uppercase tracking-widest transition-colors bg-zinc-100 dark:bg-white/5 sm:bg-transparent sm:dark:bg-transparent sm:px-0 sm:py-0 sm:min-h-0"
                                 title="Export the current filtered view to CSV"
                             >
-                                <span className="inline-flex items-center gap-1"><Download className="w-3 h-3" strokeWidth={2.5} /> Export CSV</span>
+                                <Download className="w-3 h-3 shrink-0" strokeWidth={2.5} /> <span className="sm:hidden">CSV</span><span className="hidden sm:inline">Export CSV</span>
                             </button>
                             <button
                                 onClick={() => { setFilter('all'); setCategoryFilter('all'); setIndexFilter('all'); setSelectedIndex(null); setSearchTerm(""); }}
-                                className="text-[9px] font-black text-blue-600 hover:text-red-500 uppercase tracking-widest transition-colors"
+                                className="inline-flex items-center justify-center gap-1 px-2 py-2 min-h-[36px] rounded-xl text-[9px] font-black text-blue-600 hover:text-red-500 uppercase tracking-widest transition-colors bg-zinc-100 dark:bg-white/5 sm:bg-transparent sm:dark:bg-transparent sm:px-0 sm:py-0 sm:min-h-0"
+                                title="Clear all filters"
                             >
-                                <span className="inline-flex items-center gap-1"><RotateCcw className="w-3 h-3" strokeWidth={2.5} /> Reset Pipeline</span>
+                                <RotateCcw className="w-3 h-3 shrink-0" strokeWidth={2.5} /> <span className="sm:hidden">Reset</span><span className="hidden sm:inline">Reset Pipeline</span>
                             </button>
                         </div>
                     </div>
@@ -838,10 +967,11 @@ function StocksContent() {
                         />
                     ) : viewType === 'card' ? (
                         <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6 px-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-6 px-1">
                                 {paginatedStocks.map((stock) => (
                                     <StockCard
                                         key={stock.symbol}
+                                        compact
                                         {...stock}
                                         onClick={() => router.push(`/stocks/${stock.symbol.toLowerCase()}`)}
                                         watchlists={watchlists}

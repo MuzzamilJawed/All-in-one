@@ -8,10 +8,12 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSettings } from "../context/SettingsContext";
 import { useCurrency } from "../context/CurrencyContext";
 import CurrencyToggle from "../components/CurrencyToggle";
+import FitText from "../components/FitText";
 import { rateOf } from "../lib/currency";
 import { computePivotLevels, nextLevels } from "../lib/levels";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../components/TradingChart'), { ssr: false });
+import { LOADING_CAPTION } from "../lib/caption";
 
 const PER_PAGE = 20;
 
@@ -171,15 +173,16 @@ export default function CryptoPage() {
 
             {/* Sticky Header */}
             <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2">
-                            <Bitcoin className="w-6 h-6 sm:w-7 sm:h-7 text-orange-500 shrink-0" strokeWidth={2} /> Crypto <span className="text-orange-500">Hub</span>
-                            <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">Live</span>
+                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-row justify-between items-center gap-3">
+                    <div className="min-w-0">
+                        <h1 className="text-lg sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2 min-w-0">
+                            <Bitcoin className="w-5 h-5 sm:w-7 sm:h-7 text-orange-500 shrink-0" strokeWidth={2} />
+                            <FitText className="min-w-0 flex-1">Crypto <span className="text-orange-500">Hub</span></FitText>
+                            <span className="hidden sm:inline-block bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest animate-pulse shrink-0">Live</span>
                         </h1>
                         <p className="text-zinc-500 dark:text-zinc-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">Global Digital Asset Pulse</p>
                     </div>
-                    <CurrencyToggle />
+                    <div className="shrink-0"><CurrencyToggle /></div>
                 </div>
             </header>
 
@@ -195,7 +198,7 @@ export default function CryptoPage() {
                 {loading && cryptoData.length === 0 && (
                     <div className="py-24 flex flex-col items-center justify-center gap-4">
                         <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">Loading Market Data...</p>
+                        <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">{LOADING_CAPTION}</p>
                     </div>
                 )}
 

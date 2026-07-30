@@ -7,6 +7,7 @@ import StockCard from "../../components/StockCard";
 import { useSettings } from "../../context/SettingsContext";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../../components/TradingChart'), { ssr: false });
+import { LOADING_CAPTION } from "../../lib/caption";
 
 interface Stock {
     symbol: string;
@@ -44,19 +45,19 @@ export default function NasdaqSymbolPage() {
         for (let i = 0; i < count; i++) {
             const time = nowSec - i * interval;
             const change = (Math.random() - 0.5) * volatility;
-            
+
             const close = lastClose;
             const open = close / (1 + change);
             const high = Math.max(open, close) * (1 + Math.random() * (volatility * 0.3));
             const low = Math.min(open, close) * (1 - Math.random() * (volatility * 0.3));
-            
-            history.unshift({ 
-                time, 
-                open: parseFloat(open.toFixed(2)), 
-                high: parseFloat(high.toFixed(2)), 
-                low: parseFloat(low.toFixed(2)), 
+
+            history.unshift({
+                time,
+                open: parseFloat(open.toFixed(2)),
+                high: parseFloat(high.toFixed(2)),
+                low: parseFloat(low.toFixed(2)),
                 close: parseFloat(close.toFixed(2)),
-                volume: Math.floor(Math.random() * 1000000) + 100000 
+                volume: Math.floor(Math.random() * 1000000) + 100000
             });
             lastClose = open;
         }
@@ -89,20 +90,20 @@ export default function NasdaqSymbolPage() {
             <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">Accessing NASDAQ Satellite Feed...</p>
+                    <p className="text-zinc-500 font-black uppercase text-[10px] tracking-widest">{LOADING_CAPTION}</p>
                 </div>
             </div>
         );
     }
     if (!stock) {
         return (
-          <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
-              <div className="text-center">
-                  <h1 className="text-2xl sm:text-4xl font-black text-white italic uppercase mb-4">Route Error</h1>
-                  <p className="text-zinc-500 mb-8 uppercase text-xs tracking-widest font-black">No market data available for {symbol}</p>
-                  <button onClick={() => router.push('/nasdaq')} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-500 transition-all">Back to NASDAQ Console</button>
-              </div>
-          </div>
+            <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
+                <div className="text-center">
+                    <h1 className="text-2xl sm:text-4xl font-black text-white italic uppercase mb-4">Route Error</h1>
+                    <p className="text-zinc-500 mb-8 uppercase text-xs tracking-widest font-black">No market data available for {symbol}</p>
+                    <button onClick={() => router.push('/nasdaq')} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-500 transition-all">Back to NASDAQ Console</button>
+                </div>
+            </div>
         );
     }
 
@@ -113,7 +114,7 @@ export default function NasdaqSymbolPage() {
                 <div className="max-w-md">
                     <StockCard {...stock} exchange="NASDAQ" />
                 </div>
-                
+
                 {stock.history && (
                     <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[3.5rem] p-5 sm:p-10 border border-zinc-200 dark:border-zinc-800 shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
@@ -126,11 +127,11 @@ export default function NasdaqSymbolPage() {
                             </div>
                         </div>
                         <div className="h-[350px] sm:h-[550px] relative z-10">
-                            <TradingChart 
-                                title={`${stock.symbol} / ${displayCurrency}`} 
-                                data={stock.history} 
-                                currentTimeframe={chartTF} 
-                                onTimeframeChange={setChartTF} 
+                            <TradingChart
+                                title={`${stock.symbol} / ${displayCurrency}`}
+                                data={stock.history}
+                                currentTimeframe={chartTF}
+                                onTimeframeChange={setChartTF}
                                 currencySymbol="$"
                             />
                         </div>

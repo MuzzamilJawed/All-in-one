@@ -7,6 +7,7 @@ const TradingChart = dynamic(() => import('../../components/TradingChart'), { ss
 import { useSettings } from "../../context/SettingsContext";
 import { computePivotLevels, nextLevels } from "../../lib/levels";
 import { TrendingDown, Activity, ArrowLeft, BarChart3, X, PanelLeft, Search, LineChart, ClipboardList } from "lucide-react";
+import { LOADING_CAPTION } from "../../lib/caption";
 
 export default function MarketTerminalPage() {
     return (
@@ -21,8 +22,7 @@ export default function MarketTerminalPage() {
                         <div className="absolute inset-0 flex items-center justify-center text-blue-600"><TrendingDown className="w-6 h-6" strokeWidth={2} /></div>
                     </div>
                     <div className="text-center">
-                        <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] mb-2">Initializing Terminal</p>
-                        <p className="text-zinc-500 font-bold uppercase text-[8px] tracking-[0.2em] animate-pulse">Syncing Advanced Execution Infrastructure</p>
+                        <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] animate-pulse">{LOADING_CAPTION}</p>
                     </div>
                 </div>
             </div>
@@ -331,8 +331,7 @@ function MarketTerminalContent() {
                         <div className="absolute inset-0 flex items-center justify-center text-blue-600"><Activity className="w-8 h-8" strokeWidth={2} /></div>
                     </div>
                     <div className="text-center">
-                        <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] mb-2">Synchronizing Market Data</p>
-                        <p className="text-zinc-500 font-bold uppercase text-[8px] tracking-[0.2em] animate-pulse">Establishing Low-Latency Satellite Downlink</p>
+                        <p className="text-zinc-900 dark:text-white font-black uppercase text-xs tracking-[0.4em] animate-pulse">{LOADING_CAPTION}</p>
                     </div>
                 </div>
             </div>
@@ -461,28 +460,28 @@ function MarketTerminalContent() {
                             })
                         ) : (
                             filteredAssets.map((s) => (
-                            <button
-                                key={s.symbol}
-                                data-testid={`stock-card-${s.symbol}`}
-                                onClick={() => { setSelectedAsset(s); if (window.innerWidth < 1024) setIsSidebarOpen(false); }}
-                                className={`w-full flex items-center justify-between p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all group mb-1 ${selectedAsset?.symbol === s.symbol ? 'bg-blue-600/10 dark:bg-blue-600/20 border border-blue-500/30' : 'hover:bg-zinc-50 dark:hover:bg-white/5 border border-transparent'}`}
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic transition-all ${selectedAsset?.symbol === s.symbol ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30 rotate-3' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'}`}>
-                                        {s.symbol.substring(0, 2)}
+                                <button
+                                    key={s.symbol}
+                                    data-testid={`stock-card-${s.symbol}`}
+                                    onClick={() => { setSelectedAsset(s); if (window.innerWidth < 1024) setIsSidebarOpen(false); }}
+                                    className={`w-full flex items-center justify-between p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all group mb-1 ${selectedAsset?.symbol === s.symbol ? 'bg-blue-600/10 dark:bg-blue-600/20 border border-blue-500/30' : 'hover:bg-zinc-50 dark:hover:bg-white/5 border border-transparent'}`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black italic transition-all ${selectedAsset?.symbol === s.symbol ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30 rotate-3' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'}`}>
+                                            {s.symbol.substring(0, 2)}
+                                        </div>
+                                        <div className="text-left">
+                                            <p className={`text-xs font-black uppercase tracking-tighter ${selectedAsset?.symbol === s.symbol ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-zinc-300'}`}>{s.symbol}</p>
+                                            <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest truncate max-w-[120px]">{s.name || s.symbol}</p>
+                                        </div>
                                     </div>
-                                    <div className="text-left">
-                                        <p className={`text-xs font-black uppercase tracking-tighter ${selectedAsset?.symbol === s.symbol ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-zinc-300'}`}>{s.symbol}</p>
-                                        <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest truncate max-w-[120px]">{s.name || s.symbol}</p>
+                                    <div className="text-right">
+                                        <p className="text-xs font-black font-mono tracking-tighter text-zinc-900 dark:text-white">{s.currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                        <p className={`text-[9px] font-black ${s.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                            {s.changePercent >= 0 ? '▲' : '▼'}{Math.abs(s.changePercent).toFixed(1)}%
+                                        </p>
                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-xs font-black font-mono tracking-tighter text-zinc-900 dark:text-white">{s.currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                    <p className={`text-[9px] font-black ${s.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                        {s.changePercent >= 0 ? '▲' : '▼'}{Math.abs(s.changePercent).toFixed(1)}%
-                                    </p>
-                                </div>
-                            </button>
+                                </button>
                             ))
                         )}
                     </div>
@@ -613,125 +612,125 @@ function MarketTerminalContent() {
 
                     <div className="flex-1 p-4 lg:p-6 relative min-h-[320px] lg:min-h-0">
                         {viewMode === 'sectors' ? (
-                        <div className="absolute inset-0 p-4 lg:p-6 overflow-y-auto custom-scrollbar">
-                            {activeSector ? (
-                                <div className="space-y-4">
-                                    {/* Breadth summary */}
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                                        <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-3 text-center">
-                                            <p className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest mb-0.5">Advancers</p>
-                                            <p className="text-lg font-black text-green-600 dark:text-green-400 leading-none">{activeSector.advancers}</p>
-                                        </div>
-                                        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-3 text-center">
-                                            <p className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-widest mb-0.5">Decliners</p>
-                                            <p className="text-lg font-black text-red-600 dark:text-red-400 leading-none">{activeSector.decliners}</p>
-                                        </div>
-                                        <div className="bg-zinc-500/10 border border-zinc-500/20 rounded-2xl p-3 text-center">
-                                            <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Unchanged</p>
-                                            <p className="text-lg font-black text-zinc-600 dark:text-zinc-300 leading-none">{activeSector.unchanged}</p>
-                                        </div>
-                                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-3 text-center">
-                                            <p className="text-[8px] font-black text-blue-600/80 dark:text-blue-400/80 uppercase tracking-widest mb-0.5">Volume</p>
-                                            <p className="text-lg font-black text-blue-600 dark:text-blue-400 leading-none">{fmtVol(activeSector.totalVolume)}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Constituents · {activeSector.count}</p>
-                                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Click to open chart →</p>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 pb-4">
-                                        {activeSector.stocks.map((s: any) => {
-                                            const pos = (s.changePercent || 0) >= 0;
-                                            return (
-                                                <button
-                                                    key={s.symbol}
-                                                    onClick={() => { setViewMode('stocks'); setSelectedAsset(s); }}
-                                                    className={`text-left p-3 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-lg ${pos ? 'bg-green-500/[0.06] border-green-500/20 hover:border-green-500/40' : 'bg-red-500/[0.06] border-red-500/20 hover:border-red-500/40'}`}
-                                                >
-                                                    <div className="flex items-center justify-between gap-1 mb-1">
-                                                        <span className="text-xs font-black uppercase tracking-tighter text-zinc-900 dark:text-white truncate">{s.symbol}</span>
-                                                        <span className={`text-[10px] font-black tabular-nums shrink-0 ${pos ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{pos ? '▲' : '▼'}{Math.abs(s.changePercent || 0).toFixed(2)}%</span>
-                                                    </div>
-                                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest truncate mb-1">{s.name || s.symbol}</p>
-                                                    <p className="text-sm font-black font-mono tabular-nums text-zinc-900 dark:text-white">Rs.{(s.currentPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="h-full flex items-center justify-center">
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select a sector</p>
-                                </div>
-                            )}
-                        </div>
-                        ) : (
-                        <div className="absolute inset-0 p-4 lg:p-6 flex flex-col">
-                            <div className="flex-1 bg-white dark:bg-black/60 rounded-3xl border border-zinc-200 dark:border-white/5 overflow-hidden shadow-[0_0_50px_-12px_rgba(37,99,235,0.15)] transition-all duration-1000 relative">
-                                <div className="h-full w-full relative px-3 sm:px-5 py-2">
-                                    {chartLoading && (
-                                        <div className="absolute inset-0 z-20 bg-white/50 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                                <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest">Fetching Real History...</p>
+                            <div className="absolute inset-0 p-4 lg:p-6 overflow-y-auto custom-scrollbar">
+                                {activeSector ? (
+                                    <div className="space-y-4">
+                                        {/* Breadth summary */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                                            <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-3 text-center">
+                                                <p className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest mb-0.5">Advancers</p>
+                                                <p className="text-lg font-black text-green-600 dark:text-green-400 leading-none">{activeSector.advancers}</p>
+                                            </div>
+                                            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-3 text-center">
+                                                <p className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-widest mb-0.5">Decliners</p>
+                                                <p className="text-lg font-black text-red-600 dark:text-red-400 leading-none">{activeSector.decliners}</p>
+                                            </div>
+                                            <div className="bg-zinc-500/10 border border-zinc-500/20 rounded-2xl p-3 text-center">
+                                                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Unchanged</p>
+                                                <p className="text-lg font-black text-zinc-600 dark:text-zinc-300 leading-none">{activeSector.unchanged}</p>
+                                            </div>
+                                            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-3 text-center">
+                                                <p className="text-[8px] font-black text-blue-600/80 dark:text-blue-400/80 uppercase tracking-widest mb-0.5">Volume</p>
+                                                <p className="text-lg font-black text-blue-600 dark:text-blue-400 leading-none">{fmtVol(activeSector.totalVolume)}</p>
                                             </div>
                                         </div>
-                                    )}
-                                    <TradingChart
-                                        title={`${selectedAsset?.symbol} Strategic Roadmap`}
-                                        data={candles}
-                                        currentTimeframe={timeframe}
-                                        onTimeframeChange={setTimeframe}
-                                        currencySymbol={viewMode === 'indices' ? '' : 'Rs.'}
-                                        seamless={true}
-                                        priceLines={srPriceLines}
-                                    />
-                                </div>
-                            </div>
 
-                            {/* Support / Resistance (pivot levels from session high/low) */}
-                            <div className="mt-4 lg:mt-6 shrink-0 pb-2">
-                                {srLevels ? (
-                                    <>
-                                        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-                                            <p className="text-[9px] lg:text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Support / Resistance · Pivot Levels</p>
-                                            <div className="flex items-center gap-2 sm:gap-3">
-                                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
-                                                    <span className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest">Next Support</span>
-                                                    <span className="text-xs font-black font-mono text-green-600 dark:text-green-400 tabular-nums">{fmtSR(srNext.nextSupport)}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
-                                                    <span className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-widest">Next Resistance</span>
-                                                    <span className="text-xs font-black font-mono text-red-600 dark:text-red-400 tabular-nums">{fmtSR(srNext.nextResistance)}</span>
-                                                </div>
-                                            </div>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Constituents · {activeSector.count}</p>
+                                            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Click to open chart →</p>
                                         </div>
-                                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
-                                            {[
-                                                { label: 'S3', val: srLevels.s3, tone: 'text-green-600 dark:text-green-400' },
-                                                { label: 'S2', val: srLevels.s2, tone: 'text-green-600 dark:text-green-400' },
-                                                { label: 'S1', val: srLevels.s1, tone: 'text-green-600 dark:text-green-400' },
-                                                { label: 'PIVOT', val: srLevels.pivot, tone: 'text-zinc-900 dark:text-white' },
-                                                { label: 'R1', val: srLevels.r1, tone: 'text-red-600 dark:text-red-400' },
-                                                { label: 'R2', val: srLevels.r2, tone: 'text-red-600 dark:text-red-400' },
-                                                { label: 'R3', val: srLevels.r3, tone: 'text-red-600 dark:text-red-400' },
-                                            ].map((lvl) => (
-                                                <div key={lvl.label} className="bg-white/60 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 rounded-xl sm:rounded-2xl px-2 py-2 sm:py-2.5 text-center backdrop-blur-md shadow-sm">
-                                                    <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-0.5">{lvl.label}</p>
-                                                    <p className={`text-[10px] lg:text-xs font-black font-mono tabular-nums truncate ${lvl.tone}`}>{fmtSR(lvl.val)}</p>
-                                                </div>
-                                            ))}
+
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 pb-4">
+                                            {activeSector.stocks.map((s: any) => {
+                                                const pos = (s.changePercent || 0) >= 0;
+                                                return (
+                                                    <button
+                                                        key={s.symbol}
+                                                        onClick={() => { setViewMode('stocks'); setSelectedAsset(s); }}
+                                                        className={`text-left p-3 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-lg ${pos ? 'bg-green-500/[0.06] border-green-500/20 hover:border-green-500/40' : 'bg-red-500/[0.06] border-red-500/20 hover:border-red-500/40'}`}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-1 mb-1">
+                                                            <span className="text-xs font-black uppercase tracking-tighter text-zinc-900 dark:text-white truncate">{s.symbol}</span>
+                                                            <span className={`text-[10px] font-black tabular-nums shrink-0 ${pos ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{pos ? '▲' : '▼'}{Math.abs(s.changePercent || 0).toFixed(2)}%</span>
+                                                        </div>
+                                                        <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest truncate mb-1">{s.name || s.symbol}</p>
+                                                        <p className="text-sm font-black font-mono tabular-nums text-zinc-900 dark:text-white">Rs.{(s.currentPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
-                                    </>
+                                    </div>
                                 ) : (
-                                    <div className="bg-white/60 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 rounded-xl sm:rounded-2xl px-4 py-4 text-center backdrop-blur-md shadow-sm">
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Support / resistance unavailable — no session range yet</p>
+                                    <div className="h-full flex items-center justify-center">
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Select a sector</p>
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        ) : (
+                            <div className="absolute inset-0 p-4 lg:p-6 flex flex-col">
+                                <div className="flex-1 bg-white dark:bg-black/60 rounded-3xl border border-zinc-200 dark:border-white/5 overflow-hidden shadow-[0_0_50px_-12px_rgba(37,99,235,0.15)] transition-all duration-1000 relative">
+                                    <div className="h-full w-full relative px-3 sm:px-5 py-2">
+                                        {chartLoading && (
+                                            <div className="absolute inset-0 z-20 bg-white/50 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                    <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest">Fetching Real History...</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <TradingChart
+                                            title={`${selectedAsset?.symbol} Strategic Roadmap`}
+                                            data={candles}
+                                            currentTimeframe={timeframe}
+                                            onTimeframeChange={setTimeframe}
+                                            currencySymbol={viewMode === 'indices' ? '' : 'Rs.'}
+                                            seamless={true}
+                                            priceLines={srPriceLines}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Support / Resistance (pivot levels from session high/low) */}
+                                <div className="mt-4 lg:mt-6 shrink-0 pb-2">
+                                    {srLevels ? (
+                                        <>
+                                            <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                                                <p className="text-[9px] lg:text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-[0.2em]">Support / Resistance · Pivot Levels</p>
+                                                <div className="flex items-center gap-2 sm:gap-3">
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                                                        <span className="text-[8px] font-black text-green-600/80 dark:text-green-400/80 uppercase tracking-widest">Next Support</span>
+                                                        <span className="text-xs font-black font-mono text-green-600 dark:text-green-400 tabular-nums">{fmtSR(srNext.nextSupport)}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                                                        <span className="text-[8px] font-black text-red-600/80 dark:text-red-400/80 uppercase tracking-widest">Next Resistance</span>
+                                                        <span className="text-xs font-black font-mono text-red-600 dark:text-red-400 tabular-nums">{fmtSR(srNext.nextResistance)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
+                                                {[
+                                                    { label: 'S3', val: srLevels.s3, tone: 'text-green-600 dark:text-green-400' },
+                                                    { label: 'S2', val: srLevels.s2, tone: 'text-green-600 dark:text-green-400' },
+                                                    { label: 'S1', val: srLevels.s1, tone: 'text-green-600 dark:text-green-400' },
+                                                    { label: 'PIVOT', val: srLevels.pivot, tone: 'text-zinc-900 dark:text-white' },
+                                                    { label: 'R1', val: srLevels.r1, tone: 'text-red-600 dark:text-red-400' },
+                                                    { label: 'R2', val: srLevels.r2, tone: 'text-red-600 dark:text-red-400' },
+                                                    { label: 'R3', val: srLevels.r3, tone: 'text-red-600 dark:text-red-400' },
+                                                ].map((lvl) => (
+                                                    <div key={lvl.label} className="bg-white/60 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 rounded-xl sm:rounded-2xl px-2 py-2 sm:py-2.5 text-center backdrop-blur-md shadow-sm">
+                                                        <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-0.5">{lvl.label}</p>
+                                                        <p className={`text-[10px] lg:text-xs font-black font-mono tabular-nums truncate ${lvl.tone}`}>{fmtSR(lvl.val)}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="bg-white/60 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 rounded-xl sm:rounded-2xl px-4 py-4 text-center backdrop-blur-md shadow-sm">
+                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Support / resistance unavailable — no session range yet</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         )}
                     </div>
                 </main>

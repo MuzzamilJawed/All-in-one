@@ -29,6 +29,13 @@ interface StockCardProps {
     selectable?: boolean; // compare mode
     selected?: boolean;
     onToggleSelect?: (symbol: string) => void;
+    /**
+     * Long browse lists (the PSX explorer) opt into a phone-only compact row:
+     * symbol, name, price, change. The full card still renders from `sm` up, and
+     * screens that show a single stock leave this off so their per-symbol actions
+     * (target, watchlist, listen) stay one tap away.
+     */
+    compact?: boolean;
 }
 
 export default function StockCard({
@@ -53,6 +60,7 @@ export default function StockCard({
     selectable = false,
     selected = false,
     onToggleSelect,
+    compact = false,
 }: StockCardProps) {
     const { success, error } = useToast();
     const isPositive = change >= 0;
@@ -129,10 +137,49 @@ export default function StockCard({
         }
     };
 
-    return (
+    // Phone list row: what a stock *is* and what it did today. Everything else
+    // (volume, day range, target, watchlist, listen) lives on the detail screen.
+    const compactRow = compact ? (
         <div
             onClick={onClick}
-            className={`relative bg-white dark:bg-zinc-900 rounded-[1.2rem] sm:rounded-xl shadow-sm hover:shadow-md transition-all p-3 sm:p-4 border flex flex-col h-full cursor-pointer group/card ${selected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-zinc-200 dark:border-zinc-800'}`}
+            className={`sm:hidden relative flex items-center gap-3 px-3 py-2.5 min-h-[68px] bg-white dark:bg-zinc-900 border rounded-2xl cursor-pointer active:bg-zinc-50 dark:active:bg-zinc-800/60 transition-colors ${selected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-zinc-200 dark:border-zinc-800'}`}
+        >
+            {selectable && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); onToggleSelect?.(symbol); }}
+                    className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${selected ? 'bg-blue-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border border-zinc-200 dark:border-zinc-700'}`}
+                    title={selected ? 'Remove from compare' : 'Add to compare'}
+                >
+                    {selected ? '✓' : '+'}
+                </button>
+            )}
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                    <h4 className="text-sm font-black text-zinc-900 dark:text-zinc-50 tracking-tighter truncate">{symbol}</h4>
+                    {isNew && (
+                        <span className="text-[8px] font-black bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1 py-0.5 rounded uppercase tracking-widest shrink-0">New</span>
+                    )}
+                </div>
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tight truncate leading-tight mt-0.5">{name}</p>
+            </div>
+            <div className="shrink-0 text-right max-w-[42%]">
+                <FitText className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tabular-nums leading-none">
+                    <span className="text-[10px] font-normal mr-0.5">{currencySymbol}</span>
+                    {currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                </FitText>
+                <p className={`text-[11px] font-black tabular-nums mt-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                    {isPositive ? '▲' : '▼'}{Math.abs(changePercent).toFixed(1)}%
+                </p>
+            </div>
+        </div>
+    ) : null;
+
+    return (
+        <>
+        {compactRow}
+        <div
+            onClick={onClick}
+            className={`${compact ? 'hidden sm:flex' : 'flex'} relative bg-white dark:bg-zinc-900 rounded-[1.2rem] sm:rounded-xl shadow-sm hover:shadow-md transition-all p-3 sm:p-4 border flex-col h-full cursor-pointer group/card ${selected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-zinc-200 dark:border-zinc-800'}`}
         >
             {/* Compare selection checkbox */}
             {selectable && (
@@ -391,5 +438,6 @@ export default function StockCard({
                 </div>
             )}
         </div>
+        </>
     );
 }
