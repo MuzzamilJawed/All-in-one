@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { registerModel } from '../lib/registerModel';
 
 // A watchlist holds a single asset class. `type` is locked to the first symbol's
 // market (or chosen at creation) so every item in a list is the same kind.
@@ -6,6 +7,7 @@ export type WatchlistType = 'PSX' | 'NASDAQ' | 'CRYPTO' | 'FOREX' | 'COMMODITY';
 export const WATCHLIST_TYPES: WatchlistType[] = ['PSX', 'NASDAQ', 'CRYPTO', 'FOREX', 'COMMODITY'];
 
 export interface IWatchlist extends mongoose.Document {
+  userId: mongoose.Types.ObjectId;
   name: string;
   type: WatchlistType;
   symbols: string[];
@@ -14,6 +16,14 @@ export interface IWatchlist extends mongoose.Document {
 }
 
 const WatchlistSchema = new mongoose.Schema<IWatchlist>({
+  // Watchlists are private to their owner. Lists created before accounts
+  // existed are adopted by the seeded admin on first connect (see lib/seed.ts).
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  },
   name: {
     type: String,
     required: [true, 'Please provide a name for this watchlist.'],
@@ -33,4 +43,4 @@ const WatchlistSchema = new mongoose.Schema<IWatchlist>({
   timestamps: true,
 });
 
-export default mongoose.models.Watchlist || mongoose.model<IWatchlist>('Watchlist', WatchlistSchema);
+export default registerModel<IWatchlist>('Watchlist', WatchlistSchema);

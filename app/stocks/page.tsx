@@ -99,14 +99,14 @@ function StocksContent() {
     const [showFilters, setShowFilters] = useState(false); // mobile: collapse the filter panel
     // Market Analysis panel: collapsed keeps only the headline + active filters.
     const [analysisOpen, setAnalysisOpen] = useState(true);
-    const searchRef = useRef<HTMLInputElement | null>(null);
-    // Collapsed panel: the search is an icon that grows into a full field on focus.
-    const collapsedSearchRef = useRef<HTMLInputElement | null>(null);
+    // Phones show the search as an icon that grows into a field on focus; desktop
+    // always renders it full width.
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
     const [searchFocused, setSearchFocused] = useState(false);
     const searchExpanded = searchFocused || searchTerm.trim().length > 0;
-    // While the collapsed search is open the toggle keeps only its icons, so the
-    // field has room to grow. Desktop always has space for the labels.
-    const labelWhenSearching = searchExpanded && !analysisOpen ? "hidden sm:inline" : "";
+    // While it is open the view toggle keeps only its icons, so the field has room
+    // to grow. Desktop always has space for the labels.
+    const labelWhenSearching = searchExpanded ? "hidden sm:inline" : "";
     const PAGE_SIZE = 24; // infinite-scroll: how many rows/cards to reveal per step
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -753,37 +753,51 @@ function StocksContent() {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    {/* Collapsed panel: the search sits as an icon until tapped,
-                                        then takes the row. The view toggle drops its labels while
-                                        it is open so the input has somewhere to grow. */}
-                                    {!analysisOpen && (
-                                        <div className={`relative shrink-0 transition-[flex-grow,width] duration-300 ease-out ${searchExpanded ? 'flex-1 w-auto' : 'w-9 sm:w-10'}`}>
-                                            <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" strokeWidth={3} />
-                                            <input
-                                                ref={collapsedSearchRef}
-                                                type="text"
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                onFocus={() => setSearchFocused(true)}
-                                                onBlur={() => setSearchFocused(false)}
-                                                placeholder={searchExpanded ? "Search symbol..." : ""}
-                                                aria-label="Search symbols"
-                                                title="Search symbols"
-                                                className={`w-full h-9 sm:h-10 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[11px] font-black uppercase tracking-widest outline-none transition-all placeholder:text-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-600/40 pl-8 sm:pl-9 ${searchExpanded ? 'pr-8 cursor-text' : 'pr-0 cursor-pointer'}`}
-                                            />
-                                            {searchExpanded && searchTerm && (
-                                                <button
-                                                    onMouseDown={(e) => e.preventDefault()}
-                                                    onClick={() => { setSearchTerm(""); collapsedSearchRef.current?.focus(); }}
-                                                    aria-label="Clear search"
-                                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-                                                >
-                                                    <X className="w-3.5 h-3.5" strokeWidth={3} />
-                                                </button>
-                                            )}
-                                        </div>
+                                    {/* Search lives on this row in every state — there is no second
+                                        row below it. Desktop shows a real field; phones show an icon
+                                        that grows into one on tap, and the view toggle drops its
+                                        labels while it is open so the input has room. */}
+                                    <div className={`relative transition-[flex-grow,width] duration-300 ease-out sm:flex-none sm:w-56 lg:w-64 ${searchExpanded ? 'flex-1' : 'w-9'}`}>
+                                        <Search className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" strokeWidth={3} />
+                                        <input
+                                            ref={searchInputRef}
+                                            type="text"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            onFocus={() => setSearchFocused(true)}
+                                            onBlur={() => setSearchFocused(false)}
+                                            placeholder="Search symbol..."
+                                            aria-label="Search symbols"
+                                            title="Search symbols"
+                                            className={`w-full h-9 sm:h-11 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[11px] font-black uppercase tracking-widest outline-none transition-all placeholder:text-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-600/40 pl-8 sm:pl-11 ${searchExpanded ? 'pr-8 cursor-text' : 'pr-0 cursor-pointer'} sm:pr-9 sm:cursor-text`}
+                                        />
+                                        {searchTerm && (
+                                            <button
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => { setSearchTerm(""); searchInputRef.current?.focus(); }}
+                                                aria-label="Clear search"
+                                                className={`absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-6 h-6 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 ${searchExpanded ? 'flex' : 'hidden sm:flex'}`}
+                                            >
+                                                <X className="w-3.5 h-3.5" strokeWidth={3} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Filters toggle rides the same row on phones; desktop always
+                                        shows the dropdowns so it has no button. */}
+                                    {analysisOpen && (
+                                        <button
+                                            onClick={() => setShowFilters(v => !v)}
+                                            aria-label="Toggle filters"
+                                            aria-expanded={showFilters}
+                                            title="Filters"
+                                            className={`lg:hidden shrink-0 w-9 h-9 flex items-center justify-center rounded-xl border transition-all ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500'}`}
+                                        >
+                                            <SlidersHorizontal className="w-4 h-4" strokeWidth={2.5} />
+                                        </button>
                                     )}
-                                    <div className={`flex h-fit bg-zinc-100 dark:bg-white/5 p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/10 ${searchExpanded && !analysisOpen ? 'shrink-0' : 'flex-1 sm:flex-none'}`}>
+
+                                    <div className={`flex h-fit bg-zinc-100 dark:bg-white/5 p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/10 ${searchExpanded ? 'shrink-0' : 'flex-1 sm:flex-none'}`}>
                                         <button
                                             onClick={() => setViewType('card')}
                                             className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${viewType === 'card' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-xl' : 'text-zinc-400 hover:text-zinc-600'}`}
@@ -809,31 +823,10 @@ function StocksContent() {
                                 </div>
                             </div>
 
-                            {/* Search — on mobile a Filters button toggles the dropdowns */}
-                            <div id="market-analysis-body" className={`${analysisOpen ? 'flex' : 'hidden'} gap-2 sm:gap-3`}>
-                                <div className="relative group flex-1">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" strokeWidth={2.5} />
-                                    <input
-                                        ref={searchRef}
-                                        type="text"
-                                        placeholder="Search Symbol..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl pl-12 pr-4 py-3 sm:py-4 text-xs font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-zinc-500"
-                                    />
-                                </div>
-                                <button
-                                    onClick={() => setShowFilters(v => !v)}
-                                    className={`lg:hidden shrink-0 flex items-center gap-2 px-4 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500'}`}
-                                >
-                                    <SlidersHorizontal className="w-4 h-4" strokeWidth={2.5} /> Filters
-                                </button>
-                            </div>
-
                             {/* Filter dropdowns — collapsible on mobile, always shown on desktop */}
                             {/* One column on phones: two 150px columns clipped the option
                                 text ("Sectors: Global…") halfway through. */}
-                            <div className={`${analysisOpen ? (showFilters ? 'grid' : 'hidden') : 'hidden'} ${analysisOpen ? 'lg:grid' : ''} grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4`}>
+                            <div id="market-analysis-body" className={`${analysisOpen ? (showFilters ? 'grid' : 'hidden') : 'hidden'} ${analysisOpen ? 'lg:grid' : ''} grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4`}>
                                 <div className="relative group">
                                     <select
                                         value={indexFilter || "all"}

@@ -6,7 +6,7 @@ import { useSettings } from "../context/SettingsContext";
 import { useCurrency } from "../context/CurrencyContext";
 import CurrencyToggle from "./CurrencyToggle";
 import { MARKET_CURRENCY, currencySymbol } from "../lib/currency";
-import { getWatch, addWatch, removeWatch, type WatchItem } from "../lib/universalWatch";
+import { fetchWatch, addWatch, removeWatch, type WatchItem } from "../lib/universalWatch";
 import {
     fetchAllPrices, priceKey, priceInAny, ASSET_TYPES,
     COMMODITY_SYMBOLS, type AssetType, type PriceBook,
@@ -25,10 +25,10 @@ export default function UniversalWatchlist() {
     const [active, setActive] = useState(0); // keyboard-highlighted suggestion
     const boxRef = useRef<HTMLDivElement>(null);
 
-    const reload = useCallback(() => setItems(getWatch()), []);
+    const reload = useCallback(async () => setItems(await fetchWatch()), []);
     useEffect(() => {
         reload();
-        const h = () => reload();
+        const h = () => { reload(); };
         window.addEventListener("uwatch", h);
         return () => window.removeEventListener("uwatch", h);
     }, [reload]);

@@ -6,11 +6,14 @@ import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useSidebar } from "../context/SidebarContext";
 import { useSettings } from "../context/SettingsContext";
+import { useAuth } from "../context/AuthContext";
 import { isModuleEnabled } from "../lib/modules";
+import UserMenu from "./UserMenu";
 import {
   LayoutDashboard, TrendingUp, Globe, ArrowRightLeft, Bitcoin, Gem, Fuel,
   Briefcase, Star, Wallet, Settings, ChevronsLeft, ChevronsRight, X,
   Sun, Moon, Monitor, CandlestickChart, LineChart, ChevronDown,
+  UserCircle, Users,
 } from "lucide-react";
 
 const navigationGroups = [
@@ -60,9 +63,18 @@ const navigationGroups = [
     ]
   },
   {
-    title: "Configuration",
+    title: "Account",
     items: [
+      { name: "My Profile", href: "/profile", icon: UserCircle },
       { name: "Settings", href: "/settings", icon: Settings },
+    ]
+  },
+  // Rendered only for admins — see `visibleGroups` below.
+  {
+    title: "Administration",
+    adminOnly: true,
+    items: [
+      { name: "User Management", href: "/admin/users", icon: Users },
     ]
   },
 ];
@@ -74,14 +86,17 @@ export default function Sidebar() {
   const { theme, setTheme } = useTheme();
   const { collapsed, toggleCollapsed } = useSidebar();
   const { settings } = useSettings();
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
 
   const toggleMenu = (href: string) =>
     setOpenMenus((prev) => ({ ...prev, [href]: !prev[href] }));
 
-  // Hide nav items for disabled modules, drop groups that become empty.
+  // Hide admin-only groups from regular users, hide nav items for disabled
+  // modules, then drop groups that become empty.
   const visibleGroups = navigationGroups
+    .filter((g: any) => !g.adminOnly || user?.role === "admin")
     .map(g => ({ ...g, items: g.items.filter((it: any) => !it.module || isModuleEnabled(settings.modules, it.module)) }))
     .filter(g => g.items.length > 0);
 
@@ -139,7 +154,9 @@ export default function Sidebar() {
         />
       )}
 
-      <aside className={`fixed left-0 top-0 h-screen h-dvh w-[min(16rem,85vw)] ${collapsed ? "lg:w-20" : "lg:w-64"} bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-lg overflow-y-auto overflow-x-hidden flex flex-col border-r border-zinc-200 dark:border-zinc-800 transition-[transform,width] duration-300 z-[95]
+      {/* The nav scrolls on its own so the account + theme footer stays pinned
+          to the bottom instead of being pushed off short screens. */}
+      <aside className={`fixed left-0 top-0 h-screen h-dvh w-[min(16rem,85vw)] ${collapsed ? "lg:w-20" : "lg:w-64"} bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-lg overflow-hidden flex flex-col border-r border-zinc-200 dark:border-zinc-800 transition-[transform,width] duration-300 z-[95]
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
 
         <div className={`pl-6 pr-2 py-6 pt-[calc(1.5rem_+_var(--sa-top))] ${collapsed ? "lg:pl-2 lg:pr-1 lg:py-3" : ""} border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-2`}>
@@ -164,7 +181,7 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <nav className="p-4 space-y-6 flex-1">
+        <nav className="p-4 space-y-6 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           {visibleGroups.map((group) => (
             <div key={group.title} className="space-y-2">
               <h2 className={`text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 px-4 mb-2 ${collapsed ? "lg:hidden" : ""}`}>
@@ -236,7 +253,9 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+        <div className="shrink-0 p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+          <UserMenu collapsed={collapsed} />
+
           <div className="mb-4">
             <p className={`text-xs text-zinc-500 font-semibold uppercase tracking-wider mb-2 ${collapsed ? "lg:hidden" : ""}`}>Theme</p>
             <div className={`flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1 ${collapsed ? "lg:flex-col lg:gap-1" : ""}`}>

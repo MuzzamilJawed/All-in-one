@@ -131,6 +131,86 @@ select option {
   .sheet-panel, .sheet-scrim { animation: none; }
 }
 
+/* ── Sign-in background ────────────────────────────────────────────────────
+   A faint market-grid behind the card, masked to fade out at the edges so it
+   reads as depth rather than wallpaper. */
+.auth-bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(24, 24, 27, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(24, 24, 27, 0.07) 1px, transparent 1px);
+  background-size: 54px 54px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 62% at 50% 45%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 75% 62% at 50% 45%, #000 30%, transparent 100%);
+}
+.dark .auth-bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+}
+
+@keyframes auth-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(5%, 7%, 0) scale(1.12); }
+}
+@keyframes auth-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(-6%, -5%, 0) scale(1.09); }
+}
+.auth-blob-a { animation: auth-drift-a 19s ease-in-out infinite; }
+.auth-blob-b { animation: auth-drift-b 24s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-blob-a, .auth-blob-b { animation: none; }
+}
+
+/* ── Sign-in artwork (AuthArtwork) ─────────────────────────────────────────
+   Pure CSS so the illustration costs no JS. The line draws once on load, the
+   candles stagger in, and only the marker + sheen keep moving. */
+@keyframes auth-draw {
+  from { stroke-dashoffset: 620; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes auth-rise {
+  from { opacity: 0; transform: scaleY(0.2); }
+  to   { opacity: 1; transform: scaleY(1); }
+}
+@keyframes auth-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes auth-ping {
+  0%        { transform: scale(0.7); opacity: 0.5; }
+  70%, 100% { transform: scale(1.9); opacity: 0; }
+}
+@keyframes auth-sheen {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(620px); }
+}
+@keyframes auth-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+
+.auth-line {
+  stroke-dasharray: 620;
+  animation: auth-draw 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+}
+.auth-area   { animation: auth-fade-in 1s ease-out 1.2s both; }
+.auth-grid   { animation: auth-fade-in 0.8s ease-out both; }
+.auth-candle { transform-box: fill-box; transform-origin: bottom; animation: auth-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.auth-marker { animation: auth-fade-in 0.5s ease-out 1.9s both; }
+.auth-ping   { transform-box: fill-box; transform-origin: center; animation: auth-ping 2.4s ease-out 2s infinite; }
+.auth-sheen  { animation: auth-sheen 5.5s linear 2s infinite; }
+.auth-float  { animation: auth-float 5s ease-in-out infinite; }
+.auth-float-slow { animation-duration: 7s; animation-delay: 0.8s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-line { stroke-dasharray: none; animation: none; }
+  .auth-area, .auth-grid, .auth-candle, .auth-marker { animation: none; opacity: 1; transform: none; }
+  .auth-ping, .auth-sheen, .auth-float { animation: none; }
+  .auth-sheen { opacity: 0; }
+}
+
 /* ── Launch splash entrance animations ─────────────────────────────────────── */
 @keyframes splash-pop {
   0%   { opacity: 0; transform: scale(0.82); }

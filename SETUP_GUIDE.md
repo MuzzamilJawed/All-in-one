@@ -34,6 +34,13 @@ npm run dev
 
 Then open: **http://localhost:3000**
 
+### Sign in
+
+The app is behind an account. An admin is seeded on first run — sign in with
+**`admin@solotrackr.app` / `admin12345`**, or create your own account from the
+login screen. See **[AUTH.md](AUTH.md)** for Google sign-in setup, the
+environment variables, and how per-user watchlists and portfolios work.
+
 ---
 
 ## 📊 PAGES & FEATURES

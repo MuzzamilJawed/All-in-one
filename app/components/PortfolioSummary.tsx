@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Briefcase, PieChart } from "lucide-react";
 import { useCurrency } from "../context/CurrencyContext";
 import { convertAmount, currencySymbol } from "../lib/currency";
-import { getTxns, computeHoldings, type Txn } from "../lib/portfolio";
+import { fetchTxns, computeHoldings, type Txn } from "../lib/portfolio";
 import { fetchAllPrices, priceKey, priceIn, type PriceBook } from "../lib/prices";
 import FitText from "./FitText";
 
@@ -17,11 +17,11 @@ export default function PortfolioSummary() {
     const [book, setBook] = useState<PriceBook>({ map: {}, rate: 278, updated: "" });
     const [loading, setLoading] = useState(true);
 
-    const reload = useCallback(() => setTxns(getTxns()), []);
+    const reload = useCallback(async () => setTxns(await fetchTxns()), []);
 
     useEffect(() => {
         reload();
-        const h = () => reload();
+        const h = () => { reload(); };
         window.addEventListener("portfolio", h);
         return () => window.removeEventListener("portfolio", h);
     }, [reload]);

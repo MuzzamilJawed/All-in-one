@@ -6,6 +6,7 @@ import CommandPalette from "./components/CommandPalette";
 import Splash from "./components/Splash";
 import SafeArea from "./components/SafeArea";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { AuthProvider } from "./context/AuthContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { CurrencyProvider } from "./context/CurrencyContext";
 import { SidebarProvider } from "./context/SidebarContext";
@@ -62,25 +63,27 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-50 dark:bg-black`}
       >
-        <SettingsProvider>
-          <CurrencyProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem
-              disableTransitionOnChange
-            >
-              <SidebarProvider>
-                <ToastProvider>
-                  <SafeArea />
-                  <AppShell>{children}</AppShell>
-                  <CommandPalette />
-                  <Splash />
-                </ToastProvider>
-              </SidebarProvider>
-            </ThemeProvider>
-          </CurrencyProvider>
-        </SettingsProvider>
+        <AuthProvider>
+          <SettingsProvider>
+            <CurrencyProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="dark"
+                enableSystem
+                disableTransitionOnChange
+              >
+                <SidebarProvider>
+                  <ToastProvider>
+                    <SafeArea />
+                    <AppShell>{children}</AppShell>
+                    <CommandPalette />
+                    <Splash />
+                  </ToastProvider>
+                </SidebarProvider>
+              </ThemeProvider>
+            </CurrencyProvider>
+          </SettingsProvider>
+        </AuthProvider>
       </body>
     </html>
   );

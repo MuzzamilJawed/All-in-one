@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ensureSeed } from './seed';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/solo-trackr';
 
@@ -32,6 +33,8 @@ async function dbConnect() {
     });
   }
   cached.conn = await cached.promise;
+  // Bootstraps the admin account on the very first connection of the process.
+  await ensureSeed();
   return cached.conn;
 }
 

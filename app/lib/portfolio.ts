@@ -1,6 +1,9 @@
-// Client-side portfolio ledger (localStorage). Records BUY/SELL transactions
-// across every asset type and derives current holdings + realized/unrealized
-// P/L using the average-cost method. No backend needed.
+// Portfolio ledger — BUY/SELL transactions for the signed-in user, stored in
+// MongoDB via /api/portfolio. Holdings and realized/unrealized P/L are derived
+// here (average-cost method) so the maths stays in one place.
+//
+// Components refresh by listening for the "portfolio" window event, which every
+// mutation below dispatches.
 
 import type { AssetType } from "./prices";
 
@@ -17,36 +20,109 @@ export interface Txn {
     note?: string;
 }
 
-const KEY = "portfolio.txns.v1";
 const hasWindow = () => typeof window !== "undefined";
+const emit = () => { if (hasWindow()) window.dispatchEvent(new CustomEvent("portfolio")); };
 
-export const getTxns = (): Txn[] => {
+const fromApi = (doc: any): Txn => ({
+    id: String(doc._id ?? doc.id),
+    date: doc.date,
+    type: doc.type,
+    assetType: doc.assetType,
+    symbol: doc.symbol,
+    name: doc.name || undefined,
+    quantity: Number(doc.quantity) || 0,
+    price: Number(doc.price) || 0,
+    currency: doc.currency,
+    note: doc.note || undefined,
+});
+
+/** All transactions for the signed-in user; empty when signed out. */
+export async function fetchTxns(): Promise<Txn[]> {
+    try {
+        const res = await fetch("/api/portfolio", { cache: "no-store" });
+        const json = await res.json();
+        return json?.success && Array.isArray(json.data) ? json.data.map(fromApi) : [];
+    } catch {
+        return [];
+    }
+}
+
+export async function addTxn(t: Omit<Txn, "id">): Promise<{ txn?: Txn; error?: string }> {
+    try {
+        const res = await fetch("/api/portfolio", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...t, symbol: t.symbol.trim().toUpperCase() }),
+        });
+        const json = await res.json();
+        if (!json?.success) return { error: json?.error || "Couldn't record the trade" };
+        emit();
+        return { txn: fromApi(json.data) };
+    } catch {
+        return { error: "Network error — couldn't record the trade" };
+    }
+}
+
+export async function deleteTxn(id: string): Promise<boolean> {
+    try {
+        const res = await fetch(`/api/portfolio/${id}`, { method: "DELETE" });
+        const json = await res.json();
+        if (json?.success) emit();
+        return !!json?.success;
+    } catch {
+        return false;
+    }
+}
+
+export async function clearTxns(): Promise<boolean> {
+    try {
+        const res = await fetch("/api/portfolio", { method: "DELETE" });
+        const json = await res.json();
+        if (json?.success) emit();
+        return !!json?.success;
+    } catch {
+        return false;
+    }
+}
+
+export async function importTxns(txns: Omit<Txn, "id">[]): Promise<number> {
+    try {
+        const res = await fetch("/api/portfolio/import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ txns }),
+        });
+        const json = await res.json();
+        if (json?.success) emit();
+        return json?.data?.imported ?? 0;
+    } catch {
+        return 0;
+    }
+}
+
+// ── Legacy localStorage ledger (pre-accounts) ───────────────────────────────
+// Read once on first sign-in so an existing browser's trades follow the user
+// into their account, then dropped.
+
+const LEGACY_KEY = "portfolio.txns.v1";
+
+export function readLegacyTxns(): Txn[] {
     if (!hasWindow()) return [];
     try {
-        const raw = window.localStorage.getItem(KEY);
+        const raw = window.localStorage.getItem(LEGACY_KEY);
         const arr = raw ? JSON.parse(raw) : [];
         return Array.isArray(arr) ? arr : [];
     } catch {
         return [];
     }
-};
+}
 
-const write = (txns: Txn[]) => {
+export function clearLegacyTxns() {
     if (!hasWindow()) return;
-    try {
-        window.localStorage.setItem(KEY, JSON.stringify(txns));
-        window.dispatchEvent(new CustomEvent("portfolio"));
-    } catch { /* quota */ }
-};
+    try { window.localStorage.removeItem(LEGACY_KEY); } catch { /* ignore */ }
+}
 
-export const addTxn = (t: Omit<Txn, "id">): Txn => {
-    const txn: Txn = { ...t, symbol: t.symbol.trim().toUpperCase(), id: `${t.date}-${t.symbol}-${Math.floor(Math.random() * 1e9)}-${getTxns().length}` };
-    write([...getTxns(), txn]);
-    return txn;
-};
-
-export const deleteTxn = (id: string) => write(getTxns().filter(t => t.id !== id));
-export const clearTxns = () => write([]);
+// ── Derivation (pure) ───────────────────────────────────────────────────────
 
 export interface Holding {
     assetType: AssetType;

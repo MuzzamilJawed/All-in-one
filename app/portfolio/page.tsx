@@ -12,7 +12,7 @@ import CurrencyToggle from "../components/CurrencyToggle";
 import { convertAmount, currencySymbol } from "../lib/currency";
 import { useToast } from "../context/ToastContext";
 import {
-    getTxns, addTxn, deleteTxn, computeHoldings, txnsToCsv, type Txn,
+    fetchTxns, addTxn, deleteTxn, computeHoldings, txnsToCsv, type Txn,
 } from "../lib/portfolio";
 import {
     fetchAllPrices, priceKey, priceIn, ASSET_TYPES,
@@ -26,7 +26,7 @@ const todayStr = () => {
 
 export default function PortfolioPage() {
     const { settings } = useSettings();
-    const { success, info } = useToast();
+    const { success, info, error } = useToast();
     // Holdings stay in their own currency (PSX in PKR, NASDAQ in USD); only the
     // aggregate figures are converted to the active display currency.
     const { currency: displayCur, rates } = useCurrency();
@@ -34,6 +34,8 @@ export default function PortfolioPage() {
     const [txns, setTxns] = useState<Txn[]>([]);
     const [book, setBook] = useState<PriceBook>({ map: {}, rate: 278, updated: "" });
     const [pricesLoading, setPricesLoading] = useState(true);
+    const [ledgerLoading, setLedgerLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [showAdd, setShowAdd] = useState(false);
     const [portTab, setPortTab] = useState<"analytics" | "holdings" | "history">("holdings");
     const [from, setFrom] = useState("");
@@ -49,11 +51,14 @@ export default function PortfolioPage() {
         symbol: "", quantity: "", price: "", currency: "PKR" as "PKR" | "USD", note: "",
     });
 
-    const reload = useCallback(() => setTxns(getTxns()), []);
+    const reload = useCallback(async () => {
+        setLedgerLoading(true);
+        try { setTxns(await fetchTxns()); } finally { setLedgerLoading(false); }
+    }, []);
 
     useEffect(() => {
         reload();
-        const h = () => reload();
+        const h = () => { reload(); };
         window.addEventListener("portfolio", h);
         return () => window.removeEventListener("portfolio", h);
     }, [reload]);
@@ -190,24 +195,28 @@ export default function PortfolioPage() {
         if (p != null) setForm(f => ({ ...f, price: String(Number(p.toFixed(p < 1 ? 6 : 2))) }));
     };
 
-    const submit = () => {
+    const submit = async () => {
+        if (saving) return;
         const q = parseFloat(form.quantity), p = parseFloat(form.price);
         if (!form.symbol.trim()) { info("Enter a symbol"); return; }
         if (!Number.isFinite(q) || q <= 0) { info("Enter a valid quantity"); return; }
         if (!Number.isFinite(p) || p <= 0) { info("Enter a valid price"); return; }
         const info2 = book.map[priceKey(form.assetType, form.symbol)];
-        addTxn({
+        setSaving(true);
+        const res = await addTxn({
             date: form.date || todayStr(), type: form.type, assetType: form.assetType,
             symbol: form.symbol, name: info2?.name, quantity: q, price: p, currency: form.currency, note: form.note.trim() || undefined,
         });
+        setSaving(false);
+        if (res.error) { error(res.error); return; }
         success(`${form.type} ${q} ${form.symbol.toUpperCase()} recorded`);
         setForm(f => ({ ...f, symbol: "", quantity: "", price: "", note: "" }));
     };
 
-    const remove = (t: Txn) => {
+    const remove = async (t: Txn) => {
         if (!confirm(`Delete ${t.type} ${t.quantity} ${t.symbol} (${t.date})?`)) return;
-        deleteTxn(t.id);
-        info("Transaction deleted");
+        if (await deleteTxn(t.id)) info("Transaction deleted");
+        else error("Couldn't delete that transaction");
     };
 
     const download = () => {
@@ -296,7 +305,7 @@ export default function PortfolioPage() {
                                 </select>
                             </div>
                             <div className="col-span-1 flex items-end">
-                                <button onClick={submit} className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">Add</button>
+                                <button onClick={submit} disabled={saving} className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">{saving ? "Saving…" : "Add"}</button>
                             </div>
                         </div>
                     </div>
@@ -456,9 +465,13 @@ export default function PortfolioPage() {
                 <div className="bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden">
                     <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between gap-2">
                         <h2 className="text-sm font-black uppercase tracking-tighter italic">Current Holdings</h2>
-                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{pricesLoading ? "Pricing…" : `${rows.length} positions · ${book.updated}`}</span>
+                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{ledgerLoading ? "Loading…" : pricesLoading ? "Pricing…" : `${rows.length} positions · ${book.updated}`}</span>
                     </div>
-                    {rows.length === 0 ? (
+                    {ledgerLoading && rows.length === 0 ? (
+                        <div className="py-16 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                        </div>
+                    ) : rows.length === 0 ? (
                         <div className="py-16 text-center px-4">
                             <BarChart3 className="w-8 h-8 mx-auto mb-3 text-zinc-400" strokeWidth={1.5} />
                             <p className="text-zinc-500 font-black uppercase tracking-widest text-[11px] mb-1">No open positions</p>

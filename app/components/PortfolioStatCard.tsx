@@ -5,7 +5,7 @@ import { Briefcase } from "lucide-react";
 import StatCard from "./StatCard";
 import { useCurrency } from "../context/CurrencyContext";
 import { convertAmount, currencySymbol } from "../lib/currency";
-import { getTxns, computeHoldings, type Txn } from "../lib/portfolio";
+import { fetchTxns, computeHoldings, type Txn } from "../lib/portfolio";
 import { fetchAllPrices, priceKey, priceIn, type PriceBook } from "../lib/prices";
 
 // Compact dashboard tile: live portfolio value + total return %. Reuses the same
@@ -16,10 +16,10 @@ export default function PortfolioStatCard() {
     const [txns, setTxns] = useState<Txn[]>([]);
     const [book, setBook] = useState<PriceBook>({ map: {}, rate: 278, updated: "" });
 
-    const reload = useCallback(() => setTxns(getTxns()), []);
+    const reload = useCallback(async () => setTxns(await fetchTxns()), []);
     useEffect(() => {
         reload();
-        const h = () => reload();
+        const h = () => { reload(); };
         window.addEventListener("portfolio", h);
         return () => window.removeEventListener("portfolio", h);
     }, [reload]);
