@@ -8,8 +8,9 @@ import type { CapacitorConfig } from '@capacitor/cli';
 //   • LAN dev:     point at your machine's IP while `npm run dev` is running, e.g.
 //       CAP_SERVER_URL=http://192.168.1.20:3005 npx cap sync
 //
-// Change the fallback below to your own LAN IP so a bare `npx cap sync` works.
-const SERVER_URL = process.env.CAP_SERVER_URL || 'http://192.168.100.10:3005';
+// The fallback is production on purpose: a bare `npx cap sync` used to bake in a
+// LAN IP, which ships an app that can only work on one Wi-Fi network.
+const SERVER_URL = process.env.CAP_SERVER_URL || 'https://solo-trackr.vercel.app';
 const isHttps = SERVER_URL.startsWith('https://');
 
 const config: CapacitorConfig = {
@@ -33,14 +34,17 @@ const config: CapacitorConfig = {
     contentInset: 'always',
   },
   plugins: {
-    // The app boots from a remote URL, so hiding at a fixed 800ms left a blank
-    // WebView on screen. It now stays until the web splash mounts and calls
-    // hide() — with launchShowDuration as a backstop if the server is unreachable.
+    // One splash, and it is this native one — visible from the tap, unlike the
+    // in-app splash which can only appear once the remote page has loaded. It
+    // shows the same logo the launch window animates to, then hides as soon as
+    // the app has painted. launchShowDuration is the backstop for an unreachable
+    // server. <Splash> renders nothing on native so this is never doubled up.
     SplashScreen: {
-      launchShowDuration: 2500,
+      launchShowDuration: 3000,
       launchAutoHide: true,
+      androidSplashResourceName: 'splash_brand',
       backgroundColor: '#050505',
-      androidScaleType: 'CENTER_CROP',
+      androidScaleType: 'FIT_XY',
       showSpinner: false,
     },
     // Initial value only — <SafeArea> re-applies the style at runtime to match

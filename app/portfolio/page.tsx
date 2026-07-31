@@ -248,10 +248,13 @@ export default function PortfolioPage() {
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase leading-none flex items-center gap-2"><Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" strokeWidth={2} /> Portfolio <span className="text-emerald-500">Ledger</span></h1>
                         <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1">Multi-Asset Holdings · Profit &amp; Loss</p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:flex-nowrap">
+                    {/* nowrap on the buttons: with flex-1 alone the labels broke onto
+                        two lines ("+ ADD" / "TRADE") and the row looked ragged. */}
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                         <CurrencyToggle />
-                        <button onClick={() => setShowAdd(s => !s)} className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">{showAdd ? "✕ Close" : "+ Add Trade"}</button>
-                        <button onClick={download} disabled={ledger.length === 0} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-zinc-200 dark:border-white/10 transition-all"><Download className="w-3.5 h-3.5" strokeWidth={2} /> Download</button>
+                        <button onClick={() => setShowAdd(s => !s)} className="flex-1 sm:flex-none whitespace-nowrap px-3 sm:px-4 py-2.5 min-h-[40px] bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">{showAdd ? "✕ Close" : "+ Add Trade"}</button>
+                        {/* Icon-only on phones — the label is what pushed this row over. */}
+                        <button onClick={download} disabled={ledger.length === 0} aria-label="Download trades as CSV" title="Download trades as CSV" className="shrink-0 sm:flex-none inline-flex items-center justify-center gap-1.5 w-10 sm:w-auto h-10 sm:h-auto sm:px-4 sm:py-2.5 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-zinc-200 dark:border-white/10 transition-all"><Download className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" strokeWidth={2} /> <span className="hidden sm:inline">Download</span></button>
                     </div>
                 </div>
             </header>
@@ -483,38 +486,38 @@ export default function PortfolioPage() {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5">
-                                        <th className="px-3 sm:px-6 py-3">Asset</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right hidden sm:table-cell">Qty</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right hidden lg:table-cell">Avg Cost</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right hidden md:table-cell">Current</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right hidden lg:table-cell">Invested</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right">Value</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right hidden md:table-cell">Day P/L</th>
-                                        <th className="px-3 sm:px-6 py-3 text-right">Total P/L</th>
+                                        <th className="px-2 sm:px-6 py-3">Asset</th>
+                                        <th className="px-2 sm:px-4 py-3 text-right hidden sm:table-cell">Qty</th>
+                                        <th className="px-2 sm:px-4 py-3 text-right hidden lg:table-cell">Avg Cost</th>
+                                        <th className="px-2 sm:px-4 py-3 text-right hidden md:table-cell">Current</th>
+                                        <th className="px-2 sm:px-4 py-3 text-right hidden lg:table-cell">Invested</th>
+                                        <th className="px-2 sm:px-4 py-3 text-right">Value</th>
+                                        <th className="px-2 sm:px-4 py-3 text-right hidden md:table-cell">Day P/L</th>
+                                        <th className="px-2 sm:px-6 py-3 text-right">Total P/L</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                                     {rows.map(r => (
                                         <tr key={`${r.assetType}:${r.symbol}:${r.currency}`} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02]">
-                                            <td className="px-3 sm:px-6 py-3">
+                                            <td className="px-2 sm:px-6 py-3">
                                                 <div className="flex items-center gap-2">
                                                     <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${typeBadge(r.assetType)}`}>{r.assetType}</span>
                                                     <div className="min-w-0">
                                                         <div className="text-xs font-black tracking-tight truncate">{r.symbol}</div>
-                                                        <div className="text-[9px] text-zinc-400 font-bold truncate max-w-[160px]">{r.name || "—"}</div>
+                                                        <div className="text-[9px] text-zinc-400 font-bold truncate max-w-[88px] sm:max-w-[160px]">{r.name || "—"}</div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell">{r.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500 hidden lg:table-cell">{fmt(r.avgCost, r.currency)}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden md:table-cell">{fmt(r.current, r.currency)}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500 hidden lg:table-cell">{fmt(r.invested, r.currency)}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums font-black">{fmt(r.value, r.currency)}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right hidden md:table-cell">
+                                            <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell">{r.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
+                                            <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500 hidden lg:table-cell">{fmt(r.avgCost, r.currency)}</td>
+                                            <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden md:table-cell">{fmt(r.current, r.currency)}</td>
+                                            <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500 hidden lg:table-cell">{fmt(r.invested, r.currency)}</td>
+                                            <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums font-black">{fmt(r.value, r.currency)}</td>
+                                            <td className="px-2 sm:px-4 py-3 text-right hidden md:table-cell">
                                                 <div className={`font-mono text-xs font-black tabular-nums ${r.dayPnl == null ? "text-zinc-400" : r.dayPnl >= 0 ? "text-green-500" : "text-red-500"}`}>{signed(r.dayPnl, r.currency)}</div>
                                                 {r.dayPct != null && <div className={`text-[9px] font-black ${r.dayPct >= 0 ? "text-green-500" : "text-red-500"}`}>{r.dayPct >= 0 ? "▲" : "▼"} {Math.abs(r.dayPct).toFixed(2)}%</div>}
                                             </td>
-                                            <td className="px-3 sm:px-6 py-3 text-right">
+                                            <td className="px-2 sm:px-6 py-3 text-right">
                                                 <div className={`font-mono text-xs font-black tabular-nums ${r.pnl == null ? "text-zinc-400" : r.pnl >= 0 ? "text-green-500" : "text-red-500"}`}>{signed(r.pnl, r.currency)}</div>
                                                 {r.pnlPct != null && <div className={`text-[9px] font-black ${r.pnlPct >= 0 ? "text-green-500" : "text-red-500"}`}>{r.pnlPct >= 0 ? "▲" : "▼"} {Math.abs(r.pnlPct).toFixed(2)}%</div>}
                                             </td>
@@ -547,28 +550,28 @@ export default function PortfolioPage() {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5">
-                                        <th className="px-3 sm:px-6 py-3 hidden sm:table-cell">Date</th>
-                                        <th className="px-3 sm:px-4 py-3">Type</th>
-                                        <th className="px-3 sm:px-4 py-3">Asset</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right hidden md:table-cell">Qty</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right hidden sm:table-cell">Price</th>
-                                        <th className="px-3 sm:px-4 py-3 text-right">Value</th>
-                                        <th className="px-3 sm:px-6 py-3"></th>
+                                        <th className="px-2 sm:px-6 py-3 hidden sm:table-cell">Date</th>
+                                        <th className="px-2 sm:px-4 py-3">Type</th>
+                                        <th className="px-2 sm:px-4 py-3">Asset</th>
+                                        <th className="px-2 sm:px-4 py-3 text-right hidden md:table-cell">Qty</th>
+                                        <th className="px-2 sm:px-4 py-3 text-right hidden sm:table-cell">Price</th>
+                                        <th className="px-2 sm:px-4 py-3 text-right">Value</th>
+                                        <th className="px-2 sm:px-6 py-3"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                                     {ledger.map(t => (
                                         <tr key={t.id} className="hover:bg-zinc-50 dark:hover:bg-white/[0.02]">
-                                            <td className="px-3 sm:px-6 py-3 font-mono text-[11px] tabular-nums text-zinc-500 hidden sm:table-cell">{t.date}</td>
-                                            <td className="px-3 sm:px-4 py-3"><span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${t.type === "BUY" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>{t.type}</span></td>
-                                            <td className="px-3 sm:px-4 py-3">
+                                            <td className="px-2 sm:px-6 py-3 font-mono text-[11px] tabular-nums text-zinc-500 hidden sm:table-cell">{t.date}</td>
+                                            <td className="px-2 sm:px-4 py-3"><span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${t.type === "BUY" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>{t.type}</span></td>
+                                            <td className="px-2 sm:px-4 py-3">
                                                 <span className="text-xs font-black">{t.symbol}</span> <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded ${typeBadge(t.assetType)}`}>{t.assetType}</span>
                                                 <span className="sm:hidden block text-[9px] font-mono text-zinc-400 tabular-nums mt-0.5">{t.date}</span>
                                             </td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden md:table-cell">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell">{fmt(t.price, t.currency)}</td>
-                                            <td className="px-3 sm:px-4 py-3 text-right font-mono text-xs tabular-nums font-black">{fmt(t.quantity * t.price, t.currency)}</td>
-                                            <td className="px-3 sm:px-6 py-3 text-right"><button onClick={() => remove(t)} className="text-zinc-400 hover:text-red-500 text-sm px-2" title="Delete">✕</button></td>
+                                            <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden md:table-cell">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
+                                            <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell">{fmt(t.price, t.currency)}</td>
+                                            <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums font-black">{fmt(t.quantity * t.price, t.currency)}</td>
+                                            <td className="px-2 sm:px-6 py-3 text-right"><button onClick={() => remove(t)} className="text-zinc-400 hover:text-red-500 text-sm px-2" title="Delete">✕</button></td>
                                         </tr>
                                     ))}
                                 </tbody>

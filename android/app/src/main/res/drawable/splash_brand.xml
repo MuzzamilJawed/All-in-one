@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What the Capacitor splash shows while the remote page loads: the same logo on
+  the same background the launch window just finished animating, so nothing
+  jumps and there is no blank frame before the app appears.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <!-- 240dp matches how Android renders the launch window's animated icon, so
+         the logo does not visibly change size as one layer hands to the next. -->
+    <item
+        android:width="240dp"
+        android:height="240dp"
+        android:gravity="center"
+        android:drawable="@drawable/splash_logo" />
+</layer-list>

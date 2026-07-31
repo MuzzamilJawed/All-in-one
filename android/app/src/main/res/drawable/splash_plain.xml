@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What the Capacitor SplashScreen plugin displays after the launch window: a flat
+  fill in the app's background colour, no logo.
+
+  The plugin's default resource (splash.png) is the blue tile with the "S" — that
+  read as a separate first splash before the in-app one. This keeps the screen
+  covered during the remote page load without looking like a splash of its own.
+-->
+<shape
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/splash_background" />
+</shape>

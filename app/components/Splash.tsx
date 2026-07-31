@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
  */
 export default function Splash() {
     const [mounted, setMounted] = useState(false);
+    const [native, setNative] = useState(false);
     const [leaving, setLeaving] = useState(false);
     const [angle, setAngle] = useState(-Math.PI / 2); // start at the top of the ring
 
@@ -23,18 +24,22 @@ export default function Splash() {
     useEffect(() => { angleRef.current = angle; }, [angle]);
 
     // Show on first client render (i.e. each real launch / full reload).
-    useEffect(() => { setMounted(true); }, []);
-
-    // Hand over from the native launch screen the moment this one is on screen,
-    // so the user never sees a blank WebView between the two.
+    // On native the launch screen has already been showing since the icon was
+    // tapped, so a second splash here would just repeat it — we skip this one and
+    // dismiss the native one instead, once the app has had a frame to paint.
     useEffect(() => {
-        if (!mounted) return;
         const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-        if (!cap?.isNativePlatform?.()) return;
-        import("@capacitor/splash-screen")
-            .then(({ SplashScreen }) => SplashScreen.hide({ fadeOutDuration: 250 }))
-            .catch(() => { /* plugin absent — the native backstop hides it */ });
-    }, [mounted]);
+        if (cap?.isNativePlatform?.()) {
+            setNative(true);
+            const t = setTimeout(() => {
+                import("@capacitor/splash-screen")
+                    .then(({ SplashScreen }) => SplashScreen.hide({ fadeOutDuration: 300 }))
+                    .catch(() => { /* plugin absent — launchShowDuration hides it */ });
+            }, 350);
+            return () => clearTimeout(t);
+        }
+        setMounted(true);
+    }, []);
 
     const dismiss = useCallback(() => {
         setLeaving(true);
@@ -97,7 +102,7 @@ export default function Splash() {
         window.removeEventListener("pointerup", endDrag);
     }, [moveDrag, endDrag]);
 
-    if (!mounted) return null;
+    if (!mounted || native) return null;
 
     const R = 96; // orbit radius (px)
     const x = Math.cos(angle) * R;

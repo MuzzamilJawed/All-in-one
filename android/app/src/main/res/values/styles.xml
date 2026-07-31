@@ -17,9 +17,9 @@
 
 
     <!--
-      Uses the androidx core-splashscreen API rather than a flat @drawable
-      background, so the launch screen can animate. The icon plays on Android 12+;
-      older versions fall back to showing it statically on the same background.
+      The native launch screen is now the only splash: it is on screen from the
+      moment the icon is tapped, so there is never a blank frame waiting for the
+      remote page. The in-app splash is skipped on native for the same reason.
     -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
