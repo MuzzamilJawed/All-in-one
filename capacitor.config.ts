@@ -33,8 +33,12 @@ const config: CapacitorConfig = {
     contentInset: 'always',
   },
   plugins: {
+    // The app boots from a remote URL, so hiding at a fixed 800ms left a blank
+    // WebView on screen. It now stays until the web splash mounts and calls
+    // hide() — with launchShowDuration as a backstop if the server is unreachable.
     SplashScreen: {
-      launchShowDuration: 800,
+      launchShowDuration: 2500,
+      launchAutoHide: true,
       backgroundColor: '#050505',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,

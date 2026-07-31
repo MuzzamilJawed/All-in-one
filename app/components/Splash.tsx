@@ -25,6 +25,17 @@ export default function Splash() {
     // Show on first client render (i.e. each real launch / full reload).
     useEffect(() => { setMounted(true); }, []);
 
+    // Hand over from the native launch screen the moment this one is on screen,
+    // so the user never sees a blank WebView between the two.
+    useEffect(() => {
+        if (!mounted) return;
+        const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+        if (!cap?.isNativePlatform?.()) return;
+        import("@capacitor/splash-screen")
+            .then(({ SplashScreen }) => SplashScreen.hide({ fadeOutDuration: 250 }))
+            .catch(() => { /* plugin absent — the native backstop hides it */ });
+    }, [mounted]);
+
     const dismiss = useCallback(() => {
         setLeaving(true);
         setTimeout(() => setMounted(false), 500); // let the fade finish
