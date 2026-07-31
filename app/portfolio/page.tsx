@@ -9,6 +9,7 @@ import {
 import { useSettings } from "../context/SettingsContext";
 import { useCurrency } from "../context/CurrencyContext";
 import CurrencyToggle from "../components/CurrencyToggle";
+import FitText from "../components/FitText";
 import { convertAmount, currencySymbol } from "../lib/currency";
 import { useToast } from "../context/ToastContext";
 import {
@@ -243,18 +244,46 @@ export default function PortfolioPage() {
 
             {/* Header */}
             <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                        <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase leading-none flex items-center gap-2"><Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" strokeWidth={2} /> Portfolio <span className="text-emerald-500">Ledger</span></h1>
-                        <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1">Multi-Asset Holdings · Profit &amp; Loss</p>
+                {/* `flex-wrap`: between sm and lg the title and the action group
+                    together are wider than the row (the sidebar still costs pl-16
+                    there), which pushed the page into horizontal scroll. Wrapping
+                    drops the actions to their own line instead. */}
+                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center gap-3">
+                    {/* Currency rides the title row — same top-right placement as every
+                        other market screen — leaving the row below to the actions. */}
+                    <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
+                        <div className="min-w-0">
+                            {/* Sharing the row with the currency pill leaves ~220px here,
+                                which "Portfolio Ledger" overruns — FitText shrinks it to
+                                fit instead of letting it slide under the pill. */}
+                            <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase leading-none flex items-center gap-2 min-w-0">
+                                <Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" strokeWidth={2} />
+                                <FitText className="min-w-0 flex-1">Portfolio <span className="text-emerald-500">Ledger</span></FitText>
+                            </h1>
+                            <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1 truncate">Multi-Asset Holdings · Profit &amp; Loss</p>
+                        </div>
+                        <div className="shrink-0"><CurrencyToggle /></div>
                     </div>
-                    {/* nowrap on the buttons: with flex-1 alone the labels broke onto
-                        two lines ("+ ADD" / "TRADE") and the row looked ragged. */}
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <CurrencyToggle />
-                        <button onClick={() => setShowAdd(s => !s)} className="flex-1 sm:flex-none whitespace-nowrap px-3 sm:px-4 py-2.5 min-h-[40px] bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">{showAdd ? "✕ Close" : "+ Add Trade"}</button>
-                        {/* Icon-only on phones — the label is what pushed this row over. */}
-                        <button onClick={download} disabled={ledger.length === 0} aria-label="Download trades as CSV" title="Download trades as CSV" className="shrink-0 sm:flex-none inline-flex items-center justify-center gap-1.5 w-10 sm:w-auto h-10 sm:h-auto sm:px-4 sm:py-2.5 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-zinc-200 dark:border-white/10 transition-all"><Download className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" strokeWidth={2} /> <span className="hidden sm:inline">Download</span></button>
+                    <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                onClick={() => setShowAdd(s => !s)}
+                                className="whitespace-nowrap inline-flex items-center justify-center px-4 h-10 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                            >
+                                {showAdd ? "✕ Close" : "+ Add Trade"}
+                            </button>
+                            {/* Icon-only on phones — the label is what overflowed the row. */}
+                            <button
+                                onClick={download}
+                                disabled={ledger.length === 0}
+                                aria-label="Download trades as CSV"
+                                title="Download trades as CSV"
+                                className="shrink-0 inline-flex items-center justify-center gap-1.5 w-10 sm:w-auto h-10 sm:px-4 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-zinc-200 dark:border-white/10 transition-all active:scale-95"
+                            >
+                                <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" strokeWidth={2} />
+                                <span className="hidden sm:inline">Download</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -373,7 +402,10 @@ export default function PortfolioPage() {
                                         <button onClick={() => setAllocBy("type")} className={`px-2.5 py-1 rounded text-[8px] font-black uppercase tracking-widest ${allocBy === "type" ? "bg-white dark:bg-zinc-800 text-blue-600 shadow" : "text-zinc-500"}`}>By Class</button>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr] gap-6 items-center">
+                                {/* minmax(0,…): a bare `fr` track floors at its
+                                    content's min width, so the chart column could
+                                    push the row a few px past the viewport. */}
+                                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-6 items-center">
                                     <div className="min-w-0 w-full h-[300px] sm:h-[360px] relative">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
@@ -482,7 +514,67 @@ export default function PortfolioPage() {
                             <button onClick={() => setShowAdd(true)} className="inline-flex items-center px-2 py-2 min-h-[34px] text-[10px] font-black text-blue-500 uppercase tracking-widest border-b border-blue-500/40 hover:border-blue-500">+ Add your first trade</button>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <>
+                        {/* Phones: stacked cards. A row of numeric columns can't fit
+                            under ~390px, and side-scrolling a table hides the P/L
+                            that matters most. Cards show more, not less. */}
+                        <div className="sm:hidden divide-y divide-zinc-100 dark:divide-white/5">
+                            {rows.map(r => (
+                                <div key={`${r.assetType}:${r.symbol}:${r.currency}`} className="p-4 space-y-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0 ${typeBadge(r.assetType)}`}>{r.assetType}</span>
+                                            <div className="min-w-0">
+                                                <div className="text-xs font-black tracking-tight truncate">{r.symbol}</div>
+                                                <div className="text-[9px] text-zinc-400 font-bold truncate">{r.name || "—"}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <div className="text-sm font-black font-mono tabular-nums leading-none">{fmt(r.value, r.currency)}</div>
+                                            <div className="text-[9px] text-zinc-400 font-bold tabular-nums mt-1">
+                                                {r.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })} @ {fmt(r.avgCost, r.currency)}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { label: "Day P/L", val: r.dayPnl, pct: r.dayPct },
+                                            { label: "Total P/L", val: r.pnl, pct: r.pnlPct },
+                                        ].map(m => {
+                                            const up = (m.val ?? 0) >= 0;
+                                            return (
+                                                <div key={m.label} className={`min-w-0 rounded-xl border px-2.5 py-2 ${m.val == null ? "bg-zinc-500/[0.06] border-zinc-500/15" : up ? "bg-green-500/[0.06] border-green-500/15" : "bg-red-500/[0.06] border-red-500/15"}`}>
+                                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{m.label}</p>
+                                                    <p className={`text-xs font-black font-mono tabular-nums truncate ${m.val == null ? "text-zinc-400" : up ? "text-green-500" : "text-red-500"}`}>
+                                                        {signed(m.val, r.currency)}
+                                                    </p>
+                                                    {m.pct != null && (
+                                                        <p className={`text-[9px] font-black ${m.pct >= 0 ? "text-green-500" : "text-red-500"}`}>
+                                                            {m.pct >= 0 ? "▲" : "▼"} {Math.abs(m.pct).toFixed(2)}%
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                        {[
+                                            { label: "Current", val: fmt(r.current, r.currency) },
+                                            { label: "Invested", val: fmt(r.invested, r.currency) },
+                                        ].map(m => (
+                                            <div key={m.label} className="flex items-baseline justify-between gap-2 min-w-0">
+                                                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest shrink-0">{m.label}</span>
+                                                <span className="text-[10px] font-mono font-black tabular-nums truncate">{m.val}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="hidden sm:block overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5">
@@ -526,6 +618,7 @@ export default function PortfolioPage() {
                                 </tbody>
                             </table>
                         </div>
+                        </>
                     )}
                 </div>
                 )}
@@ -535,18 +628,66 @@ export default function PortfolioPage() {
                 <div className="bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden">
                     <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <h2 className="text-sm font-black uppercase tracking-tighter italic">Trade History <span className="text-zinc-400">· {ledger.length}</span></h2>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">From</span>
-                            <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="px-2 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500" />
-                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">To</span>
-                            <input type="date" value={to} onChange={e => setTo(e.target.value)} className="px-2 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500" />
-                            {(from || to) && <button onClick={() => { setFrom(""); setTo(""); }} className="text-[9px] font-black text-blue-500 uppercase tracking-widest hover:underline">Clear</button>}
+                        {/* One row on phones: two native date inputs plus both word
+                            labels overrun the card, so the labels give way to a compact
+                            arrow and the inputs share the remaining width. */}
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <span className="hidden sm:inline text-[9px] font-black text-zinc-400 uppercase tracking-widest shrink-0">From</span>
+                            <input
+                                type="date"
+                                value={from}
+                                onChange={e => setFrom(e.target.value)}
+                                aria-label="From date"
+                                className="flex-1 sm:flex-none min-w-0 w-full sm:w-auto px-2 py-1.5 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] sm:text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="shrink-0 text-[10px] font-black text-zinc-400 sm:hidden">→</span>
+                            <span className="hidden sm:inline text-[9px] font-black text-zinc-400 uppercase tracking-widest shrink-0">To</span>
+                            <input
+                                type="date"
+                                value={to}
+                                onChange={e => setTo(e.target.value)}
+                                aria-label="To date"
+                                className="flex-1 sm:flex-none min-w-0 w-full sm:w-auto px-2 py-1.5 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] sm:text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            {(from || to) && (
+                                <button
+                                    onClick={() => { setFrom(""); setTo(""); }}
+                                    aria-label="Clear date filter"
+                                    className="shrink-0 px-1.5 h-9 text-[9px] font-black text-blue-500 uppercase tracking-widest hover:underline"
+                                >
+                                    Clear
+                                </button>
+                            )}
                         </div>
                     </div>
                     {ledger.length === 0 ? (
                         <div className="py-14 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest">No trades {from || to ? "in this date range" : "yet"}</div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <>
+                        {/* Phones: same card treatment as Holdings — the table was
+                            within 2px of overflowing at 320px. */}
+                        <div className="sm:hidden divide-y divide-zinc-100 dark:divide-white/5">
+                            {ledger.map(t => (
+                                <div key={t.id} className="p-4 flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${t.type === "BUY" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>{t.type}</span>
+                                            <span className="text-xs font-black tracking-tight truncate">{t.symbol}</span>
+                                            <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded ${typeBadge(t.assetType)}`}>{t.assetType}</span>
+                                        </div>
+                                        <p className="text-[9px] font-mono text-zinc-400 tabular-nums mt-1 truncate">
+                                            {t.date} · {t.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })} @ {fmt(t.price, t.currency)}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <span className="font-mono text-xs font-black tabular-nums">{fmt(t.quantity * t.price, t.currency)}</span>
+                                        <button onClick={() => remove(t)} className="text-zinc-400 hover:text-red-500 text-sm px-1.5 py-1" title="Delete">✕</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="hidden sm:block overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest border-b border-zinc-100 dark:border-white/5">
@@ -577,6 +718,7 @@ export default function PortfolioPage() {
                                 </tbody>
                             </table>
                         </div>
+                        </>
                     )}
                     {ledger.length > 0 && (
                         <div className="px-4 sm:px-6 py-3 border-t border-zinc-100 dark:border-white/5 flex flex-wrap items-center justify-end gap-x-6 gap-y-1 text-[10px] font-black uppercase tracking-widest">

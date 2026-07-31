@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  What the Capacitor splash shows while the remote page loads: the same logo on
-  the same background the launch window just finished animating, so nothing
-  jumps and there is no blank frame before the app appears.
+  Full-screen version shown by the Capacitor splash after the launch window.
+  Same ring + badge composition, same background — so the hand-off between the
+  two native layers is invisible and the user sees a single splash from the tap
+  until the app paints.
 -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />
-    <!-- 240dp matches how Android renders the launch window's animated icon, so
-         the logo does not visibly change size as one layer hands to the next. -->
     <item
-        android:width="240dp"
-        android:height="240dp"
+        android:width="288dp"
+        android:height="288dp"
         android:gravity="center"
-        android:drawable="@drawable/splash_logo" />
+        android:drawable="@drawable/splash_web_icon" />
 </layer-list>

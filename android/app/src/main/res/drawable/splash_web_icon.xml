@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The in-app splash's composition, rebuilt from native drawables: the dashed
+  orbit ring with the SoloTrackr badge at its centre.
+
+  The badge is the real launcher artwork rather than a redrawn approximation, so
+  what the splash shows is exactly the mark on the icon the user just tapped.
+  Used by BOTH native layers (the launch window and the Capacitor splash) so the
+  two are pixel-identical and read as one screen.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/splash_ring" />
+    <item
+        android:width="86dp"
+        android:height="86dp"
+        android:gravity="center"
+        android:drawable="@mipmap/ic_launcher_foreground" />
+</layer-list>
