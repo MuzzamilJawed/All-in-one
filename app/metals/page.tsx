@@ -14,11 +14,30 @@ import { rateOf } from "../lib/currency";
 import { LOADING_CAPTION } from "../lib/caption";
 // Use internal API routes to avoid CORS and run scraping/server code server-side
 
+// ── Gold purity ─────────────────────────────────────────────────────────────
+// Karat is parts-of-24 pure gold: 24K is ~100%, 18K is 18/24 = 75%. The presets
+// are the grades traded most often (Pakistani and Gulf jewellery is usually 21K
+// or 22K, Western 18K/14K/9K); the calculator also accepts any other value.
+const KARAT_PRESETS = [24, 23, 22, 21, 20, 18, 14, 10, 9];
+const CUSTOM_KARAT = 'CUSTOM';
+
+/** Karat as a purity percentage, e.g. 21 → "87.5". */
+const purityPct = (karat: number) =>
+  Number(((karat / 24) * 100).toFixed(1)).toString();
+
+/** A usable karat from free text — anything outside 1–24 is meaningless. */
+const clampKarat = (raw: string) => {
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n) || n <= 0) return 24;
+  return Math.min(24, Math.max(0.1, Math.round(n * 10) / 10));
+};
+
 export default function MetalsPage() {
   const [showMore, setShowMore] = useState(false);
   const [showPurity, setShowPurity] = useState(false);
   const [calcMetal, setCalcMetal] = useState('gold');
   const [calcPurity, setCalcPurity] = useState('24K');
+  const [customKarat, setCustomKarat] = useState('20');
   const [calcUnit, setCalcUnit] = useState('Tola');
   const [calcQuantity, setCalcQuantity] = useState(1);
   const [timeframe, setTimeframe] = useState("1d");
@@ -430,6 +449,14 @@ export default function MetalsPage() {
     return conv(src.usdPrice, src.pkrPrice) || 0;
   };
 
+  // ── Gold purity ─────────────────────────────────────────────────────────
+  // Karat is a 24ths fraction of pure gold, so any value works arithmetically —
+  // the presets are just the grades traded most often. Anything else (20K, 16K,
+  // a half-karat assay result) goes through the custom field.
+  const activeKarat = calcPurity === CUSTOM_KARAT
+    ? clampKarat(customKarat)
+    : (parseFloat(calcPurity) || 24);
+
   // Base price per selected weight unit (before purity/quantity).
   const getMetalBasePrice = (metal: string, unit: string) => {
     const oz = getMetalOunce(metal);
@@ -445,7 +472,7 @@ export default function MetalsPage() {
   const calcTotal = () => {
     const basePrice = getMetalBasePrice(calcMetal, calcUnit);
     // Purity grade only reduces value for gold; other metals are quoted at spot.
-    const purityRatio = calcMetal === 'gold' ? (parseInt(calcPurity) || 24) / 24 : 1;
+    const purityRatio = calcMetal === 'gold' ? activeKarat / 24 : 1;
     return basePrice * purityRatio * calcQuantity;
   };
 
@@ -600,11 +627,38 @@ export default function MetalsPage() {
                             onChange={(e) => setCalcPurity(e.target.value)}
                             className="w-full bg-zinc-50 dark:bg-zinc-800 border-none rounded-3xl p-5 font-bold transition-all focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-zinc-50"
                           >
-                            <option value="24K">24K (99.9%)</option>
-                            <option value="22K">22K (91.6%)</option>
-                            <option value="21K">21K (87.5%)</option>
-                            <option value="18K">18K (75.0%)</option>
+                            {KARAT_PRESETS.map(k => (
+                              <option key={k} value={`${k}K`}>{k}K ({purityPct(k)}%)</option>
+                            ))}
+                            <option value={CUSTOM_KARAT}>Custom karat…</option>
                           </select>
+
+                          {/* Any karat the presets don't cover — 20K, 16K, 12K, or a
+                              half-karat assay figure. */}
+                          {calcPurity === CUSTOM_KARAT && (
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min={1}
+                                max={24}
+                                step={0.1}
+                                value={customKarat}
+                                onChange={(e) => setCustomKarat(e.target.value)}
+                                placeholder="20"
+                                aria-label="Custom karat"
+                                className="w-32 bg-zinc-50 dark:bg-zinc-800 border-none rounded-3xl p-5 font-bold text-center tabular-nums transition-all focus:ring-2 focus:ring-blue-500 text-zinc-900 dark:text-zinc-50"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-lg font-black tabular-nums leading-none text-zinc-900 dark:text-zinc-50">
+                                  {activeKarat}K
+                                </p>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">
+                                  {purityPct(activeKarat)}% pure
+                                </p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                       <div className="space-y-4 flex-1">
@@ -662,8 +716,11 @@ export default function MetalsPage() {
                             </div>
                           );
                         })()}
+                        {/* Name the purity the figure was struck at — with a free
+                            karat field, the number alone is ambiguous. */}
                         <p className="text-blue-100/40 text-[10px] font-black uppercase tracking-widest">
-                          Calculated at {new Date().toLocaleTimeString()}
+                          {calcMetal === 'gold' && `${activeKarat}K · ${purityPct(activeKarat)}% pure · `}
+                          {calcQuantity} {calcUnit}
                         </p>
                       </div>
 

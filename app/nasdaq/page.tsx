@@ -516,7 +516,7 @@ export default function NasdaqPage() {
                 <div className="space-y-8 sm:space-y-12 min-h-[400px] sm:min-h-[800px]">
                     {viewType === 'card' ? (
                         <div className="space-y-8 sm:space-y-12 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-8 px-1">
+                            <div className="card-grid gap-3 sm:gap-8 px-1">
                                 {paginatedStocks.map((stock) => (
                                     <StockCard
                                         key={stock.symbol}
@@ -583,11 +583,10 @@ export default function NasdaqPage() {
                                     <thead>
                                         <tr className="bg-zinc-100/50 dark:bg-black uppercase tracking-widest text-zinc-400 font-black">
                                             <th onClick={() => requestSort('symbol')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors">Ticker Symbol</th>
-                                            <th onClick={() => requestSort('name')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors hidden sm:table-cell">Organization Name</th>
-                                            <th onClick={() => requestSort('currentPrice')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Execution Price</th>
+                                                                                        <th onClick={() => requestSort('currentPrice')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Execution Price</th>
                                             <th onClick={() => requestSort('changePercent')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right">Momentum Delta</th>
                                             <th onClick={() => requestSort('volume')} className="p-3 sm:p-8 cursor-pointer hover:text-blue-500 transition-colors text-right hidden md:table-cell">Market Fluidity</th>
-                                            <th className="p-3 sm:p-8 text-center hidden sm:table-cell">Strategic Analysis</th>
+                                            <th className="p-3 sm:p-8 text-center hidden lg:table-cell">Strategic Analysis</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
@@ -598,11 +597,10 @@ export default function NasdaqPage() {
                                                         <span className="w-fit px-2.5 py-1 sm:px-4 sm:py-2 bg-zinc-100 dark:bg-white/5 rounded-xl font-black group-hover:text-blue-600 group-hover:scale-105 transition-all shadow-sm">
                                                             {stock.symbol}
                                                         </span>
-                                                        <span className="sm:hidden text-[9px] font-bold text-zinc-400 dark:text-zinc-500 truncate max-w-[130px]">{stock.name}</span>
+                                                        <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tight truncate max-w-[130px] sm:max-w-[190px]" title={stock.name}>{stock.name}</span>
                                                     </div>
                                                 </td>
-                                                <td className="p-3 sm:p-8 font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-xs hidden sm:table-cell">{stock.name}</td>
-                                                <td className="p-3 sm:p-8 font-mono font-black text-right text-sm">
+                                                                                                <td className="p-3 sm:p-8 font-mono font-black text-right text-sm">
                                                     ${stock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </td>
                                                 <td className="p-3 sm:p-8 text-right">
@@ -611,7 +609,7 @@ export default function NasdaqPage() {
                                                     </span>
                                                 </td>
                                                 <td className="p-3 sm:p-8 font-mono text-zinc-400 text-right font-black uppercase hidden md:table-cell">{stock.volume}</td>
-                                                <td className="p-3 sm:p-8 text-center hidden sm:table-cell">
+                                                <td className="p-3 sm:p-8 text-center hidden lg:table-cell">
                                                     <button onClick={(e) => { e.stopPropagation(); router.push(`/nasdaq/${stock.symbol.toLowerCase()}`); }} className="text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white px-6 py-3 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-600/30">Detailed Audit</button>
                                                 </td>
                                             </tr>

@@ -18,6 +18,9 @@ export interface IUser extends mongoose.Document {
     // The dashboard's "watch any asset" list lives on the user so it follows
     // them across devices, same as their watchlist categories and ledger.
     universalWatch: { assetType: AssetType; symbol: string }[];
+    /** App preferences — currency, refresh interval, visible modules. Stored
+     *  per user so they follow the account rather than the browser. */
+    settings?: Record<string, unknown>;
     lastLoginAt?: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -49,6 +52,9 @@ const UserSchema = new mongoose.Schema<IUser>({
         assetType: { type: String, enum: ['PSX', 'NASDAQ', 'CRYPTO', 'FOREX', 'COMMODITY'], required: true },
         symbol: { type: String, uppercase: true, required: true },
     }],
+    // Free-form on purpose: the API normalises this against the Settings shape
+    // on the way in and out, so adding a preference needs no migration.
+    settings: { type: mongoose.Schema.Types.Mixed, default: undefined },
     lastLoginAt: { type: Date },
 }, {
     timestamps: true,

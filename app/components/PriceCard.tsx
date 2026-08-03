@@ -100,12 +100,12 @@ export default function PriceCard({
             </div>
 
             {/* Footer hidden on mobile to keep cards short (time is in the page header) */}
-            <div className="mt-auto pt-3 sm:pt-6 border-t border-zinc-100 dark:border-zinc-800 hidden sm:flex justify-between items-center">
+            {/* <div className="mt-auto pt-3 sm:pt-6 border-t border-zinc-100 dark:border-zinc-800 hidden sm:flex justify-between items-center">
               <div className="space-y-0.5">
                 <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Market Refresh</p>
                 <p className="text-[10px] font-bold text-zinc-900 dark:text-zinc-50">{lastUpdated}</p>
               </div>
-            </div>
+            </div> */}
           </div>
         )}
       </div>

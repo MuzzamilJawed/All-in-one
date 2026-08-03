@@ -126,6 +126,38 @@ export default function StockCard({
     // PSX and NASDAQ both quote to 2 decimals — keep the derived figures consistent.
     const dp = (v: number) => v.toFixed(2);
 
+    // Only the figures this feed actually supplies. PSX sends previous close and
+    // intraday OHLC; the NASDAQ feed sends neither, so its cards would otherwise
+    // render a row of dashes where PSX shows real numbers.
+    const sessionDetail: { label: string; value: string; sub?: string | null; tone: string; title: string }[] = [
+        ldcp != null && {
+            label: "Prev",
+            value: `${currencySymbol}${dp(ldcp)}`,
+            tone: "text-zinc-700 dark:text-zinc-200",
+            title: "Last Day Closing Price — today's change is measured from this",
+        },
+        gap != null && {
+            label: "Gap",
+            value: `${gap >= 0 ? "+" : "-"}${currencySymbol}${dp(Math.abs(gap))}`,
+            sub: gapPct != null ? `${gapPct >= 0 ? "+" : ""}${gapPct.toFixed(2)}%` : null,
+            tone: gap >= 0 ? "text-green-500" : "text-red-500",
+            title: "How it opened against the previous close",
+        },
+        sinceOpen != null && {
+            label: "Vs Open",
+            value: `${sinceOpen >= 0 ? "+" : "-"}${currencySymbol}${dp(Math.abs(sinceOpen))}`,
+            tone: sinceOpen >= 0 ? "text-green-500" : "text-red-500",
+            title: "Move during the session, excluding the opening gap",
+        },
+        turnover != null && {
+            label: "Traded",
+            value: `${currencySymbol}${compactNum(turnover)}`,
+            sub: rangePct != null ? `Range ${rangePct.toFixed(1)}%` : null,
+            tone: "text-zinc-700 dark:text-zinc-200",
+            title: "Approximate value traded today (volume × last price)",
+        },
+    ].filter(Boolean) as { label: string; value: string; sub?: string | null; tone: string; title: string }[];
+
     const saveMeta = (e: React.MouseEvent | React.KeyboardEvent) => {
         e.stopPropagation();
         const parsed = parseFloat(targetInput.replace(/,/g, ""));
@@ -512,36 +544,9 @@ export default function StockCard({
                 {/* Session detail — previous close, the opening gap, the move since
                 the open, and turnover. Two rows of four keep it inside the card
                 at every width instead of stretching it. */}
-                {(ldcp != null || turnover != null) && (
+                {sessionDetail.length > 0 && (
                     <div className="mt-2.5 pt-2.5 border-t border-zinc-100 dark:border-white/5 grid grid-cols-2 gap-x-3 gap-y-1.5">
-                        {[
-                            {
-                                label: "Prev",
-                                value: ldcp != null ? `${currencySymbol}${dp(ldcp)}` : "—",
-                                tone: "text-zinc-700 dark:text-zinc-200",
-                                title: "Last Day Closing Price — today's change is measured from this",
-                            },
-                            {
-                                label: "Gap",
-                                value: gap != null ? `${gap >= 0 ? "+" : "-"}${currencySymbol}${dp(Math.abs(gap))}` : "—",
-                                sub: gapPct != null ? `${gapPct >= 0 ? "+" : ""}${gapPct.toFixed(2)}%` : null,
-                                tone: gap == null ? "text-zinc-400" : gap >= 0 ? "text-green-500" : "text-red-500",
-                                title: "How it opened against the previous close",
-                            },
-                            {
-                                label: "Vs Open",
-                                value: sinceOpen != null ? `${sinceOpen >= 0 ? "+" : "-"}${currencySymbol}${dp(Math.abs(sinceOpen))}` : "—",
-                                tone: sinceOpen == null ? "text-zinc-400" : sinceOpen >= 0 ? "text-green-500" : "text-red-500",
-                                title: "Move during the session, excluding the opening gap",
-                            },
-                            {
-                                label: "Traded",
-                                value: turnover != null ? `${currencySymbol}${compactNum(turnover)}` : "—",
-                                sub: rangePct != null ? `Range ${rangePct.toFixed(1)}%` : null,
-                                tone: "text-zinc-700 dark:text-zinc-200",
-                                title: "Approximate value traded today (volume × last price)",
-                            },
-                        ].map(d => (
+                        {sessionDetail.map(d => (
                             <div key={d.label} className="min-w-0" title={d.title}>
                                 <p className="text-[8px] font-black text-zinc-400 uppercase tracking-wider leading-none truncate">{d.label}</p>
                                 {/* FitText, not truncate: these slots get narrow on 4-up

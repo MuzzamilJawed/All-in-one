@@ -210,17 +210,19 @@ export default function WatchlistPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white">
       {/* Header */}
       <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-        <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
-              <Star className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> My <span className="text-blue-500">Watchlists</span>
+        {/* One row at every width — the currency pill sits beside the heading on
+            phones too, rather than dropping to a second line. */}
+        <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2 sm:gap-2.5">
+              <Star className="w-5 h-5 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> My <span className="text-blue-500">Watchlists</span>
             </h1>
-            <p className="text-zinc-500 dark:text-zinc-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-1">
+            <p className="text-zinc-500 dark:text-zinc-500 text-[9px] sm:text-xs font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] mt-1 leading-relaxed">
               Personalized Asset Monitoring Engine
             </p>
           </div>
           {/* PSX and NASDAQ categories ignore this — they render in PKR / USD. */}
-          <CurrencyToggle />
+          <div className="shrink-0"><CurrencyToggle /></div>
         </div>
       </header>
 

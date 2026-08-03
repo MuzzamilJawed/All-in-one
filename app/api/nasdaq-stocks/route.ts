@@ -645,9 +645,11 @@ export async function GET() {
     }
 
     // If still no data, use mock
+    let usedMock = false;
     if (!quotes || quotes.length === 0) {
       console.log("All live sources failed, using mock data");
       quotes = getMockNASDAQStocks();
+      usedMock = true;
     }
 
     // Transform quotes to consistent format
@@ -668,7 +670,10 @@ export async function GET() {
     return NextResponse.json({
       data: transformed,
       timestamp: new Date().toISOString(),
-      isLive: transformed.length > 20, // Flag indicating if data is live
+      // Was a live source used? This used to be `transformed.length > 20`, which
+      // is a row count, not a liveness check — the mock list has 48 entries, so
+      // demo prices were always reported as live market data.
+      isLive: !usedMock,
     });
   } catch (error) {
     console.error("NASDAQ route error:", error);
