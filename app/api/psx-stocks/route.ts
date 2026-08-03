@@ -189,6 +189,11 @@ export async function GET() {
         if (betterMatch) stats.value = betterMatch[1].trim();
     }
 
+    // PSX doesn't publish a "total scrips traded" figure, and `total` was left at
+    // its 0 initialiser — so the UI's Total chip always read 0. It's just the
+    // three buckets added up.
+    stats.total = (Number(stats.advanced) || 0) + (Number(stats.declined) || 0) + (Number(stats.unchanged) || 0);
+
     // PSX Market Summary has multiple tables, one for each sector
     $('table').each((ti, table) => {
       // Find rows in this table

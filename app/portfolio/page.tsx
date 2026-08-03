@@ -248,7 +248,7 @@ export default function PortfolioPage() {
                     together are wider than the row (the sidebar still costs pl-16
                     there), which pushed the page into horizontal scroll. Wrapping
                     drops the actions to their own line instead. */}
-                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center gap-3">
+                <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center gap-3">
                     {/* Currency rides the title row — same top-right placement as every
                         other market screen — leaving the row below to the actions. */}
                     <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
@@ -260,7 +260,10 @@ export default function PortfolioPage() {
                                 <Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" strokeWidth={2} />
                                 <FitText className="min-w-0 flex-1">Portfolio <span className="text-emerald-500">Ledger</span></FitText>
                             </h1>
-                            <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1 truncate">Multi-Asset Holdings · Profit &amp; Loss</p>
+                            {/* No `truncate`: on a 320px phone this tagline is wider than
+                                the header, and an ellipsised tagline reads as a bug. Let
+                                it wrap to a second line instead. */}
+                            <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.15em] mt-1 leading-relaxed">Multi-Asset Holdings · Profit &amp; Loss</p>
                         </div>
                         <div className="shrink-0"><CurrencyToggle /></div>
                     </div>
@@ -288,7 +291,7 @@ export default function PortfolioPage() {
                 </div>
             </header>
 
-            <main className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10 space-y-6 sm:space-y-8">
+            <main className="page-shell mx-auto p-4 sm:p-8 relative z-10 space-y-6 sm:space-y-8">
                 {/* Add transaction */}
                 {showAdd && (
                     <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-sm rounded-2xl sm:rounded-[2rem] border border-zinc-200 dark:border-white/5 shadow-sm p-4 sm:p-6 animate-in fade-in slide-in-from-top-2">
@@ -344,18 +347,18 @@ export default function PortfolioPage() {
                 )}
 
                 {/* Summary cards — day + total both shown */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
                     {[
-                        { label: "Invested", val: totals.invested, tone: "text-zinc-900 dark:text-white", signed: false, pct: null as number | null, highlight: false },
-                        { label: "Current Value", val: totals.value, tone: "text-zinc-900 dark:text-white", signed: false, pct: null, highlight: false },
-                        { label: "Day P/L", val: totals.day, tone: totals.day >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: totals.value > 0 ? totals.dayPct : null, highlight: true },
-                        { label: "Unrealized P/L", val: totals.unrealized, tone: totals.unrealized >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: null, highlight: false },
-                        { label: "Realized P/L", val: totals.realizedTotal, tone: totals.realizedTotal >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: null, highlight: false },
-                        { label: "Total P/L", val: totals.total, tone: totals.total >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: totals.invested > 0 ? (totals.total / totals.invested) * 100 : null, highlight: true },
+                        { label: "Invested", val: totals.invested, tone: "text-zinc-900 dark:text-white", signed: false, pct: null as number | null },
+                        { label: "Current Value", val: totals.value, tone: "text-zinc-900 dark:text-white", signed: false, pct: null },
+                        { label: "Day P/L", val: totals.day, tone: totals.day >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: totals.value > 0 ? totals.dayPct : null },
+                        { label: "Unrealized P/L", val: totals.unrealized, tone: totals.unrealized >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: null },
+                        { label: "Realized P/L", val: totals.realizedTotal, tone: totals.realizedTotal >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: null },
+                        { label: "Total P/L", val: totals.total, tone: totals.total >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: totals.invested > 0 ? (totals.total / totals.invested) * 100 : null },
                     ].map((c, i) => (
-                        <div key={i} className={`bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[1.75rem] p-4 sm:p-5 border shadow-sm ${c.highlight ? "border-blue-500/30" : "border-zinc-200 dark:border-white/5"}`}>
+                        <div key={i} className="bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[1.75rem] p-4 sm:p-5 border border-zinc-200 dark:border-white/5 shadow-sm">
                             <p className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">{c.label}</p>
-                            <p className={`text-base sm:text-xl font-black font-mono tracking-tighter tabular-nums ${c.tone}`}>{c.signed ? signed(c.val) : fmt(c.val)}</p>
+                            <FitText className={`text-base sm:text-xl font-black font-mono tracking-tighter tabular-nums ${c.tone}`}>{c.signed ? signed(c.val) : fmt(c.val)}</FitText>
                             {c.pct != null && (
                                 <p className={`text-[10px] font-black ${c.val >= 0 ? "text-green-500" : "text-red-500"}`}>{c.val >= 0 ? "▲" : "▼"} {Math.abs(c.pct).toFixed(2)}%</p>
                             )}
@@ -532,44 +535,73 @@ export default function PortfolioPage() {
                                         <div className="text-right shrink-0">
                                             <div className="text-sm font-black font-mono tabular-nums leading-none">{fmt(r.value, r.currency)}</div>
                                             <div className="text-[9px] text-zinc-400 font-bold tabular-nums mt-1">
-                                                {r.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })} @ {fmt(r.avgCost, r.currency)}
+                                                {r.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })} units
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            { label: "Day P/L", val: r.dayPnl, pct: r.dayPct },
-                                            { label: "Total P/L", val: r.pnl, pct: r.pnlPct },
-                                        ].map(m => {
-                                            const up = (m.val ?? 0) >= 0;
-                                            return (
-                                                <div key={m.label} className={`min-w-0 rounded-xl border px-2.5 py-2 ${m.val == null ? "bg-zinc-500/[0.06] border-zinc-500/15" : up ? "bg-green-500/[0.06] border-green-500/15" : "bg-red-500/[0.06] border-red-500/15"}`}>
-                                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{m.label}</p>
-                                                    <p className={`text-xs font-black font-mono tabular-nums truncate ${m.val == null ? "text-zinc-400" : up ? "text-green-500" : "text-red-500"}`}>
-                                                        {signed(m.val, r.currency)}
-                                                    </p>
-                                                    {m.pct != null && (
-                                                        <p className={`text-[9px] font-black ${m.pct >= 0 ? "text-green-500" : "text-red-500"}`}>
-                                                            {m.pct >= 0 ? "▲" : "▼"} {Math.abs(m.pct).toFixed(2)}%
-                                                        </p>
-                                                    )}
+                                    {/* One panel, two rows: the per-unit rates on top
+                                        (Avg Cost / Current on the desktop table), the
+                                        P/L pair below. Separate boxes read as two
+                                        cards inside the card. */}
+                                    <div className="rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5 px-3 py-2">
+                                        <div className="flex items-stretch gap-2">
+                                            {[
+                                                { label: "Buy Rate", val: fmt(r.avgCost, r.currency), tone: "" },
+                                                {
+                                                    label: "Present Rate",
+                                                    val: fmt(r.current, r.currency),
+                                                    tone: r.current == null ? "text-zinc-400" : r.current >= r.avgCost ? "text-green-500" : "text-red-500",
+                                                },
+                                                { label: "Invested", val: fmt(r.invested, r.currency), tone: "" },
+                                            ].map((m, i) => (
+                                                <div key={m.label} className="contents">
+                                                    {i > 0 && <div className="w-px bg-zinc-200 dark:bg-white/10 shrink-0" />}
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{m.label}</p>
+                                                        <FitText className={`text-[11px] font-black font-mono tabular-nums ${m.tone}`}>{m.val}</FitText>
+                                                    </div>
                                                 </div>
-                                            );
-                                        })}
+                                            ))}
+                                        </div>
+
+                                        <div className="h-px bg-zinc-200 dark:bg-white/10 my-2" />
+
+                                        <div className="flex items-stretch gap-2">
+                                            {[
+                                                { label: "Day P/L", val: r.dayPnl, pct: r.dayPct },
+                                                { label: "Total P/L", val: r.pnl, pct: r.pnlPct },
+                                            ].map((m, i) => {
+                                                const up = (m.val ?? 0) >= 0;
+                                                const tone = m.val == null ? "text-zinc-400" : up ? "text-green-500" : "text-red-500";
+                                                return (
+                                                    <div key={m.label} className="contents">
+                                                        {i > 0 && <div className="w-px bg-zinc-200 dark:bg-white/10 shrink-0" />}
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{m.label}</p>
+                                                            <FitText className={`text-xs font-black font-mono tabular-nums ${tone}`}>
+                                                                {signed(m.val, r.currency)}
+                                                                {m.pct != null && (
+                                                                    <span className="text-[9px] ml-1.5">
+                                                                        {m.pct >= 0 ? "▲" : "▼"} {Math.abs(m.pct).toFixed(2)}%
+                                                                    </span>
+                                                                )}
+                                                            </FitText>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                        {[
-                                            { label: "Current", val: fmt(r.current, r.currency) },
-                                            { label: "Invested", val: fmt(r.invested, r.currency) },
-                                        ].map(m => (
-                                            <div key={m.label} className="flex items-baseline justify-between gap-2 min-w-0">
-                                                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest shrink-0">{m.label}</span>
-                                                <span className="text-[10px] font-mono font-black tabular-nums truncate">{m.val}</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    {r.current != null && (
+                                        <div className="flex items-baseline justify-between gap-2 min-w-0">
+                                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest shrink-0">Gain per unit</span>
+                                            <span className={`text-[10px] font-mono font-black tabular-nums truncate ${r.current - r.avgCost >= 0 ? "text-green-500" : "text-red-500"}`}>
+                                                {signed(r.current - r.avgCost, r.currency)}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>

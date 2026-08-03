@@ -19,7 +19,7 @@ const Box = ({ className = "" }: { className?: string }) => (
 
 const Header = () => (
     <div className="safe-top sticky top-0 z-40 bg-white/70 dark:bg-black/40 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-        <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center gap-4">
+        <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center gap-4">
             <div className="space-y-2">
                 <Box className="h-6 sm:h-8 w-48 sm:w-64" />
                 <Box className="h-2.5 w-24" />
@@ -237,7 +237,7 @@ export default function PageSkeleton({ variant = "cards" }: { variant?: Variant 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505]">
             <Header />
-            <div className="max-w-[1600px] mx-auto p-4 sm:p-8">
+            <div className="page-shell mx-auto p-4 sm:p-8">
                 <Body variant={variant} />
             </div>
         </div>

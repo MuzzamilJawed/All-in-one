@@ -87,7 +87,7 @@ export default function SettingsPage() {
 
       {/* Header */}
       <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-        <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
+        <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6">
           <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <Settings className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Configuration <span className="text-blue-500 text-xl sm:text-2xl">Hub</span>
           </h1>
@@ -98,7 +98,7 @@ export default function SettingsPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
+      <main className="page-shell mx-auto p-4 sm:p-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
 
           {/* Display Settings */}

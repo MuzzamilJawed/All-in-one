@@ -312,7 +312,7 @@ export default function NasdaqPage() {
             )}
 
             <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center">
+                <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center">
                     <div>
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white flex items-center gap-2.5">
                             <Globe className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> NASDAQ <span className="text-blue-500">Terminal</span>
@@ -322,7 +322,7 @@ export default function NasdaqPage() {
                 </div>
             </header>
 
-            <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-8 sm:space-y-12">
+            <main className="page-shell mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-8 sm:space-y-12">
 
                 {/* Market Intelligence Ribbon */}
                 <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-white/5 shadow-2xl p-5 sm:p-8 space-y-6 sm:space-y-8 relative overflow-hidden group">

@@ -469,7 +469,7 @@ export default function MetalsPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       <div className="safe-top sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
-        <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 max-w-[1600px] mx-auto">
+        <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 page-shell mx-auto">
           <div className="flex flex-row justify-between items-center gap-3 sm:gap-6">
             <div className="min-w-0">
               <h1 className="text-lg sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase italic tracking-tighter min-w-0">
@@ -490,7 +490,7 @@ export default function MetalsPage() {
         </div>
       </div>
 
-      <div className="p-4 sm:p-8 max-w-[1600px] mx-auto w-full">
+      <div className="p-4 sm:p-8 page-shell mx-auto w-full">
         {error && (
           <div className="mb-6 bg-amber-50 dark:bg-amber-900 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
             <p className="text-amber-800 dark:text-amber-200 text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 shrink-0" strokeWidth={2} /> {error}</p>

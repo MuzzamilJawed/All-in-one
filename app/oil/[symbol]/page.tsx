@@ -184,7 +184,7 @@ export default function OilDetailPage() {
         <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30">
             {/* Header */}
             <div className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center gap-3">
+                <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex justify-between items-center gap-3">
                     <div className="flex items-center gap-3 sm:gap-6 min-w-0 flex-1">
                         <button onClick={() => router.push('/oil')} className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group">
                             <ArrowLeft className="w-5 h-5 text-zinc-500 group-hover:text-blue-500 transition-colors" strokeWidth={2} />
@@ -201,7 +201,7 @@ export default function OilDetailPage() {
                 </div>
             </div>
 
-            <main className="max-w-[1600px] mx-auto p-4 sm:p-8 space-y-8 sm:space-y-12">
+            <main className="page-shell mx-auto p-4 sm:p-8 space-y-8 sm:space-y-12">
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
                     {[

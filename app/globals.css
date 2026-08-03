@@ -276,3 +276,26 @@ html.native-shell {
 @media (display-mode: standalone) {
   html, body { overscroll-behavior-y: none; }
 }
+
+/* Page shell width.
+   Every screen wraps its content in `max-w-[1600px] mx-auto`. On a 2560px or
+   4K panel that left ~350–1100px of dead margin either side, so the cap steps
+   up on very wide displays instead of stranding the space. Below 1920px this
+   is byte-for-byte the old behaviour. */
+.page-shell { max-width: 1600px; }
+@media (min-width: 1920px) { .page-shell { max-width: 1800px; } }
+@media (min-width: 2560px) { .page-shell { max-width: 2200px; } }
+@media (min-width: 3400px) { .page-shell { max-width: 3200px; } }
+
+/* Stock card grid.
+   Tailwind sorts arbitrary `min-[1920px]:` variants ahead of the named `xl:`
+   breakpoint, so `xl:grid-cols-4` kept winning on wide screens and the cards
+   just stretched (664px each at 4K). Declaring the steps here makes the order
+   explicit. Targets ~290-380px per card at every size. */
+.card-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); }
+@media (min-width:  640px) { .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width:  768px) { .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1920px) { .card-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 2560px) { .card-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (min-width: 3400px) { .card-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); } }

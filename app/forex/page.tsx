@@ -163,7 +163,7 @@ export default function ForexPage() {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 dark:bg-blue-600/10 blur-[120px] rounded-full"></div>
             </div>
 
-            <div className="max-w-[1600px] mx-auto p-4 sm:p-8 pt-[calc(1rem_+_var(--sa-top))] sm:pt-[calc(2rem_+_var(--sa-top))] relative z-10">
+            <div className="page-shell mx-auto p-4 sm:p-8 pt-[calc(1rem_+_var(--sa-top))] sm:pt-[calc(2rem_+_var(--sa-top))] relative z-10">
                 <header className="mb-8 sm:mb-12 pl-12 lg:pl-0 flex flex-row justify-between items-start md:items-center gap-3 sm:gap-8">
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 min-w-0">

@@ -62,7 +62,7 @@ export default function CompareTray({ stocks, onRemove, onClear, onOpen }: Compa
         <div
             className={`fixed bottom-0 left-0 right-0 ${collapsed ? "lg:left-20" : "lg:left-64"} z-[80] px-3 sm:px-6 pb-3 sm:pb-6 pb-safe pointer-events-none transition-[left] duration-300 ease-in-out`}
         >
-            <div className="max-w-[1600px] mx-auto pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-2xl sm:rounded-[1.75rem] border border-zinc-200 dark:border-white/10 shadow-2xl shadow-black/10 dark:shadow-black/40 overflow-hidden">
+            <div className="page-shell mx-auto pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-2xl sm:rounded-[1.75rem] border border-zinc-200 dark:border-white/10 shadow-2xl shadow-black/10 dark:shadow-black/40 overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-2.5 sm:py-3 border-b border-zinc-100 dark:border-white/5 bg-gradient-to-r from-blue-500/[0.04] to-transparent">
                     <div className="flex items-center gap-2.5 min-w-0">

@@ -173,7 +173,7 @@ export default function CryptoPage() {
 
             {/* Sticky Header */}
             <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-row justify-between items-center gap-3">
+                <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-row justify-between items-center gap-3">
                     <div className="min-w-0">
                         <h1 className="text-lg sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2 min-w-0">
                             <Bitcoin className="w-5 h-5 sm:w-7 sm:h-7 text-orange-500 shrink-0" strokeWidth={2} />
@@ -186,7 +186,7 @@ export default function CryptoPage() {
                 </div>
             </header>
 
-            <div className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
+            <div className="page-shell mx-auto p-4 sm:p-8 relative z-10">
 
                 {error && (
                     <div className="mb-8 p-6 bg-red-500/10 border border-red-500/20 rounded-[2.5rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-4">

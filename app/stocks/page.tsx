@@ -14,7 +14,7 @@ import SectorHeatmap from "../components/SectorHeatmap";
 import CompareTray from "../components/CompareTray";
 import PageSkeleton from "../components/PageSkeleton";
 import FitText from "../components/FitText";
-import { computeSignals, dayRangePosition, toneClasses, parseVolume } from "../lib/stockSignals";
+import { dayRangePosition, parseVolume } from "../lib/stockSignals";
 import { rollLeaders } from "../lib/stockPrefs";
 
 const ANALYSIS_OPEN_KEY = "psx.analysis.open";
@@ -54,6 +54,8 @@ function StocksContent() {
         high: number;
         low: number;
         volume: string;
+        /** Last Day Closing Price — the feed sends it; the card shows prev close + open gap. */
+        ldcp?: number | null;
         targetPrice?: number;
         sector?: string;
         history?: { time: string; price: number }[];
@@ -424,7 +426,8 @@ function StocksContent() {
             updated = [...updated].sort((a, b) => {
                 const aVal = a[sortConfig.key];
                 const bVal = b[sortConfig.key];
-                if (aVal === undefined || bVal === undefined) return 0;
+                // `== null` covers both undefined and null (ldcp can be null).
+                if (aVal == null || bVal == null) return 0;
                 if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
                 if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
@@ -529,7 +532,7 @@ function StocksContent() {
                 header height — leaving a slit that page content scrolled through. */}
             <div className="sticky top-0 z-40">
             <header className="safe-top bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
+                <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
                     <div>
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
                             <CandlestickChart className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Market <span className="text-blue-500">Explorer</span>
@@ -541,7 +544,7 @@ function StocksContent() {
 
             {indices.length > 0 && (
                 <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-x-auto no-scrollbar shadow-sm">
-                    <div className="max-w-[1600px] mx-auto px-4 sm:px-8 flex items-center gap-6 sm:gap-10">
+                    <div className="page-shell mx-auto px-4 sm:px-8 flex items-center gap-6 sm:gap-10">
                         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 border-r border-zinc-200 dark:border-white/10 pr-4 sm:pr-10">
                             <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
                             <span className="text-[9px] sm:text-[11px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest italic whitespace-nowrap">Market Pulse</span>
@@ -611,8 +614,9 @@ function StocksContent() {
                             <div className="flex-1 py-3 sm:py-4 md:pl-8 flex items-center justify-between">
                                 <div className="space-y-1 w-full">
                                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
-                                        <span className="sm:hidden">Breadth</span>
-                                        <span className="hidden sm:inline">Market Breadth (Symbol Statistics)</span>
+                                        {/* "Breadth" was jargon; the long explainer was worse.
+                                            Two words, same meaning. */}
+                                        Gainers &amp; Losers
                                     </p>
 
                                     {/* Phone: one advance/decline bar instead of four chips. */}
@@ -657,7 +661,7 @@ function StocksContent() {
             {selectedIndex && (
                 /* Sits inside the page gutter like every other card — it used to render
                    full-bleed with square corners because it was outside this wrapper. */
-                <div className="px-4 sm:px-8 max-w-[1700px] mx-auto w-full">
+                <div className="px-4 sm:px-8 page-shell mx-auto w-full">
                     <div className="bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-900/40 dark:to-indigo-900/40 px-4 py-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] text-white border border-blue-500/20 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-6">
                             <div className="min-w-0 w-full md:w-auto flex items-center justify-between gap-3">
@@ -713,7 +717,7 @@ function StocksContent() {
                 </div>
             )}
 
-            <div className={`px-4 sm:px-8 py-5 sm:py-10 max-w-[1700px] mx-auto w-full space-y-5 sm:space-y-10 ${compareStocks.length > 0 ? 'pb-64' : ''}`}>
+            <div className={`px-4 sm:px-8 py-5 sm:py-10 page-shell mx-auto w-full space-y-5 sm:space-y-10 ${compareStocks.length > 0 ? 'pb-64' : ''}`}>
                 {/* Unified Market Control Ribbon */}
                 {/* gap-* rather than space-y-*: the filter panels below collapse to
                     display:none on phones, and space-y still reserved their margin,
@@ -721,8 +725,12 @@ function StocksContent() {
                 <div className={`bg-white dark:bg-zinc-900/50 backdrop-blur-3xl rounded-[1.5rem] sm:rounded-[2.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 transition-all ${analysisOpen ? 'p-4 sm:p-8 flex flex-col gap-4 sm:gap-8' : 'px-4 sm:px-8 py-3.5 sm:py-5'}`}>
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                         <div className={`flex-1 w-full ${analysisOpen ? 'flex flex-col gap-4 sm:gap-6' : ''}`}>
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <div className="space-y-1 min-w-0">
+                            {/* flex-wrap: between sm and lg the title and the control
+                                group together are wider than the row, which squeezed
+                                the heading into a 2-line, 100px-wide column. Now the
+                                controls drop to their own line instead. */}
+                            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3">
+                                <div className="space-y-1 min-w-0 sm:shrink-0">
                                     <button
                                         onClick={toggleAnalysis}
                                         aria-expanded={analysisOpen}
@@ -730,14 +738,14 @@ function StocksContent() {
                                         title={analysisOpen ? 'Collapse panel' : 'Expand panel'}
                                         className="flex items-center gap-2 group"
                                     >
-                                        <h2 className="text-lg sm:text-2xl font-black italic uppercase tracking-tighter text-zinc-900 dark:text-white leading-none group-hover:text-blue-600 transition-colors">Market Analysis</h2>
+                                        <h2 className="text-lg sm:text-2xl font-black italic uppercase tracking-tighter text-zinc-900 dark:text-white leading-none whitespace-nowrap group-hover:text-blue-600 transition-colors">Market Analysis</h2>
                                         <ChevronDown
                                             className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-zinc-400 group-hover:text-blue-600 transition-all duration-300 ${analysisOpen ? '' : '-rotate-90'}`}
                                             strokeWidth={3}
                                         />
                                     </button>
-                                    <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span>
+                                    <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2 whitespace-nowrap">
+                                        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full shrink-0 animate-pulse"></span>
                                         <span className="sm:hidden">{filteredStocks.length} assets</span>
                                         <span className="hidden sm:inline">Monitoring {filteredStocks.length} Real-Time Assets</span>
                                     </p>
@@ -769,7 +777,11 @@ function StocksContent() {
                                             placeholder="Search symbol..."
                                             aria-label="Search symbols"
                                             title="Search symbols"
-                                            className={`w-full h-9 sm:h-11 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[11px] font-black uppercase tracking-widest outline-none transition-all placeholder:text-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-600/40 pl-8 sm:pl-11 ${searchExpanded ? 'pr-8 cursor-text' : 'pr-0 cursor-pointer'} sm:pr-9 sm:cursor-text`}
+                                            // Collapsed on a phone the field is only 36px wide, so the
+                                            // placeholder's first letter poked out beside the icon —
+                                            // hide it until the field actually opens. Desktop (sm+)
+                                            // always shows a real field, so it keeps its placeholder.
+                                            className={`w-full h-9 sm:h-11 rounded-xl sm:rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[11px] font-black uppercase tracking-widest outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-600/40 pl-8 sm:pl-11 sm:placeholder:text-zinc-500 ${searchExpanded ? 'pr-8 cursor-text placeholder:text-zinc-500' : 'pr-0 cursor-pointer placeholder:text-transparent'} sm:pr-9 sm:cursor-text`}
                                         />
                                         {searchTerm && (
                                             <button
@@ -960,7 +972,7 @@ function StocksContent() {
                         />
                     ) : viewType === 'card' ? (
                         <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-6 px-1">
+                            <div className="card-grid gap-2 sm:gap-6 px-1">
                                 {paginatedStocks.map((stock) => (
                                     <StockCard
                                         key={stock.symbol}
@@ -1006,14 +1018,17 @@ function StocksContent() {
                                 <table className="w-full text-left text-[11px] border-collapse">
                                     <thead>
                                         <tr className="bg-zinc-50 dark:bg-white/5 text-zinc-500">
+                                            {/* Company and Signal are gone: the name now sits under the
+                                                symbol, and the freed width goes to today's Low/High,
+                                                which show from tablet up. */}
                                             <th onClick={() => requestSort('symbol')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors">Symbol <SortIcon column="symbol" /></th>
-                                            <th onClick={() => requestSort('name')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors hidden sm:table-cell">Company <SortIcon column="name" /></th>
                                             <th onClick={() => requestSort('currentPrice')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Price <SortIcon column="currentPrice" /></th>
                                             <th onClick={() => requestSort('changePercent')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right">Change <SortIcon column="changePercent" /></th>
-                                            <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-center hidden md:table-cell">Signal</th>
+                                            <th onClick={() => requestSort('low')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right hidden sm:table-cell">Low <SortIcon column="low" /></th>
+                                            <th onClick={() => requestSort('high')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right hidden sm:table-cell">High <SortIcon column="high" /></th>
                                             <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-center hidden lg:table-cell">Day Range</th>
-                                            <th onClick={() => requestSort('volume')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right hidden sm:table-cell">Volume <SortIcon column="volume" /></th>
-                                            <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-right hidden sm:table-cell">Action</th>
+                                            <th onClick={() => requestSort('volume')} className="p-3 sm:p-6 font-black uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors text-right hidden md:table-cell">Volume <SortIcon column="volume" /></th>
+                                            <th className="p-3 sm:p-6 font-black uppercase tracking-widest text-right hidden lg:table-cell">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
@@ -1022,23 +1037,18 @@ function StocksContent() {
                                                 <td className="p-3 sm:p-6">
                                                     <div className="flex flex-col gap-1 min-w-0">
                                                         <span className="w-fit px-2.5 py-1 sm:px-3 sm:py-1.5 bg-zinc-100 dark:bg-white/10 rounded-lg font-black group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">{stock.symbol}</span>
-                                                        <span className="sm:hidden text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tight truncate max-w-[130px]">{stock.name}</span>
+                                                        <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tight truncate max-w-[130px] sm:max-w-[190px]">{stock.name}</span>
                                                     </div>
                                                 </td>
-                                                <td className="p-3 sm:p-6 font-black truncate max-w-[250px] dark:text-zinc-300 group-hover:text-blue-600 transition-colors hidden sm:table-cell">{stock.name}</td>
                                                 <td className="p-3 sm:p-6 font-mono font-black text-right text-sm">{stock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                 <td className={`p-3 sm:p-6 font-black text-right text-sm ${stock.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                                     {stock.changePercent >= 0 ? '▲' : '▼'}{Math.abs(stock.changePercent).toFixed(2)}%
                                                 </td>
-                                                <td className="p-3 sm:p-6 text-center hidden md:table-cell">
-                                                    <div className="flex items-center justify-center gap-1 flex-wrap">
-                                                        {computeSignals(stock).slice(0, 2).map(sig => (
-                                                            <span key={sig.key} title={sig.title} className={`inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded border ${toneClasses(sig.tone)}`}>
-                                                                <sig.icon className="w-2.5 h-2.5" strokeWidth={2.5} /> {sig.label}
-                                                            </span>
-                                                        ))}
-                                                        {computeSignals(stock).length === 0 && <span className="text-zinc-300 dark:text-zinc-700">—</span>}
-                                                    </div>
+                                                <td className="p-3 sm:p-6 font-mono text-right text-sm text-red-500/80 hidden sm:table-cell tabular-nums">
+                                                    {stock.low > 0 ? stock.low.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '—'}
+                                                </td>
+                                                <td className="p-3 sm:p-6 font-mono text-right text-sm text-green-500/80 hidden sm:table-cell tabular-nums">
+                                                    {stock.high > 0 ? stock.high.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '—'}
                                                 </td>
                                                 <td className="p-3 sm:p-6 hidden lg:table-cell">
                                                     {(() => {
@@ -1054,8 +1064,8 @@ function StocksContent() {
                                                         );
                                                     })()}
                                                 </td>
-                                                <td className="p-3 sm:p-6 font-mono text-zinc-500 dark:text-zinc-500 text-right group-hover:text-zinc-300 hidden sm:table-cell">{stock.volume}</td>
-                                                <td className="p-3 sm:p-6 text-right hidden sm:table-cell">
+                                                <td className="p-3 sm:p-6 font-mono text-zinc-500 dark:text-zinc-500 text-right group-hover:text-zinc-300 hidden md:table-cell">{stock.volume}</td>
+                                                <td className="p-3 sm:p-6 text-right hidden lg:table-cell">
                                                     <button onClick={(e) => { e.stopPropagation(); router.push(`/stocks/${stock.symbol.toLowerCase()}`); }} className="text-[10px] font-black uppercase bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-600/20">Analyze</button>
                                                 </td>
                                             </tr>

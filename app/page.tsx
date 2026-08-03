@@ -120,7 +120,7 @@ export default function Home() {
 
       {/* Header */}
       <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-        <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex justify-between items-center">
+        <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex justify-between items-center">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/25">
               <span className="text-white font-black text-xl sm:text-2xl italic leading-none">S</span>
@@ -143,7 +143,7 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10">
+      <main className="page-shell mx-auto p-4 sm:p-8 relative z-10">
 
         {/* Mobile tab bar — one section per screen (hidden on desktop) */}
         <div className="lg:hidden -mt-1 mb-4 flex gap-2 overflow-x-auto no-scrollbar">
@@ -446,7 +446,7 @@ export default function Home() {
       </main>
 
       <footer className="mt-20 border-t border-white/5 py-8 sm:py-12 px-4 sm:px-8">
-        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="page-shell mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest text-center md:text-left">© 2026 SoloTrackr. All Rights Reserved.</p>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
             <a href="#" className="hover:text-white transition-colors">Risk Disclosure</a>

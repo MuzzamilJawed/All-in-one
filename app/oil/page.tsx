@@ -228,7 +228,7 @@ export default function OilPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
       {/* Header */}
       <div className="safe-top sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
-        <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 max-w-[1600px] mx-auto">
+        <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 page-shell mx-auto">
           <div className="flex flex-row justify-between items-center gap-3 sm:gap-6">
             <div className="min-w-0">
               <h1 className="text-lg sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 flex items-center gap-2 tracking-tighter uppercase italic min-w-0">
@@ -261,7 +261,7 @@ export default function OilPage() {
         </div>
       </div>
 
-      <div className="p-4 sm:p-8 pb-32 max-w-[1600px] mx-auto w-full space-y-6 sm:space-y-12">
+      <div className="p-4 sm:p-8 pb-32 page-shell mx-auto w-full space-y-6 sm:space-y-12">
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-6 flex items-center gap-4">
             <AlertTriangle className="w-6 h-6 text-red-500 shrink-0" strokeWidth={2} />

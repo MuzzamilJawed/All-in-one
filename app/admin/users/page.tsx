@@ -184,15 +184,15 @@ export default function AdminUsersPage() {
             </div>
 
             <header className="safe-top sticky top-0 z-50 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="max-w-[1600px] mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
+                <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex flex-col sm:flex-row sm:flex-wrap justify-between items-start sm:items-center gap-3">
+                    <div className="min-w-0 sm:shrink-0">
                         <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase leading-none flex items-center gap-2">
                             <Users className="w-6 h-6 sm:w-7 sm:h-7 text-blue-500 shrink-0" strokeWidth={2} /> User <span className="text-blue-500">Management</span>
                         </h1>
                         <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mt-1">Registered Accounts · Roles · Activity</p>
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <div className="relative flex-1 sm:w-64">
+                    <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:min-w-[280px]">
+                        <div className="relative flex-1 sm:min-w-0">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" strokeWidth={2.5} />
                             <input
                                 value={query}
@@ -216,9 +216,9 @@ export default function AdminUsersPage() {
                 </div>
             </header>
 
-            <main className="max-w-[1600px] mx-auto p-4 sm:p-8 relative z-10 space-y-6">
+            <main className="page-shell mx-auto p-4 sm:p-8 relative z-10 space-y-6">
                 {/* Summary */}
-                <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     {[
                         { label: "Registered Users", val: summary.total },
                         { label: "Administrators", val: summary.admins },
