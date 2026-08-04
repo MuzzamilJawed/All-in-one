@@ -533,26 +533,26 @@ export default function PortfolioPage() {
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <div className="text-sm font-black font-mono tabular-nums leading-none">{fmt(r.value, r.currency)}</div>
-                                            <div className="text-[9px] text-zinc-400 font-bold tabular-nums mt-1">
+                                            <div className={`text-sm font-black font-mono tabular-nums leading-none ${r.current == null ? "text-zinc-400" : r.current >= r.avgCost ? "text-green-500" : "text-red-500"}`}>
+                                                {fmt(r.current, r.currency)}
+                                            </div>
+                                            <div className="text-[10px] font-black font-mono tabular-nums text-zinc-500 dark:text-zinc-400 mt-1">
+                                                {fmt(r.value, r.currency)}
+                                            </div>
+                                            <div className="text-[9px] text-zinc-400 font-bold tabular-nums mt-0.5">
                                                 {r.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })} units
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* One panel, two rows: the per-unit rates on top
-                                        (Avg Cost / Current on the desktop table), the
+                                    {/* One panel, two rows: cost basis on top (the
+                                        present rate is the card's headline now), the
                                         P/L pair below. Separate boxes read as two
                                         cards inside the card. */}
                                     <div className="rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5 px-3 py-2">
                                         <div className="flex items-stretch gap-2">
                                             {[
                                                 { label: "Buy Rate", val: fmt(r.avgCost, r.currency), tone: "" },
-                                                {
-                                                    label: "Present Rate",
-                                                    val: fmt(r.current, r.currency),
-                                                    tone: r.current == null ? "text-zinc-400" : r.current >= r.avgCost ? "text-green-500" : "text-red-500",
-                                                },
                                                 { label: "Invested", val: fmt(r.invested, r.currency), tone: "" },
                                             ].map((m, i) => (
                                                 <div key={m.label} className="contents">

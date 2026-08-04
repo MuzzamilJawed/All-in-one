@@ -30,6 +30,71 @@ the account itself; those users can add it later from `/profile`.
 
 Every password field in the app has a show/hide eye toggle.
 
+**One account per email address.** Sign-up is refused with *"An account with this
+email already exists — sign in instead."* if the address is taken. The rule is
+case- and whitespace-insensitive — `  Foo@Example.COM ` is the same account as
+`foo@example.com`, because addresses are trimmed and lower-cased before they are
+stored. It is enforced by a **unique index in MongoDB**, not just by a lookup in
+the sign-up route, so two simultaneous sign-ups can't both slip through; the
+loser gets the same message rather than a server error. The index is (re)built
+on every start-up, and if a legacy database already holds duplicate addresses
+the log says so instead of quietly running without the constraint.
+
+The one case where an existing email doesn't stop you: an account created
+through **Google that has no password yet** adopts the password you just typed
+and gains email sign-in. That links the two sign-in methods on one account — it
+never creates a second one.
+
+---
+
+## Forgot your password — `/forgot-password`
+
+The sign-in form carries a **Forgot password?** link. Recovery is a one-time
+code followed by a single-use link:
+
+1. **Give the email address** on the account. Email is the only channel — no
+   SMS provider is wired up, and a phone box that silently can't deliver is
+   worse than not offering one. (The API still calls the field `identifier`,
+   so an SMS channel could be added later without changing its shape.)
+2. **Enter the 6-digit code** sent to that address. It is valid for **10
+   minutes** and dies after **5 wrong guesses**. Codes can be re-sent after a
+   45-second cool-down.
+3. **Set the new password** on the reset link the verified code mints. The link
+   is good for **15 minutes**, works **once**, and is invalidated by starting
+   another reset. Afterwards you're sent back to `/login` to sign in with it.
+
+A Google-only account can reset this way too — doing so gives it a password and
+enables email sign-in, exactly like setting one from `/profile`.
+
+**What it deliberately doesn't do**
+
+- **Never says whether an account exists.** An unknown address gets the same
+  "code sent" response, with a throwaway request handle whose code can never
+  match. Otherwise this endpoint would be a membership oracle.
+- **Never stores anything replayable.** Only HMACs of the code and of the link
+  token are written; a leaked `passwordresets` collection can't take an account
+  over.
+- **Rate-limits every step** — 5 codes per address and 15 per IP address per
+  quarter hour, and separate caps on verifying and on submitting a new password.
+  The counter lives in server memory, which is right for the single-server
+  deployment this app expects; behind more than one instance, move it into
+  MongoDB.
+- **Does not sign other devices out.** Session cookies are stateless and carry
+  no revocation handle, so a session opened before the reset stays valid until
+  it expires. Changing `AUTH_SECRET` is the blunt instrument that ends all of
+  them.
+
+### Delivering the code
+
+Nothing is delivered until a provider is configured — see the table below for
+`RESEND_API_KEY` + `MAIL_FROM`, or `NOTIFY_WEBHOOK_URL` to send it yourself.
+Both are plain HTTPS calls, so no new package is involved.
+
+With **neither** configured, a `next dev` server prints the code to the terminal
+and shows it on the verify screen, so the flow is testable before any provider
+account exists. A production build refuses to send instead — a code nobody
+receives is worse than an honest error.
+
 ---
 
 ## My Profile — `/profile`
@@ -112,6 +177,9 @@ two — it's still one user, with one set of watchlists and one ledger.
 | `GOOGLE_CLIENT_ID` | no | Enables the Google sign-in button. |
 | `COOKIE_SECURE` | no | Set to `false` to allow the session cookie over plain HTTP in a production build (LAN / Capacitor dev). |
 | `SEED_ADMIN_EMAIL` · `SEED_ADMIN_PASSWORD` · `SEED_ADMIN_NAME` | no | Override the seeded admin. |
+| `APP_URL` | no | Public origin used to build the password-reset link. Derived from the request when unset — set it behind a proxy or for the Capacitor shell. |
+| `RESEND_API_KEY` · `MAIL_FROM` | for reset codes | Emails the reset code through [Resend](https://resend.com). `MAIL_FROM` must sit on a domain verified there. |
+| `NOTIFY_WEBHOOK_URL` · `NOTIFY_WEBHOOK_TOKEN` | no | Send it yourself instead: receives `POST {channel,to,subject,text,html,code}` when no Resend key is set. |
 
 Changing `AUTH_SECRET` signs everyone out; it does not affect stored passwords.
 
@@ -140,11 +208,18 @@ Hand-rolled and dependency-free — nothing beyond what the project already used
 |---|---|
 | Password hashing (scrypt, `node:crypto`) | `app/lib/password.ts` |
 | Phone normalisation + validation | `app/lib/phone.ts` |
+| Reset codes + link tokens (HMAC, masking) | `app/lib/otp.ts` |
+| Code delivery — Resend / webhook | `app/lib/notify.ts` |
+| In-memory request throttle | `app/lib/rateLimit.ts` |
+| Reset APIs — request · verify · reset | `app/api/auth/password-reset/*/route.ts` |
+| Forgot-password screen (email + code) | `app/forgot-password/page.tsx` |
+| Reset link screen (new password) | `app/reset-password/page.tsx` |
+| Six-box one-time-code input | `app/components/OtpInput.tsx` |
 | Password input with show/hide toggle | `app/components/PasswordField.tsx` |
 | Session cookie (HMAC-SHA256, 30 days, httpOnly) | `app/lib/session.ts` |
 | Google ID-token verification | `app/lib/google.ts` |
 | `requireUser()` guard for route handlers | `app/lib/apiAuth.ts` |
-| Admin seed + legacy-data adoption | `app/lib/seed.ts` |
+| Admin seed + unique-email index + legacy-data adoption | `app/lib/seed.ts` |
 | `requireAdmin()` guard (re-reads the role from the DB) | `app/lib/apiAuth.ts` |
 | Per-user activity roll-ups | `app/lib/userStats.ts` |
 | Client auth state | `app/context/AuthContext.tsx` |
@@ -153,8 +228,10 @@ Hand-rolled and dependency-free — nothing beyond what the project already used
 | Admin user directory | `app/admin/users/page.tsx` |
 | Route gate (`/login` redirect, `/admin/*` block) | `app/components/AppShell.tsx` |
 
-**Data model** — `User`, `Transaction` and `Watchlist` (`app/models/`). Both
-`Transaction` and `Watchlist` carry an indexed `userId`.
+**Data model** — `User`, `Transaction`, `Watchlist` and `PasswordReset`
+(`app/models/`). `Transaction` and `Watchlist` both carry an indexed `userId`;
+`PasswordReset` carries a TTL index, so finished and abandoned reset attempts
+drop out of the collection on their own.
 
 **The isolation rule:** every user-scoped query filters on `userId` taken from
 the session cookie, never from the request body. A watchlist or trade belonging

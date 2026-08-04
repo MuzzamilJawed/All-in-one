@@ -27,13 +27,17 @@ export interface IUser extends mongoose.Document {
 }
 
 const UserSchema = new mongoose.Schema<IUser>({
+    // One account per address, enforced by the database rather than by a
+    // check-then-insert that two concurrent sign-ups could both pass.
+    // `lowercase` is what makes it case-insensitive: Foo@x.com is stored — and
+    // therefore indexed — as foo@x.com. (`unique` already builds the index, so
+    // adding `index: true` here would only declare it twice.)
     email: {
         type: String,
         required: [true, 'Email is required.'],
         unique: true,
         lowercase: true,
         trim: true,
-        index: true,
     },
     name: {
         type: String,
@@ -59,6 +63,19 @@ const UserSchema = new mongoose.Schema<IUser>({
 }, {
     timestamps: true,
 });
+
+/** The one message every path uses when an address is already spoken for. */
+export const EMAIL_TAKEN = 'An account with this email already exists — sign in instead.';
+
+/**
+ * True for the duplicate-key error the unique index raises when two writes race
+ * past a "does this email exist?" lookup and both try to insert it. Catching it
+ * is what turns a 500 with a raw Mongo string into something a form can show.
+ */
+export const isDuplicateEmailError = (error: unknown): boolean => {
+    const err = error as { code?: number; keyPattern?: Record<string, unknown> } | null;
+    return err?.code === 11000 && (!err.keyPattern || 'email' in err.keyPattern);
+};
 
 // Shape sent to the browser — never includes passwordHash.
 export const publicUser = (u: IUser) => ({

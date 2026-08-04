@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '../../../lib/mongodb';
-import User, { publicUser } from '../../../models/User';
+import User, { publicUser, EMAIL_TAKEN, isDuplicateEmailError } from '../../../models/User';
 import { hashPassword, passwordProblem } from '../../../lib/password';
 import { normalizePhone, phoneProblem } from '../../../lib/phone';
 import { createSessionToken, attachSession } from '../../../lib/session';
@@ -36,10 +36,7 @@ export async function POST(request: Request) {
                 const res = NextResponse.json({ success: true, data: publicUser(existing) });
                 return attachSession(res, createSessionToken(String(existing._id), existing.role));
             }
-            return NextResponse.json(
-                { success: false, error: 'An account with this email already exists — sign in instead.' },
-                { status: 409 },
-            );
+            return NextResponse.json({ success: false, error: EMAIL_TAKEN }, { status: 409 });
         }
 
         const user = await User.create({
@@ -56,6 +53,13 @@ export async function POST(request: Request) {
         const res = NextResponse.json({ success: true, data: publicUser(user) });
         return attachSession(res, createSessionToken(String(user._id), user.role));
     } catch (error) {
+        // The lookup above catches the ordinary case; this catches the race,
+        // where a second sign-up for the same address slipped between that
+        // lookup and this insert. The unique index rejects it either way — this
+        // just makes the rejection readable.
+        if (isDuplicateEmailError(error)) {
+            return NextResponse.json({ success: false, error: EMAIL_TAKEN }, { status: 409 });
+        }
         console.error('[auth] register failed:', error);
         return NextResponse.json(
             { success: false, error: error instanceof Error ? error.message : 'Could not create your account' },

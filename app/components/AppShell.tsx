@@ -8,8 +8,9 @@ import { useSettings } from "../context/SettingsContext";
 import { useAuth } from "../context/AuthContext";
 import { moduleForPath, isModuleEnabled } from "../lib/modules";
 
-// Routes that render standalone — no sidebar, no auth gate.
-const PUBLIC_ROUTES = ["/login"];
+// Routes that render standalone — no sidebar, no auth gate. Password recovery
+// belongs here by definition: you can't sign in to reach it.
+const PUBLIC_ROUTES = ["/login", "/forgot-password", "/reset-password"];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
     const { collapsed } = useSidebar();

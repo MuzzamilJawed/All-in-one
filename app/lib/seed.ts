@@ -23,7 +23,27 @@ export function ensureSeed(): Promise<void> {
     return running;
 }
 
+/**
+ * The schema declares `unique: true` on email, but that is only a real
+ * constraint once the index exists — and a deployment that turns off mongoose's
+ * autoIndex (common production advice) would otherwise run with no enforcement
+ * at all. Building it here is idempotent, and loud when the collection already
+ * holds duplicate addresses, which is exactly when silence would hurt.
+ */
+async function ensureUniqueEmails(): Promise<void> {
+    try {
+        await User.collection.createIndex({ email: 1 }, { unique: true, name: 'email_1' });
+    } catch (err) {
+        console.error(
+            '[seed] could not enforce one account per email — merge or remove the duplicate ' +
+            'accounts, then restart so the unique index can be built:', err,
+        );
+    }
+}
+
 async function seed(): Promise<void> {
+    await ensureUniqueEmails();
+
     let admin = await User.findOne({ email: SEED_ADMIN_EMAIL });
 
     if (!admin) {

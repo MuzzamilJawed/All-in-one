@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Loader2, Lock, Mail, Phone, ShieldCheck, User as UserIcon } from "lucide-react";
 import { phoneProblem } from "../lib/phone";
 import { useAuth } from "../context/AuthContext";
@@ -12,8 +13,9 @@ import DevQuickLogin from "../components/DevQuickLogin";
 
 type Mode = "signin" | "signup";
 
-export default function LoginPage() {
+function LoginScreen() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user, loading, googleClientId, signIn, signUp, signInWithGoogle } = useAuth();
 
     const [mode, setMode] = useState<Mode>("signin");
@@ -24,6 +26,12 @@ export default function LoginPage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    const [noticeDismissed, setNoticeDismissed] = useState(false);
+
+    // `?reset=1` — the hand-off from /reset-password.
+    const notice = searchParams.has("reset") && !noticeDismissed
+        ? "Password updated — sign in with your new password."
+        : null;
 
     // Already signed in (or just finished) — the app is behind this page.
     useEffect(() => {
@@ -64,6 +72,7 @@ export default function LoginPage() {
     const switchMode = (next: Mode) => {
         setMode(next);
         setError(null);
+        setNoticeDismissed(true);
         setPassword("");
         setConfirmPassword("");
     };
@@ -228,6 +237,17 @@ export default function LoginPage() {
                             leading={<Lock className={iconCls} strokeWidth={2.5} />}
                         />
 
+                        {mode === "signin" && (
+                            <div className="flex justify-end">
+                                <Link
+                                    href="/forgot-password"
+                                    className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-blue-600 transition-colors"
+                                >
+                                    Forgot password?
+                                </Link>
+                            </div>
+                        )}
+
                         {mode === "signup" && (
                             <>
                                 <PasswordField
@@ -247,6 +267,12 @@ export default function LoginPage() {
                                     </p>
                                 )}
                             </>
+                        )}
+
+                        {notice && !error && (
+                            <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2">
+                                {notice}
+                            </p>
                         )}
 
                         {error && (
@@ -295,5 +321,21 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    // useSearchParams (the `?reset=1` banner) needs a Suspense boundary to
+    // prerender — same wrapper the stock report screen uses.
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen h-dvh flex items-center justify-center bg-zinc-50 dark:bg-[#050505]">
+                    <div className="animate-spin rounded-full h-9 w-9 border-b-2 border-blue-600" />
+                </div>
+            }
+        >
+            <LoginScreen />
+        </Suspense>
     );
 }
