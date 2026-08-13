@@ -57,7 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex bg-zinc-50 dark:bg-[#050505]">
             <Sidebar />
             <main
-                className={`flex-1 min-w-0 transition-[margin] duration-300 ease-in-out pb-[env(safe-area-inset-bottom)] ${collapsed ? "lg:ml-20" : "lg:ml-64"}`}
+                className={`flex-1 min-w-0 overflow-x-hidden transition-[margin] duration-300 ease-in-out pb-[env(safe-area-inset-bottom)] ${collapsed ? "lg:ml-20" : "lg:ml-64"}`}
             >
                 {blocked || forbidden ? (
                     <div className="min-h-screen flex items-center justify-center px-6 text-center">
