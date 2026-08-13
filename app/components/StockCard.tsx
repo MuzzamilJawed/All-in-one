@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Target, Volume2, StickyNote } from "lucide-react";
+import { Target, Volume2, StickyNote, Plus, X, Check, Loader2 } from "lucide-react";
 import { computeSignals, dayRangePosition, toneClasses } from "../lib/stockSignals";
 import { getTarget, setTarget, getNote, setNote, type StockNote } from "../lib/stockPrefs";
 import { useToast } from "../context/ToastContext";
@@ -105,6 +105,9 @@ export default function StockCard({
     const effectiveTarget = target ?? (targetPrice ?? null);
     const signals = isPSX ? computeSignals({ changePercent, currentPrice, open, high, low }, effectiveTarget) : [];
     const rangePos = dayRangePosition(low, high, currentPrice);
+    // Whether the feed sent a session at all. PSX does; the NASDAQ feed sends no
+    // OHLC, so those cards skip the range block entirely — consistently.
+    const hasSession = (low ?? 0) > 0 && (high ?? 0) > 0 && high >= low;
 
     // ── Extra detail derived from the feed ──────────────────────────────────
     // All plain arithmetic on values we already have — nothing inferred.
@@ -129,34 +132,34 @@ export default function StockCard({
     // Only the figures this feed actually supplies. PSX sends previous close and
     // intraday OHLC; the NASDAQ feed sends neither, so its cards would otherwise
     // render a row of dashes where PSX shows real numbers.
-    const sessionDetail: { label: string; value: string; sub?: string | null; tone: string; title: string }[] = [
-        ldcp != null && {
-            label: "Prev",
-            value: `${currencySymbol}${dp(ldcp)}`,
-            tone: "text-zinc-700 dark:text-zinc-200",
-            title: "Last Day Closing Price — today's change is measured from this",
-        },
-        gap != null && {
-            label: "Gap",
-            value: `${gap >= 0 ? "+" : "-"}${currencySymbol}${dp(Math.abs(gap))}`,
-            sub: gapPct != null ? `${gapPct >= 0 ? "+" : ""}${gapPct.toFixed(2)}%` : null,
-            tone: gap >= 0 ? "text-green-500" : "text-red-500",
-            title: "How it opened against the previous close",
-        },
-        sinceOpen != null && {
-            label: "Vs Open",
-            value: `${sinceOpen >= 0 ? "+" : "-"}${currencySymbol}${dp(Math.abs(sinceOpen))}`,
-            tone: sinceOpen >= 0 ? "text-green-500" : "text-red-500",
-            title: "Move during the session, excluding the opening gap",
-        },
-        turnover != null && {
-            label: "Traded",
-            value: `${currencySymbol}${compactNum(turnover)}`,
-            sub: rangePct != null ? `Range ${rangePct.toFixed(1)}%` : null,
-            tone: "text-zinc-700 dark:text-zinc-200",
-            title: "Approximate value traded today (volume × last price)",
-        },
-    ].filter(Boolean) as { label: string; value: string; sub?: string | null; tone: string; title: string }[];
+    // const sessionDetail: { label: string; value: string; sub?: string | null; tone: string; title: string }[] = [
+    //     ldcp != null && {
+    //         label: "Prev",
+    //         value: `${currencySymbol}${dp(ldcp)}`,
+    //         tone: "text-zinc-700 dark:text-zinc-200",
+    //         title: "Last Day Closing Price — today's change is measured from this",
+    //     },
+    //     gap != null && {
+    //         label: "Gap",
+    //         value: `${gap >= 0 ? "+" : "-"}${currencySymbol}${dp(Math.abs(gap))}`,
+    //         sub: gapPct != null ? `${gapPct >= 0 ? "+" : ""}${gapPct.toFixed(2)}%` : null,
+    //         tone: gap >= 0 ? "text-green-500" : "text-red-500",
+    //         title: "How it opened against the previous close",
+    //     },
+    //     sinceOpen != null && {
+    //         label: "Vs Open",
+    //         value: `${sinceOpen >= 0 ? "+" : "-"}${currencySymbol}${dp(Math.abs(sinceOpen))}`,
+    //         tone: sinceOpen >= 0 ? "text-green-500" : "text-red-500",
+    //         title: "Move during the session, excluding the opening gap",
+    //     },
+    //     turnover != null && {
+    //         label: "Traded",
+    //         value: `${currencySymbol}${compactNum(turnover)}`,
+    //         sub: rangePct != null ? `Range ${rangePct.toFixed(1)}%` : null,
+    //         tone: "text-zinc-700 dark:text-zinc-200",
+    //         title: "Approximate value traded today (volume × last price)",
+    //     },
+    // ].filter(Boolean) as { label: string; value: string; sub?: string | null; tone: string; title: string }[];
 
     const saveMeta = (e: React.MouseEvent | React.KeyboardEvent) => {
         e.stopPropagation();
@@ -213,20 +216,21 @@ export default function StockCard({
                     </button>
                 )}
                 <div className="min-w-0 flex-1">
-                    {/* Sector rides the symbol row rather than taking a line of its
-                        own — it truncates to whatever space is left. */}
-                    <div className="flex items-baseline gap-1.5 min-w-0">
+                    {/* Symbol and name on same row, sector below */}
+                    <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap mb-1">
                         <h4 className="text-sm font-black text-zinc-900 dark:text-zinc-50 tracking-tighter shrink-0">{symbol}</h4>
                         {isNew && (
                             <span className="text-[8px] font-black bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1 py-0.5 rounded uppercase tracking-widest shrink-0">New</span>
                         )}
-                        {sector && (
-                            <span className="min-w-0 text-[8px] text-zinc-400 dark:text-zinc-500 font-black uppercase tracking-widest truncate" title={`Sector · ${sector}`}>
+                        <p className="min-w-0 text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tight truncate flex-1">{name}</p>
+                    </div>
+                    {sector && (
+                        <div>
+                            <span className="inline-block text-[8px] text-zinc-400 dark:text-zinc-500 font-black uppercase tracking-widest truncate" title={`Sector · ${sector}`}>
                                 {sector}
                             </span>
-                        )}
-                    </div>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tight truncate leading-tight mt-0.5">{name}</p>
+                        </div>
+                    )}
                 </div>
                 <div className="shrink-0 text-right max-w-[42%]">
                     <FitText className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tabular-nums leading-none">
@@ -283,19 +287,29 @@ export default function StockCard({
                 {selectable && (
                     <button
                         onClick={(e) => { e.stopPropagation(); onToggleSelect?.(symbol); }}
-                        className={`absolute -top-2 -left-2 z-20 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black shadow-lg transition-all ${selected ? 'bg-blue-600 text-white scale-110' : 'bg-white dark:bg-zinc-800 text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:border-blue-500'}`}
+                        className={`absolute -top-2 -left-2 z-20 w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-all ${selected ? 'bg-blue-600 text-white scale-110' : 'bg-white dark:bg-zinc-800 text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:border-blue-500'}`}
                         title={selected ? 'Remove from compare' : 'Add to compare'}
                     >
-                        {selected ? '✓' : '+'}
+                        {selected
+                            ? <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                            : <Plus className="w-3.5 h-3.5" strokeWidth={3} />}
                     </button>
                 )}
 
-                <div className="flex flex-wrap justify-between items-start gap-x-2 gap-y-1.5 mb-2 sm:mb-3">
-                    <div className="flex-1 min-w-[7.5rem]">
-                        <div className="flex items-center gap-1 sm:gap-1.5 mb-0.5">
-                            <h4 className="text-sm sm:text-lg font-black text-zinc-900 dark:text-zinc-50 tracking-tighter truncate">
+                {/* One row, never two. This used to wrap, which dropped the actions
+                    and the change onto their own line under the sector badge on any
+                    card narrow enough — so the identity block gets whatever width is
+                    left and truncates, rather than pushing the actions down. */}
+                <div className="flex flex-nowrap justify-between items-start gap-x-2 mb-2 sm:mb-3">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 sm:gap-1.5 mb-0.5 flex-wrap">
+                            <h4 className="text-sm sm:text-lg font-black text-zinc-900 dark:text-zinc-50 tracking-tighter shrink-0">
                                 {symbol}
                             </h4>
+                            {/* Mobile only: name inline with symbol */}
+                            <p className="sm:hidden text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter truncate flex-1">
+                                {name}
+                            </p>
                             {/* <span className="text-[9px] sm:text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">
                             {exchange || 'PSX'}
                         </span> */}
@@ -303,17 +317,23 @@ export default function StockCard({
                                 <span className="text-[8px] font-black bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0" title="New leader vs previous session">NEW</span>
                             )}
                         </div>
-                        <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter line-clamp-1 sm:line-clamp-2 leading-tight" title={name}>
+                        {/* Desktop only: full name on separate line. These two slots keep a fixed height whether or not they are
+                            filled. A one-line name next to a two-line one, or a missing
+                            sector, otherwise shifts everything below it and the cards in
+                            a row stop lining up with each other. */}
+                        <p className="hidden sm:block text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-tighter line-clamp-1 sm:line-clamp-2 leading-tight min-h-[1.25em] sm:min-h-[2.5em]" title={name}>
                             {name}
                         </p>
-                        {sector && (
-                            <span className="inline-block mt-1 max-w-full text-[8px] font-black bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 px-1.5 py-0.5 rounded uppercase tracking-widest truncate" title={`Sector · ${sector}`}>
-                                {sector}
-                            </span>
-                        )}
+                        <div className="mt-1 min-h-[1.0625rem] sm:mt-1 w-full sm:w-auto">
+                            {sector && (
+                                <span className="inline-block max-w-full text-[8px] font-black bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 px-1.5 py-0.5 rounded uppercase tracking-widest truncate" title={`Sector · ${sector}`}>
+                                    {sector}
+                                </span>
+                            )}
+                        </div>
                     </div>
-                    <div className={`flex flex-col items-end relative shrink-0 ml-auto`}>
-                        <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                    <div className={`flex flex-col items-end relative shrink-0`}>
+                        <div className="flex items-center gap-1 sm:gap-1.5 mb-1">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowMeta(!showMeta); setShowWatchlistMenu(false); }}
                                 className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 ${showMeta || target || note ? 'bg-blue-600 text-white shadow-lg' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
@@ -326,7 +346,12 @@ export default function StockCard({
                                 className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 ${showWatchlistMenu ? 'bg-blue-600 text-white shadow-lg' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                                 title="Add to Watchlist"
                             >
-                                <span className="text-[13px] sm:text-[14px] leading-none">{showWatchlistMenu ? "×" : "+"}</span>
+                                {/* A lucide glyph, not a text "+" — a character sits on
+                                    the font's baseline and at its own optical weight, so
+                                    it never lined up with the drawn icons either side. */}
+                                {showWatchlistMenu
+                                    ? <X className="w-3.5 h-3.5" strokeWidth={2} />
+                                    : <Plus className="w-3.5 h-3.5" strokeWidth={2} />}
                             </button>
 
                             <button
@@ -368,16 +393,23 @@ export default function StockCard({
                                 className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700`}
                                 title="Listen"
                             >
-                                {ttsLoading ? <span className="text-[11px] sm:text-[12px] leading-none">…</span> : <Volume2 className="w-3.5 h-3.5" strokeWidth={2} />}
+                                {ttsLoading
+                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2} />
+                                    : <Volume2 className="w-3.5 h-3.5" strokeWidth={2} />}
                             </button>
+                        </div>
 
+                        {/* Percent and amount share the line under the actions. Sitting
+                            the percent beside the three buttons made this column wide
+                            enough to shove itself onto a row of its own. */}
+                        <div className="flex items-baseline gap-1.5 whitespace-nowrap">
                             <span className={`text-[10px] sm:text-xs font-black ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                                 {isPositive ? '▲' : '▼'}{Math.abs(changePercent).toFixed(1)}%
                             </span>
+                            <span className={`text-[9px] sm:text-[10px] font-bold ${isPositive ? 'text-green-600/70' : 'text-red-600/70'}`}>
+                                {isPositive ? '+' : ''}{change?.toFixed(2)}
+                            </span>
                         </div>
-                        <span className={`text-[9px] sm:text-[10px] font-bold ${isPositive ? 'text-green-600/70' : 'text-red-600/70'}`}>
-                            {isPositive ? '+' : ''}{change?.toFixed(2)}
-                        </span>
 
                         {/* Target / note editor */}
                         {showMeta && (
@@ -490,77 +522,86 @@ export default function StockCard({
                     </div>
                 </div>
 
-                {/* Signal badges + user tag */}
-                {(signals.length > 0 || note?.tag) && (
-                    <div className="flex flex-wrap items-center gap-1 mb-2">
-                        {note?.tag && (
-                            <span className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" title={note.text || note.tag}>
-                                <StickyNote className="w-2.5 h-2.5" strokeWidth={2} /> {note.tag}
-                            </span>
-                        )}
-                        {signals.slice(0, 2).map(sig => (
-                            <span key={sig.key} title={sig.title} className={`inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded border ${toneClasses(sig.tone)}`}>
-                                <sig.icon className="w-2.5 h-2.5" strokeWidth={2.5} /> {sig.label}
-                            </span>
-                        ))}
-                    </div>
-                )}
-
-                <div className="mt-auto pt-2 sm:pt-3 flex items-end justify-between gap-2 border-t border-zinc-100 dark:border-zinc-800">
-                    <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Price</p>
-                        <FitText className="text-sm sm:text-xl font-black text-zinc-900 dark:text-zinc-50 font-mono tabular-nums leading-none">
-                            <span className="text-[10px] sm:text-xs font-normal mr-0.5">{currencySymbol}</span>
-                            {currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                        </FitText>
-                        {effectiveTarget != null && (
-                            <p className="text-[9px] font-bold text-blue-500 mt-0.5 truncate inline-flex items-center gap-0.5" title="Your target"><Target className="w-2.5 h-2.5 shrink-0" strokeWidth={2} /> {effectiveTarget.toLocaleString()}</p>
-                        )}
-                    </div>
-                    <div className="text-right min-w-0">
-                        <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest mb-0.5">Vol</p>
-                        <p className="text-[10px] sm:text-xs font-bold text-zinc-600 dark:text-zinc-300 font-mono leading-none truncate">{volume}</p>
-                    </div>
+                {/* Signal badges + user tag. The row is always here, empty or not:
+                    a card that happens to have no signal must not pull its price
+                    block a badge-height higher than its neighbours'. */}
+                <div className="flex flex-wrap items-center gap-1 mb-2 min-h-[1.0625rem]">
+                    {note?.tag && (
+                        <span className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" title={note.text || note.tag}>
+                            <StickyNote className="w-2.5 h-2.5" strokeWidth={2} /> {note.tag}
+                        </span>
+                    )}
+                    {signals.slice(0, 2).map(sig => (
+                        <span key={sig.key} title={sig.title} className={`inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded border ${toneClasses(sig.tone)}`}>
+                            <sig.icon className="w-2.5 h-2.5" strokeWidth={2.5} /> {sig.label}
+                        </span>
+                    ))}
                 </div>
 
-                {/* Day range position bar — carries Low/High so a separate O/H/L grid is redundant */}
-                {rangePos != null && (
-                    <div className="mt-2.5">
-                        <div className="flex items-center justify-between text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-1">
-                            <span>L {low?.toFixed(1)}</span>
-                            <span className="text-zinc-500">O {open?.toFixed(1)}</span>
-                            <span>H {high?.toFixed(1)}</span>
+                {/* Price, range and session detail move as one block pinned to the
+                    bottom of the card. Pinning only the price row left the optional
+                    blocks below it deciding how high the price sat, which is what
+                    knocked the grid out of alignment row to row. */}
+                <div className="mt-0">
+                    <div className="pt-2 sm:pt-3 flex items-end justify-between gap-2 border-t border-zinc-100 dark:border-zinc-800">
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Price</p>
+                            <FitText className="text-sm sm:text-xl font-black text-zinc-900 dark:text-zinc-50 font-mono tabular-nums leading-none">
+                                <span className="text-[10px] sm:text-xs font-normal mr-0.5">{currencySymbol}</span>
+                                {currentPrice?.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                            </FitText>
+                            {effectiveTarget != null && (
+                                <p className="text-[9px] font-bold text-blue-500 mt-0.5 truncate inline-flex items-center gap-0.5" title="Your target"><Target className="w-2.5 h-2.5 shrink-0" strokeWidth={2} /> {effectiveTarget.toLocaleString()}</p>
+                            )}
                         </div>
-                        <div className="relative h-1.5 rounded-full bg-gradient-to-r from-red-500/30 via-zinc-300 dark:via-zinc-700 to-green-500/30">
-                            <div
-                                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-blue-600 border-2 border-white dark:border-zinc-900 shadow"
-                                style={{ left: `${rangePos}%` }}
-                                title={`${rangePos.toFixed(0)}% of today's range`}
-                            ></div>
+                        <div className="text-right min-w-0">
+                            <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest mb-0.5">Vol</p>
+                            <p className="text-[10px] sm:text-xs font-bold text-zinc-600 dark:text-zinc-300 font-mono leading-none truncate">{volume}</p>
                         </div>
                     </div>
-                )}
 
-                {/* Session detail — previous close, the opening gap, the move since
-                the open, and turnover. Two rows of four keep it inside the card
-                at every width instead of stretching it. */}
-                {sessionDetail.length > 0 && (
-                    <div className="mt-2.5 pt-2.5 border-t border-zinc-100 dark:border-white/5 grid grid-cols-2 gap-x-3 gap-y-1.5">
-                        {sessionDetail.map(d => (
-                            <div key={d.label} className="min-w-0" title={d.title}>
-                                <p className="text-[8px] font-black text-zinc-400 uppercase tracking-wider leading-none truncate">{d.label}</p>
-                                {/* FitText, not truncate: these slots get narrow on 4-up
-                                card grids and an ellipsised price is worse than a
-                                slightly smaller one. */}
-                                <FitText className={`text-[11px] font-black font-mono tabular-nums leading-tight ${d.tone}`}>
-                                    {d.value}
-                                </FitText>
-                                {/* Own line — inline it clipped on narrow card columns. */}
-                                {d.sub && <p className="text-[8px] font-bold text-zinc-400 tabular-nums truncate leading-none">{d.sub}</p>}
+                    {/* Day range position bar — carries Low/High so a separate O/H/L
+                        grid is redundant. Drawn whenever the feed sends a session,
+                        even when high equals low: a stock locked at its circuit has
+                        no position to mark, but dropping the whole block would make
+                        its card sit a bar's height out of step with its neighbours. */}
+                    {hasSession && (
+                        <div className="mt-2.5">
+                            <div className="flex items-center justify-between text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-1">
+                                <span>L {low?.toFixed(1)}</span>
+                                <span className="text-zinc-500">O {open?.toFixed(1)}</span>
+                                <span>H {high?.toFixed(1)}</span>
                             </div>
-                        ))}
-                    </div>
-                )}
+                            <div className={`relative h-1.5 rounded-full ${rangePos != null ? 'bg-gradient-to-r from-red-500/30 via-zinc-300 dark:via-zinc-700 to-green-500/30' : 'bg-zinc-200 dark:bg-zinc-800'}`}>
+                                <div
+                                    className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-zinc-900 shadow ${rangePos != null ? 'bg-blue-600' : 'bg-zinc-400 dark:bg-zinc-600'}`}
+                                    style={{ left: `${rangePos ?? 50}%` }}
+                                    title={rangePos != null
+                                        ? `${rangePos.toFixed(0)}% of today's range`
+                                        : "No range today — it traded at a single price"}
+                                ></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Session detail — previous close, the opening gap, the move
+                    since the open, and turnover. Two rows of four keep it inside
+                    the card at every width instead of stretching it. */}
+                    {/* {sessionDetail.length > 0 && (
+                        <div className="mt-2.5 pt-2.5 border-t border-zinc-100 dark:border-white/5 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                            {sessionDetail.map(d => (
+                                <div key={d.label} className="min-w-0" title={d.title}>
+                                    <p className="text-[8px] font-black text-zinc-400 uppercase tracking-wider leading-none truncate">{d.label}</p>
+                                  
+                                    <FitText className={`text-[11px] font-black font-mono tabular-nums leading-tight ${d.tone}`}>
+                                        {d.value}
+                                    </FitText>
+                                    {d.sub && <p className="text-[8px] font-bold text-zinc-400 tabular-nums truncate leading-none">{d.sub}</p>}
+                                </div>
+                            ))}
+                        </div>
+                    )} */}
+                </div>
             </div>
         </>
     );

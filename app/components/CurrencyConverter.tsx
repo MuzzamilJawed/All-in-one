@@ -9,7 +9,7 @@ const PRIORITY = ["USD", "EUR", "GBP", "PKR", "JPY", "AUD", "CAD", "CHF", "CNY",
 
 const flagFor = (code: string): string => {
     const cc = (code || "").slice(0, 2).toUpperCase();
-    if (!/^[A-Z]{2}$/.test(cc)) return "💱";
+    if (!/^[A-Z]{2}$/.test(cc)) return "$$";
     return String.fromCodePoint(...cc.split("").map(c => 0x1f1e6 + c.charCodeAt(0) - 65));
 };
 

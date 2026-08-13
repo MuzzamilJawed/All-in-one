@@ -12,7 +12,7 @@ import UserMenu from "./UserMenu";
 import {
   LayoutDashboard, TrendingUp, Globe, ArrowRightLeft, Bitcoin, Gem, Fuel,
   Briefcase, Star, Wallet, Settings, ChevronsLeft, ChevronsRight, X,
-  Sun, Moon, Monitor, CandlestickChart, LineChart, ChevronDown,
+  Sun, Moon, Monitor, CandlestickChart, LineChart, ChevronDown, ListFilter,
   UserCircle, Users,
 } from "lucide-react";
 
@@ -29,6 +29,7 @@ const navigationGroups = [
       {
         name: "PSX Stocks", href: "/stocks", icon: TrendingUp, module: "stocks",
         children: [
+          { name: "Opportunity Desk", href: "/stocks/opportunities", icon: ListFilter },
           { name: "Trade Analytics", href: "/stocks/terminal", icon: CandlestickChart },
         ],
       },

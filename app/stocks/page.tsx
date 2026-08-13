@@ -19,20 +19,16 @@ import { rollLeaders } from "../lib/stockPrefs";
 
 const ANALYSIS_OPEN_KEY = "psx.analysis.open";
 
-/**
- * "25,369,263,260" → "25.4B". The feed hands back pre-formatted strings, so
- * strip the separators before scaling. Anything unparseable passes through.
- */
 function abbreviateCount(raw?: string | number | null): string {
     if (raw == null) return "—";
-    const n = typeof raw === "number" ? raw : parseFloat(String(raw).replace(/,/g, ""));
-    if (!Number.isFinite(n)) return String(raw);
-    const abs = Math.abs(n);
-    if (abs >= 1e12) return (n / 1e12).toFixed(1).replace(/\.0$/, "") + "T";
-    if (abs >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B";
-    if (abs >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
-    if (abs >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
-    return n.toLocaleString();
+    const value = typeof raw === "number" ? raw : parseFloat(String(raw).replace(/,/g, ""));
+    if (!Number.isFinite(value)) return String(raw);
+    const absolute = Math.abs(value);
+    if (absolute >= 1e12) return `${(value / 1e12).toFixed(1).replace(/\.0$/, "")}T`;
+    if (absolute >= 1e9) return `${(value / 1e9).toFixed(1).replace(/\.0$/, "")}B`;
+    if (absolute >= 1e6) return `${(value / 1e6).toFixed(1).replace(/\.0$/, "")}M`;
+    if (absolute >= 1e3) return `${(value / 1e3).toFixed(1).replace(/\.0$/, "")}K`;
+    return value.toLocaleString();
 }
 
 export default function StocksPage() {
@@ -581,8 +577,8 @@ function StocksContent() {
                             <div className="flex-1 py-3 sm:py-4 md:pr-8 flex items-center justify-between">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
-                                        <span className={`w-2 h-2 rounded-full ${marketStats.status.toLowerCase().includes('open') ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exchange {marketStats.status}</p>
+                                        <span className={`w-2 h-2 rounded-full ${marketStats?.status?.toLowerCase().includes('open') ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exchange {marketStats?.status || '—'}</p>
                                     </div>
                                     {/* Phones get abbreviated figures — 25,369,263,260 is
                                         eleven digits of precision nobody reads on a list screen. */}
