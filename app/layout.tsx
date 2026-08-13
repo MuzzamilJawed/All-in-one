@@ -39,13 +39,10 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
 };
 
-// Mobile viewport: fills notches (viewport-fit=cover), locks zoom for an
-// app-like feel, and matches the light/dark shell colors.
+// Mobile viewport: fills notches while preserving user zoom controls.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fafafa" },

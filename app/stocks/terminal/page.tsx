@@ -394,7 +394,7 @@ function MarketTerminalContent() {
                 {/* Lateral Navigation Pane - Mobile Drawer & Desktop Sidebar */}
                 <aside
                     data-testid="equity-watch-list"
-                    className={`fixed lg:relative inset-y-0 left-0 w-[300px] sm:w-[380px] h-full border-r border-zinc-200 dark:border-white/5 bg-white dark:bg-[#080808] lg:bg-white/40 lg:dark:bg-black/20 backdrop-blur-3xl lg:backdrop-blur-md flex flex-col shrink-0 overflow-hidden transform transition-transform duration-300 ease-in-out z-50 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                    className={`fixed lg:relative inset-y-0 left-0 w-[min(380px,calc(100vw-1rem))] h-full border-r border-zinc-200 dark:border-white/5 bg-white dark:bg-[#080808] lg:bg-white/40 lg:dark:bg-black/20 backdrop-blur-3xl lg:backdrop-blur-md flex flex-col shrink-0 overflow-hidden transform transition-transform duration-300 ease-in-out z-50 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                     {/* The drawer is fixed from y=0, so on phones its first row lands
                         under the floating nav button (and the status bar cutout in the
                         native shell). Clear both before the view selector. */}

@@ -14,6 +14,8 @@ export interface ITransaction extends mongoose.Document {
     quantity: number;
     price: number;             // per unit, in `currency`
     currency: 'PKR' | 'USD';
+    brokerage: number;         // fee value, as a percentage or flat amount
+    brokerageMode: 'PERCENT' | 'AMOUNT';
     note?: string;
     createdAt: Date;
     updatedAt: Date;
@@ -42,6 +44,8 @@ const TransactionSchema = new mongoose.Schema<ITransaction>({
     quantity: { type: Number, required: true, min: [0, 'Quantity must be positive'] },
     price: { type: Number, required: true, min: [0, 'Price must be positive'] },
     currency: { type: String, enum: ['PKR', 'USD'], required: true },
+    brokerage: { type: Number, required: true, min: [0, 'Brokerage cannot be negative'], default: 0 },
+    brokerageMode: { type: String, enum: ['PERCENT', 'AMOUNT'], required: true, default: 'PERCENT' },
     note: { type: String, maxlength: 300 },
 }, {
     timestamps: true,

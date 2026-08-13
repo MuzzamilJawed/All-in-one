@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Briefcase, Download, RotateCcw, BarChart3, ChevronDown, Grid3x3, Globe, Bitcoin, ArrowRightLeft, Zap, ArrowDownToLine, Upload, Plus } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties } from "react";
+import { Briefcase, Download, RotateCcw, BarChart3, ChevronDown, Grid3x3, Globe, Bitcoin, ArrowRightLeft, Zap, ArrowDownToLine, Upload, Plus, X, Trash2 } from "lucide-react";
 import {
     PieChart, Pie, Cell, Sector, BarChart, Bar, AreaChart, Area,
     XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -13,7 +13,7 @@ import FitText from "../components/FitText";
 import { convertAmount, currencySymbol } from "../lib/currency";
 import { useToast } from "../context/ToastContext";
 import {
-    fetchTxns, addTxn, deleteTxn, computeHoldings, txnsToCsv, importTxns, type Txn,
+    fetchTxns, addTxn, deleteTxn, clearTxns, computeHoldings, brokerageAmount, txnsToCsv, importTxns, type BrokerageMode, type Txn,
 } from "../lib/portfolio";
 import {
     fetchAllPrices, priceKey, priceIn, ASSET_TYPES,
@@ -84,6 +84,8 @@ const parseUpload = (text: string, book: PriceBook): { txns: UploadTxn[]; errors
     const symbolColumn = findColumn("symbol", "ticker");
     const quantityColumn = findColumn("quantity", "qty", "shares");
     const priceColumn = findColumn("price", "buyprice", "sellprice");
+    const brokerageColumn = findColumn("brokerage", "commission", "fee");
+    const brokerageModeColumn = findColumn("brokeragemode", "brokeragetype", "feemode");
     const dateColumn = findColumn("date");
     const typeColumn = findColumn("type", "transactiontype");
     const currencyColumn = findColumn("currency");
@@ -106,11 +108,17 @@ const parseUpload = (text: string, book: PriceBook): { txns: UploadTxn[]; errors
         const symbol = valueAt(symbolColumn).toUpperCase();
         const quantity = Number(valueAt(quantityColumn));
         const price = Number(valueAt(priceColumn));
+        const brokerage = valueAt(brokerageColumn) ? Number(valueAt(brokerageColumn)) : 0;
+        const rawBrokerageMode = valueAt(brokerageModeColumn).toUpperCase();
+        const brokerageMode: BrokerageMode = ["AMOUNT", "RS", "PKR", "FIXED", "FLAT"].includes(rawBrokerageMode) ? "AMOUNT" : "PERCENT";
         const rowErrors: string[] = [];
         if (!category) rowErrors.push("category must be PSX, NASDAQ, CRYPTO, FOREX, or COMMODITY");
         if (!symbol) rowErrors.push("symbol is required");
         if (!Number.isFinite(quantity) || quantity <= 0) rowErrors.push("quantity must be greater than 0");
         if (!Number.isFinite(price) || price <= 0) rowErrors.push("price must be greater than 0");
+        if (!Number.isFinite(brokerage) || brokerage < 0) rowErrors.push("brokerage must be zero or greater");
+        if (brokerageMode === "PERCENT" && brokerage > 100) rowErrors.push("brokerage percentage cannot exceed 100");
+        if (rawBrokerageMode && !["PERCENT", "PERCENTAGE", "%", "AMOUNT", "RS", "PKR", "FIXED", "FLAT"].includes(rawBrokerageMode)) rowErrors.push("brokerage mode must be PERCENT or AMOUNT");
 
         const date = valueAt(dateColumn) || todayStr();
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) rowErrors.push("date must be YYYY-MM-DD");
@@ -127,7 +135,7 @@ const parseUpload = (text: string, book: PriceBook): { txns: UploadTxn[]; errors
         const info = book.map[priceKey(category as AssetType, symbol)];
         txns.push({
             date, type: rawType as "BUY" | "SELL", assetType: category as AssetType,
-            symbol, name: valueAt(nameColumn) || info?.name, quantity, price, currency,
+            symbol, name: valueAt(nameColumn) || info?.name, quantity, price, currency, brokerage, brokerageMode,
             note: valueAt(noteColumn) || undefined,
         });
     });
@@ -159,12 +167,13 @@ export default function PortfolioPage() {
     const filterDropdownRef = useRef<HTMLDivElement>(null);
     const uploadInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
+    const [resetting, setResetting] = useState(false);
     const [uploadErrors, setUploadErrors] = useState<string[]>([]);
 
     // Add-transaction form state
     const [form, setForm] = useState({
         date: todayStr(), type: "BUY" as "BUY" | "SELL", assetType: "PSX" as AssetType,
-        symbol: "", quantity: "", price: "", currency: "PKR" as "PKR" | "USD", note: "",
+        symbol: "", quantity: "", price: "", currency: "PKR" as "PKR" | "USD", brokerage: "", brokerageMode: "PERCENT" as BrokerageMode, note: "",
     });
 
     const reload = useCallback(async () => {
@@ -308,10 +317,13 @@ export default function PortfolioPage() {
     const signed = (amt: number | null | undefined, cur: string = displayCur) =>
         amt == null ? "—" : `${amt >= 0 ? "+" : "-"}${currencySymbol(cur)}${Math.abs(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const compact = (v: number) => `${currencySymbol(displayCur)}${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v)}`;
-    const tooltipStyle: any = { backgroundColor: "var(--tooltip-bg,#fff)", color: "var(--tooltip-fg,#111)", border: "1px solid var(--tooltip-border,#e4e4e7)", borderRadius: "0.75rem", fontSize: "12px", fontWeight: 700 };
+    const tooltipStyle: CSSProperties = { backgroundColor: "var(--tooltip-bg,#fff)", color: "var(--tooltip-fg,#111)", border: "1px solid var(--tooltip-border,#e4e4e7)", borderRadius: "0.75rem", fontSize: "12px", fontWeight: 700 };
     // Pop-out shape for the hovered donut slice (interactive)
-    const renderActiveSlice = (props: any) => {
-        const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+    const renderActiveSlice = (props: unknown) => {
+        const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props as {
+            cx: number; cy: number; innerRadius: number; outerRadius: number;
+            startAngle: number; endAngle: number; fill: string;
+        };
         return (
             <g>
                 <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 10} startAngle={startAngle} endAngle={endAngle} fill={fill} />
@@ -338,10 +350,12 @@ export default function PortfolioPage() {
 
     const submit = async () => {
         if (saving) return;
-        const q = parseFloat(form.quantity), p = parseFloat(form.price);
+        const q = parseFloat(form.quantity), p = parseFloat(form.price), b = form.brokerage.trim() === "" ? 0 : parseFloat(form.brokerage);
         if (!form.symbol.trim()) { info("Enter a symbol"); return; }
         if (!Number.isFinite(q) || q <= 0) { info("Enter a valid quantity"); return; }
         if (!Number.isFinite(p) || p <= 0) { info("Enter a valid price"); return; }
+        if (!Number.isFinite(b) || b < 0) { info("Enter a valid brokerage"); return; }
+        if (form.brokerageMode === "PERCENT" && b > 100) { info("Brokerage percentage cannot exceed 100"); return; }
         if (form.type === "SELL") {
             const holding = holdings.find(h => h.assetType === form.assetType && h.symbol.toUpperCase() === form.symbol.trim().toUpperCase() && h.currency === form.currency);
             if (!holding || q > holding.quantity + 1e-9) {
@@ -353,19 +367,20 @@ export default function PortfolioPage() {
         setSaving(true);
         const res = await addTxn({
             date: form.date || todayStr(), type: form.type, assetType: form.assetType,
-            symbol: form.symbol, name: info2?.name, quantity: q, price: p, currency: form.currency, note: form.note.trim() || undefined,
+            symbol: form.symbol, name: info2?.name, quantity: q, price: p, currency: form.currency,
+            brokerage: b, brokerageMode: form.brokerageMode, note: form.note.trim() || undefined,
         });
         setSaving(false);
         if (res.error) { error(res.error); return; }
         success(`${form.type} ${q} ${form.symbol.toUpperCase()} recorded`);
-        setForm(f => ({ ...f, symbol: "", quantity: "", price: "", note: "" }));
+        setForm(f => ({ ...f, symbol: "", quantity: "", price: "", brokerage: "", note: "" }));
     };
 
     const startSell = (holding: typeof rows[number]) => {
         setForm({
             date: todayStr(), type: "SELL", assetType: holding.assetType,
             symbol: holding.symbol, quantity: "", price: holding.current != null ? String(Number(holding.current.toFixed(holding.current < 1 ? 6 : 2))) : "",
-            currency: holding.currency, note: "Partial sale",
+            currency: holding.currency, brokerage: "", brokerageMode: form.brokerageMode, note: "Partial sale",
         });
         setShowAdd(true);
         window.setTimeout(() => document.getElementById("record-trade")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
@@ -374,7 +389,7 @@ export default function PortfolioPage() {
     const openAddTrade = () => {
         setForm({
             date: todayStr(), type: "BUY", assetType: "PSX",
-            symbol: "", quantity: "", price: "", currency: "PKR", note: "",
+            symbol: "", quantity: "", price: "", currency: "PKR", brokerage: "", brokerageMode: form.brokerageMode, note: "",
         });
         setShowAdd(true);
     };
@@ -382,11 +397,30 @@ export default function PortfolioPage() {
     const availableForForm = form.type === "SELL"
         ? holdings.find(h => h.assetType === form.assetType && h.symbol.toUpperCase() === form.symbol.trim().toUpperCase() && h.currency === form.currency)?.quantity
         : undefined;
+    const enteredQuantity = Number(form.quantity);
+    const quantityExceedsAvailable = form.type === "SELL" && availableForForm != null && Number.isFinite(enteredQuantity) && enteredQuantity > availableForForm + 1e-9;
 
     const remove = async (t: Txn) => {
         if (!confirm(`Delete ${t.type} ${t.quantity} ${t.symbol} (${t.date})?`)) return;
         if (await deleteTxn(t.id)) info("Transaction deleted");
         else error("Couldn't delete that transaction");
+    };
+
+    const resetPortfolio = async () => {
+        if (txns.length === 0 || resetting) return;
+        if (!confirm(`Reset portfolio? This will permanently delete all ${txns.length} transaction records from the database.`)) return;
+        setResetting(true);
+        const cleared = await clearTxns();
+        setResetting(false);
+        if (cleared.success && cleared.deleted > 0) {
+            setFrom("");
+            setTo("");
+            success(`${cleared.deleted} portfolio record${cleared.deleted === 1 ? "" : "s"} reset`);
+        } else if (cleared.success) {
+            error("No portfolio records were deleted. Refresh and try again.");
+        } else {
+            error("Could not reset portfolio records");
+        }
     };
 
     const download = () => {
@@ -414,12 +448,25 @@ export default function PortfolioPage() {
                 error(`Upload blocked: ${parsed.errors.length} validation issue${parsed.errors.length === 1 ? "" : "s"}`);
                 return;
             }
-            const imported = await importTxns(parsed.txns);
-            if (imported !== parsed.txns.length) {
-                error(`Only ${imported} of ${parsed.txns.length} rows were imported`);
+            const newRows = parsed.txns.filter(incoming => {
+                return !txns.some(existing => {
+                    const sameAsset = existing.assetType === incoming.assetType
+                        && existing.symbol.toUpperCase() === incoming.symbol.toUpperCase()
+                        && existing.currency === incoming.currency;
+                    return sameAsset && Math.abs(existing.quantity - incoming.quantity) <= 1e-9;
+                });
+            });
+            const skipped = parsed.txns.length - newRows.length;
+            const imported = await importTxns(newRows);
+            if (imported !== newRows.length) {
+                error(`Only ${imported} of ${newRows.length} new rows were imported`);
                 return;
             }
-            success(`${imported} trade${imported === 1 ? "" : "s"} uploaded successfully`);
+            if (imported === 0) {
+                info(`No changes found. ${skipped} row${skipped === 1 ? "" : "s"} already had the same quantity`);
+            } else {
+                success(`${imported} new row${imported === 1 ? "" : "s"} uploaded${skipped ? `; ${skipped} unchanged row${skipped === 1 ? "" : "s"} skipped` : ""}`);
+            }
         } catch {
             error("Could not read that CSV file");
         } finally {
@@ -539,10 +586,11 @@ export default function PortfolioPage() {
                                 )}
                             </div>
                             <button
-                                onClick={() => showAdd ? setShowAdd(false) : openAddTrade()}
-                                className="whitespace-nowrap inline-flex items-center justify-center px-4 h-10 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                                onClick={openAddTrade}
+                                disabled={showAdd}
+                                className="whitespace-nowrap inline-flex items-center justify-center px-4 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
                             >
-                                {showAdd ? "✕ Close" : "+ Add Trade"}
+                                + Add Trade
                             </button>
                             <input ref={uploadInputRef} type="file" accept=".csv,text/csv" onChange={handleUpload} className="hidden" />
                             <button
@@ -565,6 +613,16 @@ export default function PortfolioPage() {
                             >
                                 <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" strokeWidth={2} />
                                 <span className="hidden sm:inline">Download</span>
+                            </button>
+                            <button
+                                onClick={resetPortfolio}
+                                disabled={txns.length === 0 || resetting}
+                                aria-label="Reset portfolio records"
+                                title="Delete all portfolio records"
+                                className="shrink-0 inline-flex items-center justify-center gap-1.5 w-10 sm:w-auto h-10 sm:px-4 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-500/20 transition-all active:scale-95"
+                            >
+                                <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" strokeWidth={2} />
+                                <span className="hidden sm:inline">{resetting ? "Resetting" : "Reset"}</span>
                             </button>
                         </div>
                     </div>
@@ -612,17 +670,40 @@ export default function PortfolioPage() {
                         </div>
                     </div>
                     {[
-                        { label: "Day P/L", val: totals.day, tone: totals.day >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: totals.value > 0 ? totals.dayPct : null },
-                        { label: "Unrealized P/L", val: totals.unrealized, tone: totals.unrealized >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: null },
-                        { label: "Realized P/L", val: totals.realizedTotal, tone: totals.realizedTotal >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: null },
-                        { label: "Total P/L", val: totals.total, tone: totals.total >= 0 ? "text-green-500" : "text-red-500", signed: true, pct: totals.invested > 0 ? (totals.total / totals.invested) * 100 : null },
-                    ].map((c, i) => (
-                        <div key={i} className="bg-white dark:bg-zinc-900/50 rounded-2xl sm:rounded-[1.75rem] p-4 sm:p-5 border border-zinc-200 dark:border-white/5 shadow-sm">
-                            <p className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">{c.label}</p>
-                            <FitText className={`text-base sm:text-xl font-black font-mono tracking-tighter tabular-nums ${c.tone}`}>{c.signed ? signed(c.val) : fmt(c.val)}</FitText>
-                            {c.pct != null && (
-                                <p className={`text-[10px] font-black ${c.val >= 0 ? "text-green-500" : "text-red-500"}`}>{c.val >= 0 ? "▲" : "▼"} {Math.abs(c.pct).toFixed(2)}%</p>
-                            )}
+                        {
+                            title: "Position P/L",
+                            subtitle: "Booked and open performance",
+                            items: [
+                                { label: "Unrealized", val: totals.unrealized, pct: null as number | null },
+                                { label: "Realized", val: totals.realizedTotal, pct: null as number | null },
+                            ],
+                        },
+                        {
+                            title: "Performance P/L",
+                            subtitle: "Today and since inception",
+                            items: [
+                                { label: "Day P/L", val: totals.day, pct: totals.value > 0 ? totals.dayPct : null },
+                                { label: "Total P/L", val: totals.total, pct: totals.invested > 0 ? (totals.total / totals.invested) * 100 : null },
+                            ],
+                        },
+                    ].map(group => (
+                        <div key={group.title} className="col-span-2 rounded-2xl sm:rounded-[1.75rem] bg-blue-500/[0.04] dark:bg-blue-500/[0.06] border border-zinc-200 dark:border-white/5 shadow-sm p-3 sm:p-4 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-3">
+                                <div>
+                                    <p className="text-[9px] sm:text-[10px] font-black text-zinc-700 dark:text-zinc-200 uppercase tracking-widest">{group.title}</p>
+                                    <p className="text-[8px] font-bold text-zinc-400 mt-1">{group.subtitle}</p>
+                                </div>
+                                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                            </div>
+                            <div className="grid grid-cols-2 divide-x divide-zinc-200 dark:divide-white/10">
+                                {group.items.map(item => (
+                                    <div key={item.label} className="min-w-0 first:pr-3 last:pl-3">
+                                        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">{item.label}</p>
+                                        <FitText className={`text-sm sm:text-lg font-black font-mono tracking-tighter tabular-nums ${item.val >= 0 ? "text-green-500" : "text-red-500"}`}>{signed(item.val)}</FitText>
+                                        {item.pct != null && <p className={`text-[9px] font-black mt-1 ${item.val >= 0 ? "text-green-500" : "text-red-500"}`}>{item.val >= 0 ? "▲" : "▼"} {Math.abs(item.pct).toFixed(2)}%</p>}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -630,12 +711,12 @@ export default function PortfolioPage() {
                 {showAdd && (
                     <div id="record-trade" className={`relative overflow-hidden bg-white dark:bg-zinc-900/60 backdrop-blur-sm rounded-2xl sm:rounded-[2rem] border shadow-sm p-4 sm:p-6 animate-in fade-in slide-in-from-top-2 ${form.type === "SELL" ? "border-red-500/20" : "border-emerald-500/20"}`}>
                         <div className={`absolute inset-x-0 top-0 h-1 ${form.type === "SELL" ? "bg-red-500" : "bg-emerald-500"}`} />
-                        <div className="flex items-center justify-end gap-3 mb-5">
+                        <div className="flex items-center justify-between gap-3 mb-5">
                             <span className={`shrink-0 inline-flex items-center min-h-8 px-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${form.type === "SELL" ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"}`}>
                                 {form.type === "SELL" ? "Sell order" : "Buy order"}
                             </span>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.05fr_1.05fr_1.25fr_1.15fr_1fr_1.15fr_0.95fr_1.15fr] gap-3 sm:gap-4 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.15fr_1.1fr_1fr_1.1fr_1.15fr_0.9fr] gap-3 sm:gap-4 items-stretch">
                             <div className="col-span-1">
                                 <label className={fieldLabelCls}>Date</label>
                                 <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputCls} />
@@ -666,8 +747,29 @@ export default function PortfolioPage() {
                             </div>
                             <div className="col-span-1">
                                 <label className={fieldLabelCls}>Quantity <span className="text-blue-500" aria-hidden="true">*</span></label>
-                                <input type="number" inputMode="decimal" min="0" max={availableForForm} step="any" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} placeholder="100" className={inputCls} />
-                                {availableForForm != null && <p className="mt-1 text-[8px] font-black text-red-500 uppercase tracking-widest">Available: {availableForForm.toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>}
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        min="0"
+                                        max={availableForForm}
+                                        step="any"
+                                        value={form.quantity}
+                                        onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
+                                        placeholder="0"
+                                        aria-describedby="quantity-help"
+                                        aria-invalid={quantityExceedsAvailable}
+                                        className={`${inputCls} pr-16 ${quantityExceedsAvailable ? "border-red-500 focus:border-red-500 focus:ring-red-500/10" : ""}`}
+                                    />
+                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest text-zinc-400">units</span>
+                                </div>
+                                <p id="quantity-help" className={`mt-1.5 min-h-3 text-[8px] font-black uppercase tracking-widest ${quantityExceedsAvailable ? "text-red-500" : "text-zinc-400"}`}>
+                                    {quantityExceedsAvailable
+                                        ? `Maximum ${availableForForm?.toLocaleString(undefined, { maximumFractionDigits: 6 })} units`
+                                        : availableForForm != null
+                                            ? `Available ${availableForForm.toLocaleString(undefined, { maximumFractionDigits: 6 })} units`
+                                            : "Number of units"}
+                                </p>
                             </div>
                             <div className="col-span-1">
                                 <label className={fieldLabelCls}>Price <span className="text-blue-500" aria-hidden="true">*</span></label>
@@ -677,17 +779,46 @@ export default function PortfolioPage() {
                                 </div>
                             </div>
                             <div className="col-span-1">
+                                <label className={fieldLabelCls}>Brokerage</label>
+                                <div className="flex gap-1">
+                                    <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        min="0"
+                                        max={form.brokerageMode === "PERCENT" ? 100 : undefined}
+                                        step="any"
+                                        value={form.brokerage}
+                                        onChange={e => setForm(f => ({ ...f, brokerage: e.target.value }))}
+                                        placeholder="0"
+                                        aria-label="Brokerage value"
+                                        className={`${inputCls} min-w-0 px-3`}
+                                    />
+                                    <select
+                                        value={form.brokerageMode}
+                                        onChange={e => setForm(f => ({ ...f, brokerageMode: e.target.value as BrokerageMode }))}
+                                        aria-label="Brokerage mode"
+                                        className="w-[4.8rem] shrink-0 min-h-11 px-2 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-[10px] font-black text-zinc-700 dark:text-zinc-200 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                    >
+                                        <option value="PERCENT">%</option>
+                                        <option value="AMOUNT">{form.currency}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="col-span-1">
                                 <label className={fieldLabelCls}>Currency</label>
-                                <select value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value as any }))} className={inputCls}>
+                                <select value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value as "PKR" | "USD" }))} className={inputCls}>
                                     <option value="PKR">PKR</option>
                                     <option value="USD">USD</option>
                                 </select>
                             </div>
-                            <div className="col-span-1 flex items-end">
-                                <button onClick={submit} disabled={saving} className={`w-full min-h-11 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 disabled:opacity-60 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-[0.98] ${form.type === "SELL" ? "bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/15" : "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/15"}`}>
-                                    {saving ? "Saving…" : <>{form.type === "SELL" ? <ArrowDownToLine className="w-3.5 h-3.5" strokeWidth={2.5} /> : <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />}{form.type === "SELL" ? "Sell" : "Add"}</>}
-                                </button>
-                            </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-white/5 flex items-center justify-end gap-2">
+                            <button onClick={submit} disabled={saving} className={`min-h-10 inline-flex items-center justify-center gap-1.5 px-4 disabled:opacity-60 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-[0.98] ${form.type === "SELL" ? "bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/15" : "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/15"}`}>
+                                {saving ? "Saving…" : <>{form.type === "SELL" ? <ArrowDownToLine className="w-3.5 h-3.5" strokeWidth={2.5} /> : <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />}{form.type === "SELL" ? "Sell" : "Add"}</>}
+                            </button>
+                            <button type="button" onClick={() => setShowAdd(false)} className="inline-flex items-center justify-center gap-1.5 min-h-10 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:text-zinc-800 dark:hover:text-white text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">
+                                <X className="w-3.5 h-3.5" strokeWidth={2.5} /> Close
+                            </button>
                         </div>
                     </div>
                 )}
@@ -743,9 +874,9 @@ export default function PortfolioPage() {
                                                         {...({
                                                             activeIndex: activeIdx ?? undefined,
                                                             activeShape: renderActiveSlice,
-                                                            onMouseEnter: (_: any, i: number) => setActiveIdx(i),
+                                                            onMouseEnter: (_: unknown, i: number) => setActiveIdx(i),
                                                             onMouseLeave: () => setActiveIdx(null),
-                                                        } as any)}
+                                                        } as Record<string, unknown>)}
                                                     >
                                                         {allocData.map((d, i) => <Cell key={i} fill={d.color} opacity={activeIdx == null || activeIdx === i ? 1 : 0.4} style={{ transition: "opacity .2s", cursor: "pointer" }} />)}
                                                     </Pie>
@@ -796,7 +927,7 @@ export default function PortfolioPage() {
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" vertical={false} />
                                             <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }} axisLine={false} tickLine={false} interval={0} angle={perfData.length > 6 ? -30 : 0} textAnchor={perfData.length > 6 ? "end" : "middle"} height={perfData.length > 6 ? 50 : 20} />
                                             <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={52} tickFormatter={(v) => compact(v)} />
-                                            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(148,163,184,0.08)" }} formatter={(v: any) => [signed(v as number), perfMetric === "day" ? "Day P/L" : "Total P/L"]} />
+                                            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(148,163,184,0.08)" }} formatter={(v: unknown) => [signed(Number(v)), perfMetric === "day" ? "Day P/L" : "Total P/L"]} />
                                             <Bar dataKey="pnl" radius={[6, 6, 0, 0]}>
                                                 {perfData.map((d, i) => <Cell key={i} fill={d.pnl >= 0 ? "#22c55e" : "#ef4444"} />)}
                                             </Bar>
@@ -813,7 +944,7 @@ export default function PortfolioPage() {
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" vertical={false} />
                                             <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} axisLine={false} tickLine={false} minTickGap={28} />
                                             <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={52} tickFormatter={(v) => compact(v)} />
-                                            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [fmt(v as number), "Capital Deployed"]} />
+                                            <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [fmt(Number(v)), "Capital Deployed"]} />
                                             <Area type="monotone" dataKey="invested" stroke="#3b82f6" strokeWidth={2} fill="url(#pf-grad)" />
                                         </AreaChart>
                                     </ResponsiveContainer>
@@ -1080,7 +1211,7 @@ export default function PortfolioPage() {
                                                     <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded ${typeBadge(t.assetType)}`}>{t.assetType}</span>
                                                 </div>
                                                 <p className="text-[9px] font-mono text-zinc-400 tabular-nums mt-1 truncate">
-                                                    {t.date} · {t.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })} @ {fmt(t.price, t.currency)}
+                                                    {t.date} · {t.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })} @ {fmt(t.price, t.currency)} · Fee {fmt(brokerageAmount(t), t.currency)}
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
@@ -1100,6 +1231,7 @@ export default function PortfolioPage() {
                                                 <th className="px-2 sm:px-4 py-3">Asset</th>
                                                 <th className="px-2 sm:px-4 py-3 text-right hidden md:table-cell">Qty</th>
                                                 <th className="px-2 sm:px-4 py-3 text-right hidden sm:table-cell">Price</th>
+                                                <th className="px-2 sm:px-4 py-3 text-right hidden lg:table-cell">Brokerage</th>
                                                 <th className="px-2 sm:px-4 py-3 text-right">Value</th>
                                                 <th className="px-2 sm:px-6 py-3"></th>
                                             </tr>
@@ -1115,6 +1247,7 @@ export default function PortfolioPage() {
                                                     </td>
                                                     <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden md:table-cell">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
                                                     <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell">{fmt(t.price, t.currency)}</td>
+                                                    <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500 hidden lg:table-cell">{fmt(brokerageAmount(t), t.currency)}</td>
                                                     <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums font-black">{fmt(t.quantity * t.price, t.currency)}</td>
                                                     <td className="px-2 sm:px-6 py-3 text-right"><button onClick={() => remove(t)} className="text-zinc-400 hover:text-red-500 text-sm px-2" title="Delete">✕</button></td>
                                                 </tr>
@@ -1128,6 +1261,7 @@ export default function PortfolioPage() {
                             <div className="px-4 sm:px-6 py-3 border-t border-zinc-100 dark:border-white/5 flex flex-wrap items-center justify-end gap-x-6 gap-y-1 text-[10px] font-black uppercase tracking-widest">
                                 <span className="text-zinc-400">Bought <span className="text-green-500">{fmt(ledger.filter(t => t.type === "BUY").reduce((a, t) => a + convert(t.quantity * t.price, t.currency, displayCur), 0))}</span></span>
                                 <span className="text-zinc-400">Sold <span className="text-red-500">{fmt(ledger.filter(t => t.type === "SELL").reduce((a, t) => a + convert(t.quantity * t.price, t.currency, displayCur), 0))}</span></span>
+                                <span className="text-zinc-400">Fees <span className="text-amber-500">{fmt(ledger.reduce((a, t) => a + convert(brokerageAmount(t), t.currency, displayCur), 0))}</span></span>
                             </div>
                         )}
                     </div>

@@ -125,7 +125,7 @@ export default function UniversalWatchlist() {
                 </select>
 
                 {/* Autocomplete */}
-                <div ref={boxRef} className="relative flex-1 min-w-[160px]">
+                <div ref={boxRef} className="relative flex-1 min-w-0 basis-[12rem]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" strokeWidth={2.5} />
                     <input
                         value={symbol}

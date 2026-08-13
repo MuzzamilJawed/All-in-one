@@ -17,8 +17,12 @@ export interface Txn {
     quantity: number;
     price: number;           // per-unit, in `currency`
     currency: "PKR" | "USD";
+    brokerage?: number;      // fee value, as a percentage or flat amount
+    brokerageMode?: BrokerageMode;
     note?: string;
 }
+
+export type BrokerageMode = "PERCENT" | "AMOUNT";
 
 const hasWindow = () => typeof window !== "undefined";
 const emit = () => { if (hasWindow()) window.dispatchEvent(new CustomEvent("portfolio")); };
@@ -33,6 +37,8 @@ const fromApi = (doc: any): Txn => ({
     quantity: Number(doc.quantity) || 0,
     price: Number(doc.price) || 0,
     currency: doc.currency,
+    brokerage: Number(doc.brokerage) || 0,
+    brokerageMode: doc.brokerageMode === "AMOUNT" ? "AMOUNT" : "PERCENT",
     note: doc.note || undefined,
 });
 
@@ -74,14 +80,16 @@ export async function deleteTxn(id: string): Promise<boolean> {
     }
 }
 
-export async function clearTxns(): Promise<boolean> {
+export async function clearTxns(): Promise<{ success: boolean; deleted: number }> {
     try {
         const res = await fetch("/api/portfolio", { method: "DELETE" });
         const json = await res.json();
-        if (json?.success) emit();
-        return !!json?.success;
+        const success = !!json?.success;
+        const deleted = Number(json?.data?.deleted) || 0;
+        if (success) emit();
+        return { success, deleted };
     } catch {
-        return false;
+        return { success: false, deleted: 0 };
     }
 }
 
@@ -138,6 +146,16 @@ export interface Derived {
     realized: { PKR: number; USD: number };
 }
 
+export function brokerageAmount(t: Pick<Txn, "quantity" | "price" | "brokerage" | "brokerageMode">, quantity = t.quantity): number {
+    const feeValue = Math.max(0, Number(t.brokerage) || 0);
+    const tradeQuantity = Math.max(0, Number(t.quantity) || 0);
+    const appliedQuantity = Math.max(0, Number(quantity) || 0);
+    if (t.brokerageMode === "AMOUNT") {
+        return tradeQuantity > 0 ? feeValue * Math.min(1, appliedQuantity / tradeQuantity) : 0;
+    }
+    return appliedQuantity * (Number(t.price) || 0) * feeValue / 100;
+}
+
 // Average-cost accounting, processed in chronological order.
 export function computeHoldings(txns: Txn[]): Derived {
     const sorted = [...txns].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
@@ -153,11 +171,11 @@ export function computeHoldings(txns: Txn[]): Derived {
 
         if (t.type === "BUY") {
             const newQty = h.quantity + qty;
-            h.avgCost = newQty > 0 ? (h.avgCost * h.quantity + price * qty) / newQty : 0;
+            h.avgCost = newQty > 0 ? (h.avgCost * h.quantity + price * qty + brokerageAmount(t)) / newQty : 0;
             h.quantity = newQty;
         } else {
             const sellQty = Math.min(qty, h.quantity);          // can't sell more than held
-            realized[t.currency] += (price - h.avgCost) * sellQty;
+            realized[t.currency] += (price - h.avgCost) * sellQty - brokerageAmount(t, sellQty);
             h.quantity -= sellQty;
         }
         book.set(key, h);
@@ -169,10 +187,11 @@ export function computeHoldings(txns: Txn[]): Derived {
 
 // CSV export of a set of transactions.
 export function txnsToCsv(txns: Txn[]): string {
-    const head = ["Date", "Type", "Asset", "Symbol", "Name", "Quantity", "Price", "Currency", "Value"];
+    const head = ["Date", "Type", "Asset", "Symbol", "Name", "Quantity", "Price", "Currency", "Brokerage", "Brokerage Mode", "Brokerage Fee", "Value"];
     const rows = txns.map(t => [
         t.date, t.type, t.assetType, t.symbol, (t.name || "").replace(/,/g, " "),
-        String(t.quantity), String(t.price), t.currency, String((Number(t.quantity) || 0) * (Number(t.price) || 0)),
+        String(t.quantity), String(t.price), t.currency, String(t.brokerage || 0), t.brokerageMode || "PERCENT",
+        String(brokerageAmount(t)), String((Number(t.quantity) || 0) * (Number(t.price) || 0)),
     ]);
     return [head, ...rows].map(r => r.join(",")).join("\n");
 }

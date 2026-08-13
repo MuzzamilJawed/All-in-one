@@ -12,6 +12,8 @@ export interface NormalizedTxn {
     quantity: number;
     price: number;
     currency: string;
+    brokerage: number;
+    brokerageMode: 'PERCENT' | 'AMOUNT';
     note?: string;
 }
 
@@ -19,6 +21,8 @@ export function normalizeTxn(body: any): NormalizedTxn | { error: string } {
     const symbol = String(body?.symbol || '').trim().toUpperCase();
     const quantity = Number(body?.quantity);
     const price = Number(body?.price);
+    const brokerage = body?.brokerage === '' || body?.brokerage == null ? 0 : Number(body.brokerage);
+    const brokerageMode = body?.brokerageMode === 'AMOUNT' ? 'AMOUNT' : 'PERCENT';
     const date = String(body?.date || '');
     const type = body?.type === 'SELL' ? 'SELL' : 'BUY';
 
@@ -28,6 +32,8 @@ export function normalizeTxn(body: any): NormalizedTxn | { error: string } {
     if (!CURRENCIES.includes(body?.currency)) return { error: 'Currency must be PKR or USD' };
     if (!Number.isFinite(quantity) || quantity <= 0) return { error: 'Quantity must be a positive number' };
     if (!Number.isFinite(price) || price <= 0) return { error: 'Price must be a positive number' };
+    if (!Number.isFinite(brokerage) || brokerage < 0) return { error: 'Brokerage must be zero or a positive number' };
+    if (brokerageMode === 'PERCENT' && brokerage > 100) return { error: 'Brokerage percentage cannot exceed 100' };
 
     return {
         date,
@@ -38,6 +44,8 @@ export function normalizeTxn(body: any): NormalizedTxn | { error: string } {
         quantity,
         price,
         currency: body.currency,
+        brokerage,
+        brokerageMode,
         note: body?.note ? String(body.note).slice(0, 300) : undefined,
     };
 }

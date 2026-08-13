@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '../../lib/mongodb';
 import Transaction from '../../models/Transaction';
 import { requireUser, fail } from '../../lib/apiAuth';
@@ -42,8 +43,12 @@ export async function DELETE() {
     if (!session) return response;
     try {
         await dbConnect();
-        const result = await Transaction.deleteMany({ userId: session.uid });
-        return NextResponse.json({ success: true, data: { deleted: result.deletedCount } });
+        if (!mongoose.isValidObjectId(session.uid)) {
+            return fail(new Error('Invalid account identifier'), 'Could not identify your account', 400);
+        }
+        const userId = new mongoose.Types.ObjectId(session.uid);
+        const result = await Transaction.deleteMany({ userId });
+        return NextResponse.json({ success: true, data: { deleted: result.deletedCount ?? 0 } });
     } catch (error) {
         console.error('[portfolio] DELETE all failed:', error);
         return fail(error, 'Failed to clear your portfolio');

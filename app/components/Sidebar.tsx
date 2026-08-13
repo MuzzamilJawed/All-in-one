@@ -13,7 +13,7 @@ import {
   LayoutDashboard, TrendingUp, Globe, ArrowRightLeft, Bitcoin, Gem, Fuel,
   Briefcase, Star, Wallet, Settings, ChevronsLeft, ChevronsRight, X,
   Sun, Moon, Monitor, CandlestickChart, LineChart, ChevronDown, ListFilter,
-  UserCircle, Users,
+  UserCircle, Users, ClipboardList,
 } from "lucide-react";
 
 const navigationGroups = [
@@ -58,7 +58,12 @@ const navigationGroups = [
   {
     title: "Management",
     items: [
-      { name: "Portfolio", href: "/portfolio", icon: Briefcase, module: "portfolio" },
+      {
+        name: "Portfolio", href: "/portfolio", icon: Briefcase, module: "portfolio",
+        children: [
+          { name: "Reports", href: "/portfolio/reports", icon: ClipboardList },
+        ],
+      },
       { name: "Watchlist", href: "/watchlist", icon: Star, module: "watchlist" },
       { name: "Expenses", href: "/expenses", icon: Wallet, module: "expenses" },
     ]
