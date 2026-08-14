@@ -527,47 +527,47 @@ function StocksContent() {
                 with the strip offset by a hardcoded 65px, which never matched the real
                 header height — leaving a slit that page content scrolled through. */}
             <div className="sticky top-0 z-40">
-            <header className="safe-top bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
-                <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
-                    <div>
-                        <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
-                            <CandlestickChart className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Market <span className="text-blue-500">Explorer</span>
-                        </h1>
-                        <p className="hidden sm:block text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Real-Time Terminal</p>
-                    </div>
-                </div>
-            </header>
-
-            {indices.length > 0 && (
-                <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-x-auto no-scrollbar shadow-sm">
-                    <div className="page-shell mx-auto px-4 sm:px-8 flex items-center gap-6 sm:gap-10">
-                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 border-r border-zinc-200 dark:border-white/10 pr-4 sm:pr-10">
-                            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
-                            <span className="text-[9px] sm:text-[11px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest italic whitespace-nowrap">Market Pulse</span>
+                <header className="safe-top bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-zinc-200 dark:border-white/5">
+                    <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
+                        <div>
+                            <h1 className="text-xl sm:text-3xl font-black tracking-tighter italic uppercase text-zinc-900 dark:text-white leading-none flex items-center gap-2.5">
+                                <CandlestickChart className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={2} /> Market <span className="text-blue-500">Explorer</span>
+                            </h1>
+                            <p className="hidden sm:block text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Real-Time Terminal</p>
                         </div>
-                        {indices.map(idx => {
-                            const isPos = idx.change >= 0;
-                            const isSelected = selectedIndex?.name === idx.name;
-                            return (
-                                <button
-                                    key={idx.name}
-                                    onClick={() => {
-                                        if (isSelected) { setSelectedIndex(null); setIndexFilter('all'); }
-                                        else { setSelectedIndex(idx); setIndexFilter(idx.name); }
-                                    }}
-                                    className={`flex items-center gap-3 flex-shrink-0 transition-all px-2 py-2 min-h-[34px] rounded-lg ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900'}`}
-                                >
-                                    <span className={`text-[10px] font-black transition-colors ${isSelected ? 'text-blue-600' : 'text-zinc-500 dark:text-zinc-400'}`}>{idx.name}</span>
-                                    <span className="text-xs font-mono font-black text-zinc-900 dark:text-zinc-50">{idx.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                    <span className={`text-[10px] font-bold ${isPos ? 'text-green-600' : 'text-red-600'}`}>
-                                        {isPos ? '▲' : '▼'}{Math.abs(idx.changePercent).toFixed(1)}%
-                                    </span>
-                                </button>
-                            );
-                        })}
                     </div>
-                </div>
-            )}
+                </header>
+
+                {indices.length > 0 && (
+                    <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-x-auto no-scrollbar shadow-sm">
+                        <div className="page-shell mx-auto px-4 sm:px-8 flex items-center gap-6 sm:gap-10">
+                            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 border-r border-zinc-200 dark:border-white/10 pr-4 sm:pr-10">
+                                <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+                                <span className="text-[9px] sm:text-[11px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest italic whitespace-nowrap">Market Pulse</span>
+                            </div>
+                            {indices.map(idx => {
+                                const isPos = idx.change >= 0;
+                                const isSelected = selectedIndex?.name === idx.name;
+                                return (
+                                    <button
+                                        key={idx.name}
+                                        onClick={() => {
+                                            if (isSelected) { setSelectedIndex(null); setIndexFilter('all'); }
+                                            else { setSelectedIndex(idx); setIndexFilter(idx.name); }
+                                        }}
+                                        className={`flex items-center gap-3 flex-shrink-0 transition-all px-2 py-2 min-h-[34px] rounded-lg ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900'}`}
+                                    >
+                                        <span className={`text-[10px] font-black transition-colors ${isSelected ? 'text-blue-600' : 'text-zinc-500 dark:text-zinc-400'}`}>{idx.name}</span>
+                                        <span className="text-xs font-mono font-black text-zinc-900 dark:text-zinc-50">{idx.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                        <span className={`text-[10px] font-bold ${isPos ? 'text-green-600' : 'text-red-600'}`}>
+                                            {isPos ? '▲' : '▼'}{Math.abs(idx.changePercent).toFixed(1)}%
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {marketStats && (

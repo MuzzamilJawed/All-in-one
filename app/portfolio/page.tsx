@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties } from "react";
-import { Briefcase, Download, RotateCcw, BarChart3, ChevronDown, Grid3x3, Globe, Bitcoin, ArrowRightLeft, Zap, ArrowDownToLine, Upload, Plus, X, Trash2 } from "lucide-react";
+import { Briefcase, Download, RotateCcw, BarChart3, ChevronDown, Grid3x3, Globe, Bitcoin, ArrowRightLeft, Zap, ArrowDownToLine, Upload, Plus, X, Trash2, MoreHorizontal } from "lucide-react";
 import {
     PieChart, Pie, Cell, Sector, BarChart, Bar, AreaChart, Area,
     XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -164,6 +164,7 @@ export default function PortfolioPage() {
     const [activeIdx, setActiveIdx] = useState<number | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<AssetType | "ALL">("ALL");
     const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+    const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
     const filterDropdownRef = useRef<HTMLDivElement>(null);
     const uploadInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
@@ -494,8 +495,8 @@ export default function PortfolioPage() {
                 <div className="page-shell mx-auto pl-16 pr-4 sm:pr-8 lg:pl-8 py-3 sm:py-6 flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center gap-3">
                     {/* Currency rides the title row — same top-right placement as every
                         other market screen — leaving the row below to the actions. */}
-                    <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
-                        <div className="min-w-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3 w-full sm:w-auto">
+                        <div className="min-w-0 flex-1 max-[360px]:basis-full">
                             {/* Sharing the row with the currency pill leaves ~220px here,
                                 which "Portfolio Ledger" overruns — FitText shrinks it to
                                 fit instead of letting it slide under the pill. */}
@@ -508,10 +509,10 @@ export default function PortfolioPage() {
                                 it wrap to a second line instead. */}
                             <p className="text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.15em] mt-1 leading-relaxed">Multi-Asset Holdings · Profit &amp; Loss</p>
                         </div>
-                        <div className="shrink-0"><CurrencyToggle /></div>
+                        <div className="shrink-0 max-[360px]:w-full max-[360px]:flex max-[360px]:justify-end"><CurrencyToggle /></div>
                     </div>
-                    <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
-                        <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center justify-start sm:justify-end gap-2 w-full sm:w-auto">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
                             {/* Category Filter Dropdown */}
                             <div ref={filterDropdownRef} className="relative">
                                 <button
@@ -533,7 +534,7 @@ export default function PortfolioPage() {
                                     <ChevronDown className={`w-3.5 h-3.5 transition-transform ${filterDropdownOpen ? "rotate-180" : ""}`} strokeWidth={2} />
                                 </button>
                                 {filterDropdownOpen && (
-                                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-white/10 shadow-lg z-50 overflow-hidden">
+                                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-[min(14rem,calc(100vw-2rem))] bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-white/10 shadow-lg z-50 overflow-hidden">
                                         <div className="p-2 space-y-1">
                                             <button
                                                 onClick={() => {
@@ -588,42 +589,81 @@ export default function PortfolioPage() {
                             <button
                                 onClick={openAddTrade}
                                 disabled={showAdd}
-                                className="whitespace-nowrap inline-flex items-center justify-center px-4 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                                className="whitespace-nowrap inline-flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-4 max-[360px]:w-10 max-[360px]:flex-none max-[360px]:px-0 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
                             >
-                                + Add Trade
+                                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                <span className="max-[360px]:hidden">Add Trade</span>
                             </button>
                             <input ref={uploadInputRef} type="file" accept=".csv,text/csv" onChange={handleUpload} className="hidden" />
-                            <button
-                                onClick={() => uploadInputRef.current?.click()}
-                                disabled={uploading}
-                                aria-label="Upload portfolio trades from CSV"
-                                title="Upload portfolio trades from CSV"
-                                className="shrink-0 inline-flex items-center justify-center gap-1.5 w-10 sm:w-auto h-10 sm:px-4 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-50 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-emerald-500/20 transition-all active:scale-95"
-                            >
-                                <Upload className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" strokeWidth={2} />
-                                <span className="hidden sm:inline">{uploading ? "Validating" : "Upload CSV"}</span>
-                            </button>
-                            {/* Icon-only on phones — the label is what overflowed the row. */}
-                            <button
-                                onClick={download}
-                                disabled={ledger.length === 0}
-                                aria-label="Download trades as CSV"
-                                title="Download trades as CSV"
-                                className="shrink-0 inline-flex items-center justify-center gap-1.5 w-10 sm:w-auto h-10 sm:px-4 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-zinc-200 dark:border-white/10 transition-all active:scale-95"
-                            >
-                                <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" strokeWidth={2} />
-                                <span className="hidden sm:inline">Download</span>
-                            </button>
-                            <button
-                                onClick={resetPortfolio}
-                                disabled={txns.length === 0 || resetting}
-                                aria-label="Reset portfolio records"
-                                title="Delete all portfolio records"
-                                className="shrink-0 inline-flex items-center justify-center gap-1.5 w-10 sm:w-auto h-10 sm:px-4 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-500/20 transition-all active:scale-95"
-                            >
-                                <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" strokeWidth={2} />
-                                <span className="hidden sm:inline">{resetting ? "Resetting" : "Reset"}</span>
-                            </button>
+                            <div className="relative sm:hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setActionsMenuOpen(open => !open)}
+                                    aria-label="More portfolio actions"
+                                    aria-expanded={actionsMenuOpen}
+                                    title="More portfolio actions"
+                                    className={`w-10 h-10 inline-flex items-center justify-center rounded-xl border transition-all active:scale-95 ${actionsMenuOpen ? "bg-zinc-200 dark:bg-white/15 border-zinc-300 dark:border-white/20 text-zinc-900 dark:text-white" : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500"}`}
+                                >
+                                    <MoreHorizontal className="w-4 h-4" strokeWidth={2.5} />
+                                </button>
+                                {actionsMenuOpen && (
+                                    <div className="absolute right-0 top-12 z-50 w-52 rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 p-1.5 shadow-2xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setActionsMenuOpen(false); uploadInputRef.current?.click(); }}
+                                            disabled={uploading}
+                                            className="w-full min-h-11 inline-flex items-center gap-3 rounded-xl px-3 text-left text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
+                                        >
+                                            <Upload className="w-4 h-4 shrink-0" strokeWidth={2} /> {uploading ? "Validating" : "Upload CSV"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setActionsMenuOpen(false); download(); }}
+                                            disabled={ledger.length === 0}
+                                            className="w-full min-h-11 inline-flex items-center gap-3 rounded-xl px-3 text-left text-[10px] font-black uppercase tracking-widest text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 disabled:opacity-40"
+                                        >
+                                            <Download className="w-4 h-4 shrink-0" strokeWidth={2} /> Download CSV
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setActionsMenuOpen(false); resetPortfolio(); }}
+                                            disabled={txns.length === 0 || resetting}
+                                            className="w-full min-h-11 inline-flex items-center gap-3 rounded-xl px-3 text-left text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 hover:bg-red-500/10 disabled:opacity-40"
+                                        >
+                                            <Trash2 className="w-4 h-4 shrink-0" strokeWidth={2} /> {resetting ? "Resetting" : "Reset portfolio"}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="hidden sm:flex items-center gap-2">
+                                <button
+                                    onClick={() => uploadInputRef.current?.click()}
+                                    disabled={uploading}
+                                    aria-label="Upload portfolio trades from CSV"
+                                    title="Upload portfolio trades from CSV"
+                                    className="shrink-0 inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-50 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-emerald-500/20 transition-all active:scale-95"
+                                >
+                                    <Upload className="w-3.5 h-3.5 shrink-0" strokeWidth={2} /> {uploading ? "Validating" : "Upload CSV"}
+                                </button>
+                                <button
+                                    onClick={download}
+                                    disabled={ledger.length === 0}
+                                    aria-label="Download trades as CSV"
+                                    title="Download trades as CSV"
+                                    className="shrink-0 inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 disabled:opacity-40 text-zinc-700 dark:text-zinc-300 text-[10px] font-black uppercase tracking-widest rounded-xl border border-zinc-200 dark:border-white/10 transition-all active:scale-95"
+                                >
+                                    <Download className="w-3.5 h-3.5 shrink-0" strokeWidth={2} /> Download
+                                </button>
+                                <button
+                                    onClick={resetPortfolio}
+                                    disabled={txns.length === 0 || resetting}
+                                    aria-label="Reset portfolio records"
+                                    title="Delete all portfolio records"
+                                    className="shrink-0 inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-500/20 transition-all active:scale-95"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5 shrink-0" strokeWidth={2} /> {resetting ? "Resetting" : "Reset"}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -641,7 +681,7 @@ export default function PortfolioPage() {
 
 
                 {/* Summary cards — day + total both shown */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 sm:gap-4">
                     <div className="col-span-2 grid grid-cols-2 gap-3 sm:gap-4 rounded-2xl sm:rounded-[1.75rem] bg-blue-500/[0.04] dark:bg-blue-500/[0.06] border border-blue-500/15 p-2 sm:p-3">
                         <div className="rounded-xl sm:rounded-2xl bg-white dark:bg-zinc-900/70 p-3 sm:p-4 border border-zinc-200 dark:border-white/10 shadow-sm min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-2">
@@ -989,7 +1029,6 @@ export default function PortfolioPage() {
                                                     </div>
                                                 </div>
                                                 <div className="text-right shrink-0">
-                                                    <div className="text-[8px] font-black uppercase tracking-widest text-zinc-400 mb-1">Last price</div>
                                                     <div className={`text-sm font-black font-mono tabular-nums leading-none ${r.current == null ? "text-zinc-400" : r.current >= r.avgCost ? "text-green-500" : "text-red-500"}`}>
                                                         {fmt(r.current, r.currency)}
                                                     </div>
@@ -1002,9 +1041,6 @@ export default function PortfolioPage() {
                                                             {r.dayPct >= 0 ? "▲" : "▼"} {Math.abs(r.dayPct).toFixed(2)}%
                                                         </div>
                                                     )}
-                                                    <div className="text-[9px] text-zinc-400 font-bold tabular-nums mt-0.5">
-                                                        {r.quantity.toLocaleString(undefined, { maximumFractionDigits: 6 })} units
-                                                    </div>
                                                 </div>
                                             </div>
 

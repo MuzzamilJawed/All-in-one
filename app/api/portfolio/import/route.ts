@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
-import dbConnect from '../../../lib/mongodb';
-import Transaction from '../../../models/Transaction';
-import { requireUser, fail } from '../../../lib/apiAuth';
-import { normalizeTxn } from '../shape';
+import { NextResponse } from "next/server";
+import dbConnect from "../../../lib/mongodb";
+import Transaction from "../../../models/Transaction";
+import { requireUser, fail } from "../../../lib/apiAuth";
+import { normalizeTxn } from "../shape";
 
 const MAX_IMPORT = 5000;
 
@@ -10,37 +10,52 @@ const MAX_IMPORT = 5000;
 // localStorage ledger signs in for the first time. Malformed rows are skipped
 // rather than failing the whole import.
 export async function POST(request: Request) {
-    const { session, response } = await requireUser();
-    if (!session) return response;
-    try {
-        await dbConnect();
-        const body = await request.json();
-        const rows = Array.isArray(body?.txns) ? body.txns.slice(0, MAX_IMPORT) : [];
-        const existing = await Transaction.find({ userId: session.uid })
-            .select('assetType symbol currency quantity')
-            .lean();
-        const seen = new Set(existing.map(row => `${row.assetType}:${String(row.symbol).toUpperCase()}:${row.currency}:${Number(row.quantity)}`));
+  const { session, response } = await requireUser();
+  if (!session) return response;
+  try {
+    await dbConnect();
+    const body = await request.json();
+    const rows = Array.isArray(body?.txns)
+      ? body.txns.slice(0, MAX_IMPORT)
+      : [];
+    const existing = await Transaction.find({ userId: session.uid })
+      .select("assetType symbol currency quantity")
+      .lean();
+    const seen = new Set(
+      existing.map(
+        (row) =>
+          `${row.assetType}:${String(row.symbol).toUpperCase()}:${
+            row.currency
+          }:${Number(row.quantity)}`,
+      ),
+    );
 
-        const docs = rows
-            .map(normalizeTxn)
-            .filter((t: any) => !('error' in t))
-            .filter((t: any) => {
-                const key = `${t.assetType}:${String(t.symbol).toUpperCase()}:${t.currency}:${Number(t.quantity)}`;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            })
-            .map((t: any) => ({ ...t, userId: session.uid }));
+    const docs = rows
+      .map(normalizeTxn)
+      .filter((t: any) => !("error" in t))
+      .filter((t: any) => {
+        const key = `${t.assetType}:${String(t.symbol).toUpperCase()}:${
+          t.currency
+        }:${Number(t.quantity)}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((t: any) => ({ ...t, userId: session.uid }));
 
-        if (docs.length === 0) return NextResponse.json({ success: true, data: { imported: 0, skipped: rows.length } });
+    if (docs.length === 0)
+      return NextResponse.json({
+        success: true,
+        data: { imported: 0, skipped: rows.length },
+      });
 
-        await Transaction.insertMany(docs);
-        return NextResponse.json({
-            success: true,
-            data: { imported: docs.length, skipped: rows.length - docs.length },
-        });
-    } catch (error) {
-        console.error('[portfolio] import failed:', error);
-        return fail(error, 'Failed to import your trades');
-    }
+    await Transaction.insertMany(docs);
+    return NextResponse.json({
+      success: true,
+      data: { imported: docs.length, skipped: rows.length - docs.length },
+    });
+  } catch (error) {
+    console.error("[portfolio] import failed:", error);
+    return fail(error, "Failed to import your trades");
+  }
 }
