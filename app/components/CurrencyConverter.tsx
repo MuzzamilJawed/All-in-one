@@ -2,16 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { ArrowRight, ArrowRightLeft, ChevronDown, CircleDollarSign, X } from "lucide-react";
 
 // er-api gives rates as "units of CODE per 1 USD". Converting A→B:
 //   result = amount * rates[B] / rates[A]
 const PRIORITY = ["USD", "EUR", "GBP", "PKR", "JPY", "AUD", "CAD", "CHF", "CNY", "SAR", "AED", "INR"];
-
-const flagFor = (code: string): string => {
-    const cc = (code || "").slice(0, 2).toUpperCase();
-    if (!/^[A-Z]{2}$/.test(cc)) return "$$";
-    return String.fromCodePoint(...cc.split("").map(c => 0x1f1e6 + c.charCodeAt(0) - 65));
-};
 
 let _dn: Intl.DisplayNames | null = null;
 const nameOf = (code: string): string => {
@@ -72,10 +67,10 @@ export default function CurrencyConverter() {
             >
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">⇄</span>
+                        <span className="w-7 h-7 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center"><ArrowRightLeft className="w-4 h-4" strokeWidth={2} /></span>
                         <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-900 dark:text-white">Converter</h2>
                     </div>
-                    <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest inline-flex items-center gap-1 group-hover:gap-2 transition-all">Open <span>→</span></span>
+                    <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest inline-flex items-center gap-1 group-hover:gap-2 transition-all">Open <ArrowRight className="w-3 h-3" strokeWidth={2.5} /></span>
                 </div>
                 <div className="space-y-1.5">
                     {quick.map(q => (
@@ -94,13 +89,13 @@ export default function CurrencyConverter() {
                     <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[1.75rem] sm:rounded-[2rem] border border-zinc-200 dark:border-white/10 shadow-2xl p-5 sm:p-6 space-y-5 animate-in zoom-in-95 fade-in duration-200">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
-                                <span className="w-9 h-9 rounded-xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">⇄</span>
+                                <span className="w-9 h-9 rounded-xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center"><ArrowRightLeft className="w-5 h-5" strokeWidth={2} /></span>
                                 <div>
                                     <h3 className="text-sm font-black uppercase italic tracking-tight text-zinc-900 dark:text-white leading-none">Currency Converter</h3>
                                     <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Live cross rates</p>
                                 </div>
                             </div>
-                            <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors">✕</button>
+                            <button onClick={() => setOpen(false)} aria-label="Close converter" className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors"><X className="w-4 h-4" strokeWidth={2.5} /></button>
                         </div>
 
                         {/* Amount */}
@@ -118,7 +113,7 @@ export default function CurrencyConverter() {
                         {/* From / swap / To */}
                         <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
                             <CurrencySelect label="From" value={from} onChange={setFrom} codes={codes} />
-                            <button onClick={swap} title="Swap" className="mb-1 w-9 h-9 shrink-0 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-all shadow-lg shadow-blue-600/20">⇄</button>
+                            <button onClick={swap} title="Swap" aria-label="Swap currencies" className="mb-1 w-9 h-9 shrink-0 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-all shadow-lg shadow-blue-600/20"><ArrowRightLeft className="w-4 h-4" strokeWidth={2.5} /></button>
                             <CurrencySelect label="To" value={to} onChange={setTo} codes={codes} />
                         </div>
 
@@ -149,7 +144,7 @@ function CurrencySelect({ label, value, onChange, codes }: { label: string; valu
         <div className="min-w-0">
             <label className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{label}</label>
             <div className="relative mt-1.5">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base pointer-events-none">{flagFor(value)}</span>
+                <CircleDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" strokeWidth={2} />
                 <select
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
@@ -157,7 +152,7 @@ function CurrencySelect({ label, value, onChange, codes }: { label: string; valu
                 >
                     {codes.map(c => <option key={c} value={c}>{c} — {nameOf(c)}</option>)}
                 </select>
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 text-[10px] pointer-events-none">▼</span>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" strokeWidth={2.5} />
             </div>
         </div>
     );

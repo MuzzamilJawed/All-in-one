@@ -1,6 +1,6 @@
 "use client";
 
-import { Fuel, AlertTriangle, Award, TrendingDown, Search, Bell, LineChart } from "lucide-react";
+import { Fuel, AlertTriangle, Award, TrendingDown, Search, Bell, LineChart, X } from "lucide-react";
 
 import PageSkeleton from "../components/PageSkeleton";
 
@@ -225,7 +225,7 @@ export default function OilPage() {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-clip">
       {/* Header */}
       <div className="safe-top sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
         <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 page-shell mx-auto">
@@ -518,7 +518,7 @@ export default function OilPage() {
                     <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${al.triggered ? 'bg-red-500 text-white' : 'bg-blue-500/10 text-blue-500'}`}>
                       {al.triggered ? 'Triggered' : 'Active'}
                     </span>
-                    <button onClick={() => handleRemoveAlert(al.id)} className="w-6 h-6 rounded-lg flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-500/10 text-[11px] transition-colors" title="Remove alert">✕</button>
+                    <button onClick={() => handleRemoveAlert(al.id)} className="w-6 h-6 rounded-lg flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-500/10 text-[11px] transition-colors" title="Remove alert" aria-label="Remove alert"><X className="w-3.5 h-3.5" strokeWidth={2.5} /></button>
                   </div>
                 </div>
               ))}

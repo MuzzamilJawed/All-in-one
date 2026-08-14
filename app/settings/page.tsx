@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings } from "lucide-react";
+import { Check, Settings } from "lucide-react";
 
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
@@ -247,7 +247,7 @@ export default function SettingsPage() {
                 onClick={handleSave}
                 className={`flex-1 py-3 px-6 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg ${saved ? 'bg-green-500 text-white shadow-green-500/20' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20 hover:scale-[1.02] active:scale-95'}`}
               >
-                {saved ? '✓ Saved' : 'Save Settings'}
+                {saved ? <><Check className="inline-block w-4 h-4 mr-1" strokeWidth={3} /> Saved</> : 'Save Settings'}
               </button>
               <button
                 onClick={handleReset}

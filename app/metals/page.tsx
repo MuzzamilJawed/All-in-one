@@ -1,8 +1,7 @@
 "use client";
 
-import { Gem, AlertTriangle, Award, Circle } from "lucide-react";
+import { Gem, AlertTriangle, Award, Circle, X } from "lucide-react";
 
-import PriceCard from "../components/PriceCard";
 import MetalStatCard from "../components/MetalStatCard";
 import PageSkeleton from "../components/PageSkeleton";
 import { useState, useEffect, useCallback } from "react";
@@ -43,15 +42,6 @@ export default function MetalsPage() {
   const [timeframe, setTimeframe] = useState("1d");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [metalPrices, setMetalPrices] = useState([
-    { title: "Gold (24K) - Per Gram", usdPrice: undefined, pkrPrice: undefined, change: 0, changePercent: 0, lastUpdated: "", isLoading: true },
-    { title: "Gold (24K) - Per Tola", usdPrice: undefined as number | undefined, pkrPrice: undefined as number | undefined, change: 0, changePercent: 0, lastUpdated: "", isLoading: true },
-    { title: "Gold (24K) - Per Ounce", usdPrice: undefined, pkrPrice: undefined, change: 0, changePercent: 0, lastUpdated: "", isLoading: true },
-    { title: "Silver - Per Tola", usdPrice: undefined, pkrPrice: undefined, change: 0, changePercent: 0, lastUpdated: "", isLoading: true },
-    { title: "Silver - Per Ounce", usdPrice: undefined, pkrPrice: undefined, change: 0, changePercent: 0, lastUpdated: "", isLoading: true },
-    { title: "Silver - Per Kilogram", usdPrice: undefined, pkrPrice: undefined, change: 0, changePercent: 0, lastUpdated: "", isLoading: true },
-  ]);
-
   const [caratPrices, setCaratPrices] = useState<any[]>([]);
   const [goldCandles, setGoldCandles] = useState<any[]>([]);
   const [silverCandles, setSilverCandles] = useState<any[]>([]);
@@ -94,47 +84,6 @@ export default function MetalsPage() {
       if (!hasValidData && isManual) {
         setError("Could not fetch price data from all sources");
       }
-
-      const updatedPrices = [
-        {
-          title: "Gold (24K) - Gram",
-          usdPrice: gold?.gram24k?.usdPrice,
-          pkrPrice: gold?.gram24k?.pkrPrice,
-          change: gold?.gram24k?.change ?? 0,
-          changePercent: gold?.gram24k?.changePercent ?? 0,
-          lastUpdated: new Date().toLocaleString(),
-          isLoading: false,
-        },
-        {
-          title: "Gold (24K) - Tola",
-          usdPrice: gold?.tola24k?.usdPrice,
-          pkrPrice: gold?.tola24k?.pkrPrice,
-          change: gold?.tola24k?.change ?? 0,
-          changePercent: gold?.tola24k?.changePercent ?? 0,
-          lastUpdated: new Date().toLocaleString(),
-          isLoading: false,
-        },
-        {
-          title: "Silver - Tola",
-          usdPrice: silver?.tola?.usdPrice,
-          pkrPrice: silver?.tola?.pkrPrice,
-          change: silver?.tola?.change ?? 0,
-          changePercent: silver?.tola?.changePercent ?? 0,
-          lastUpdated: new Date().toLocaleString(),
-          isLoading: false,
-        },
-        {
-          title: "Silver - Ounce",
-          usdPrice: silver?.ounce?.usdPrice,
-          pkrPrice: silver?.ounce?.pkrPrice,
-          change: silver?.ounce?.change ?? 0,
-          changePercent: silver?.ounce?.changePercent ?? 0,
-          lastUpdated: new Date().toLocaleString(),
-          isLoading: false,
-        },
-      ];
-
-      setMetalPrices(updatedPrices);
 
       // Update Carat Prices
       if (gold?.tola24k?.pkrPrice) {
@@ -494,7 +443,7 @@ export default function MetalsPage() {
   if (loading && !rawMarketData) return <PageSkeleton variant="metals" />;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black selection:bg-blue-500/30 overflow-x-clip">
       <div className="safe-top sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm w-full">
         <div className="pl-16 pr-4 sm:pr-8 lg:pl-8 py-4 sm:py-6 page-shell mx-auto">
           <div className="flex flex-row justify-between items-center gap-3 sm:gap-6">
@@ -524,20 +473,13 @@ export default function MetalsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 items-stretch mb-6">
-          {metalPrices
-            .map((metal) => (
-              <PriceCard key={metal.title} {...metal} />
-            ))}
-        </div>
-
         {/* 52-week range + price-target alerts (sourced in PKR, shown in the active currency) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
           <MetalStatCard
             metal="GOLD"
             label="Gold 24K"
             icon="gold"
-            unitLabel="per tola"
+            baseUnit="Tola"
             currentPrice={rawMarketData?.gold?.tola24k?.pkrPrice}
             change={rawMarketData?.gold?.tola24k?.change}
             changePercent={rawMarketData?.gold?.tola24k?.changePercent}
@@ -550,7 +492,7 @@ export default function MetalsPage() {
             metal="SILVER"
             label="Silver 999"
             icon="silver"
-            unitLabel="per ounce"
+            baseUnit="Ounce"
             currentPrice={rawMarketData?.silver?.ounce?.pkrPrice}
             change={rawMarketData?.silver?.ounce?.change}
             changePercent={rawMarketData?.silver?.ounce?.changePercent}
@@ -589,7 +531,7 @@ export default function MetalsPage() {
             <div className="absolute inset-0 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => setShowMore(false)}></div>
             <div className="relative bg-white dark:bg-[#050505] rounded-2xl sm:rounded-[3rem] p-5 sm:p-8 md:p-12 shadow-2xl border border-zinc-200 dark:border-white/5 w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-300">
               <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
-              <button onClick={() => setShowMore(false)} className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors text-zinc-500 dark:text-zinc-400 z-20">✕</button>
+              <button onClick={() => setShowMore(false)} aria-label="Close weight calculator" className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors text-zinc-500 dark:text-zinc-400 z-20"><X className="w-4 h-4" strokeWidth={2.5} /></button>
 
               <div className="relative z-10">
                 <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 uppercase italic tracking-tighter mb-6 sm:mb-12 flex items-center gap-3">
@@ -823,7 +765,7 @@ export default function MetalsPage() {
                       onClick={() => setShowPurity(false)}
                       className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors text-zinc-500 dark:text-zinc-400"
                     >
-                      ✕
+                      <X className="w-4 h-4" strokeWidth={2.5} />
                     </button>
                   </div>
                 </div>

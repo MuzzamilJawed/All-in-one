@@ -329,7 +329,7 @@ export default function WatchlistPage() {
                     className="absolute -top-2 -right-2 z-50 bg-white dark:bg-zinc-800 text-red-500 rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-xl border border-zinc-200 dark:border-zinc-700 opacity-100 sm:opacity-0 sm:group-hover/wrapper:opacity-100 transition-all hover:bg-red-50"
                     title="Remove from Watchlist"
                   >
-                    ✕
+                    <X className="w-4 h-4" strokeWidth={2.5} />
                   </button>
                   {item.kind === 'stock' ? (
                     <StockCard

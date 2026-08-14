@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, BarChart3, Target, Bell } from "lucide-react";
+import { ArrowLeft, BarChart3, Target, Bell, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from 'next/dynamic';
 const TradingChart = dynamic(() => import('../../components/TradingChart'), { ssr: false });
@@ -368,7 +368,7 @@ export default function OilDetailPage() {
                                         <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${al.triggered ? 'bg-red-500 text-white' : 'bg-blue-500/10 text-blue-500'}`}>
                                             {al.triggered ? 'Triggered' : 'Active'}
                                         </span>
-                                        <button onClick={() => handleRemoveAlert(al.id)} className="w-6 h-6 rounded-lg flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-500/10 text-[11px] transition-colors" title="Remove alert">✕</button>
+                                        <button onClick={() => handleRemoveAlert(al.id)} className="w-6 h-6 rounded-lg flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-500/10 text-[11px] transition-colors" title="Remove alert" aria-label="Remove alert"><X className="w-3.5 h-3.5" strokeWidth={2.5} /></button>
                                     </div>
                                 </div>
                             ))}

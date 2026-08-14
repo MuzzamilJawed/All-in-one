@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Target, Medal, Gem, Trash2 } from "lucide-react";
+import { Target, Medal, Gem, Trash2, X } from "lucide-react";
 import { dayRangePosition } from "../lib/stockSignals";
 import { getMetalTarget, setMetalTarget, type MetalTarget } from "../lib/stockPrefs";
 import { useCurrency } from "../context/CurrencyContext";
@@ -12,7 +12,7 @@ interface MetalStatCardProps {
     metal: "GOLD" | "SILVER";
     label: string;
     icon: string;
-    unitLabel: string;        // e.g. "per tola", "per ounce"
+    baseUnit: MetalUnit;      // unit used by currentPrice and stored targets
     currentPrice?: number;    // PKR
     change?: number;          // PKR
     changePercent?: number;
@@ -23,8 +23,24 @@ interface MetalStatCardProps {
     pkrPerUsd?: number;
 }
 
+type MetalUnit = "Gram" | "Tola" | "Ounce" | "Kg";
+
+const UNIT_GRAMS: Record<MetalUnit, number> = {
+    Gram: 1,
+    Tola: 11.6638,
+    Ounce: 31.1035,
+    Kg: 1000,
+};
+
+const UNIT_LABELS: Record<MetalUnit, string> = {
+    Gram: "gm",
+    Tola: "tola",
+    Ounce: "ounce",
+    Kg: "kg",
+};
+
 export default function MetalStatCard({
-    metal, label, unitLabel, currentPrice, change = 0, changePercent = 0, low52, high52, accent, pkrPerUsd,
+    metal, label, baseUnit, currentPrice, change = 0, changePercent = 0, low52, high52, accent, pkrPerUsd,
 }: MetalStatCardProps) {
     // Every figure arrives in PKR; targets are stored in PKR too. `fx` scales
     // PKR into whichever currency the user is viewing.
@@ -36,6 +52,7 @@ export default function MetalStatCard({
     const [target, setTargetState] = useState<MetalTarget | null>(null);
     const [editing, setEditing] = useState(false);
     const [input, setInput] = useState("");
+    const [selectedUnit, setSelectedUnit] = useState<MetalUnit>(baseUnit);
 
     useEffect(() => {
         const load = () => setTargetState(getMetalTarget(metal));
@@ -46,6 +63,10 @@ export default function MetalStatCard({
 
     const isPos = (change || 0) >= 0;
     const rangePos = dayRangePosition(low52 ?? undefined, high52 ?? undefined, currentPrice);
+    const unitRatio = UNIT_GRAMS[selectedUnit] / UNIT_GRAMS[baseUnit];
+    const toSelectedUnit = (value?: number | null) => value == null ? null : value * unitRatio;
+    const selectedPrice = toSelectedUnit(currentPrice);
+    const selectedChange = toSelectedUnit(change);
 
     // Target status
     let hit = false, awayPct: number | null = null;
@@ -55,15 +76,16 @@ export default function MetalStatCard({
     }
 
     const save = () => {
-        // The input is typed in the displayed currency — store it back in PKR.
+        // Targets stay normalized to the feed's base unit while the editor follows the selected unit.
         const v = parseFloat(input.replace(/,/g, ""));
-        setMetalTarget(metal, Number.isFinite(v) && v > 0 ? v / fx : null, currentPrice || 0);
+        const baseValue = Number.isFinite(v) && v > 0 ? (v / fx) / unitRatio : null;
+        setMetalTarget(metal, baseValue, currentPrice || 0);
         setEditing(false);
     };
 
     const fmt = (n?: number | null) =>
         n == null ? "—" : n.toLocaleString(undefined, { maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0 });
-    const fmtPkr = (n?: number | null) => fmt(show(n));
+    const fmtPkr = (n?: number | null) => fmt(show(toSelectedUnit(n)));
 
     return (
         <div className={`rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 text-white relative overflow-hidden bg-gradient-to-br ${accent} shadow-xl`}>
@@ -77,15 +99,24 @@ export default function MetalStatCard({
                             : <Gem className="w-5 h-5 shrink-0" strokeWidth={2} />}
                         <div className="min-w-0">
                             <h3 className="text-sm font-black uppercase italic tracking-tighter leading-none">{label}</h3>
-                            <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest mt-0.5">{unitLabel}</p>
+                            <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest mt-0.5">per {UNIT_LABELS[selectedUnit]}</p>
                         </div>
                     </div>
 
-                    {/* The price target sits in the header's spare space rather than in a
-                        row of its own — on a phone that row was pure card height. */}
-                    {!editing && (target ? (
+                    <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
+                        <label className="sr-only" htmlFor={`${metal.toLowerCase()}-unit`}>Price unit</label>
+                        <select
+                            id={`${metal.toLowerCase()}-unit`}
+                            value={selectedUnit}
+                            onChange={(event) => setSelectedUnit(event.target.value as MetalUnit)}
+                            aria-label={`${label} price unit`}
+                            className="h-8 max-w-[5.75rem] rounded-lg border border-white/20 bg-white/15 px-2 text-[9px] font-black uppercase tracking-widest text-white outline-none focus:ring-2 focus:ring-white/40"
+                        >
+                            {(Object.keys(UNIT_LABELS) as MetalUnit[]).map(unit => <option key={unit} value={unit} className="text-zinc-900">{UNIT_LABELS[unit]}</option>)}
+                        </select>
+                        {!editing && (target ? (
                         <button
-                            onClick={() => { setInput(String(Number(((target.value * fx)).toFixed(2)))); setEditing(true); }}
+                            onClick={() => { setInput(String(Number(((show(toSelectedUnit(target.value)) ?? 0)).toFixed(2)))); setEditing(true); }}
                             title={hit ? "Target reached — tap to edit" : "Tap to edit your price target"}
                             className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[32px] rounded-full text-[9px] font-black uppercase tracking-widest transition-colors ${hit
                                 ? "bg-white text-emerald-600 animate-pulse"
@@ -102,7 +133,7 @@ export default function MetalStatCard({
                                 </>
                             )}
                         </button>
-                    ) : (
+                        ) : (
                         <button
                             onClick={() => { setInput(""); setEditing(true); }}
                             title="Set a price target"
@@ -110,18 +141,20 @@ export default function MetalStatCard({
                         >
                             <Target className="w-3 h-3 shrink-0" strokeWidth={2} /> Set target
                         </button>
-                    ))}
+                        ))}
+                    </div>
                 </div>
 
                 <div className="flex items-end justify-between gap-2 mb-4">
                     <div className="min-w-0 flex-1">
                         <FitText className="text-2xl sm:text-4xl font-black font-mono tracking-tighter leading-none">
-                            <span className="text-sm sm:text-lg font-medium mr-1 text-white/70">{sym}</span>{fmtPkr(currentPrice)}
+                            <span className="text-sm sm:text-lg font-medium mr-1 text-white/70">{sym}</span>{fmt(show(selectedPrice))}
                         </FitText>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-white/60 mt-1">per {UNIT_LABELS[selectedUnit]}</p>
                     </div>
                     <div className={`text-right shrink-0 ${isPos ? 'text-emerald-200' : 'text-red-200'}`}>
                         <p className="text-sm font-black font-mono leading-none">{isPos ? '▲' : '▼'} {Math.abs(changePercent || 0).toFixed(2)}%</p>
-                        <p className="text-[10px] font-bold opacity-80">{isPos ? '+' : ''}{fmtPkr(change || 0)}</p>
+                        <p className="text-[10px] font-bold opacity-80">{isPos ? '+' : ''}{fmt(show(selectedChange || 0))}</p>
                     </div>
                 </div>
 
@@ -156,7 +189,7 @@ export default function MetalStatCard({
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && save()}
-                                    placeholder={`Target ${unitLabel}`}
+                                    placeholder={`Target per ${UNIT_LABELS[selectedUnit]}`}
                                     className="w-full bg-white/15 border border-white/20 rounded-xl pl-9 pr-3 py-2 text-sm font-black text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-white/40"
                                 />
                             </div>
@@ -166,7 +199,7 @@ export default function MetalStatCard({
                                 aria-label="Cancel"
                                 className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
                             >
-                                ✕
+                                <X className="w-4 h-4" strokeWidth={2.5} />
                             </button>
                             {target && (
                                 <button

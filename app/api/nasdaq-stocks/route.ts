@@ -72,7 +72,7 @@ async function scrapeNASDAQViaAPI() {
       .map((r: any) => r.symbol)
       .filter(Boolean);
 
-    console.log(`✓ Got ${allSymbols.length} symbols from NASDAQ API`);
+    console.log(`[OK] Got ${allSymbols.length} symbols from NASDAQ API`);
 
     if (allSymbols.length === 0) {
       return null;
@@ -113,7 +113,7 @@ async function scrapeNASDAQViaAPI() {
         const chunkJson = await response.json();
         const chunkResults: any[] = chunkJson?.quoteResponse?.result || [];
         results.push(...chunkResults);
-        console.log(`✓ Fetched ${chunkResults.length} quotes from chunk`);
+        console.log(`[OK] Fetched ${chunkResults.length} quotes from chunk`);
       } catch (chunkErr) {
         console.warn("Chunk fetch error:", chunkErr);
         continue; // Continue with next chunk
@@ -121,7 +121,7 @@ async function scrapeNASDAQViaAPI() {
     }
 
     if (results.length > 0) {
-      console.log(`✓ Successfully fetched ${results.length} stock quotes`);
+      console.log(`[OK] Successfully fetched ${results.length} stock quotes`);
       return results;
     }
 
@@ -224,7 +224,7 @@ async function fetchFromAlternativeAPI() {
 
     if (results.length > 10) {
       console.log(
-        `✓ Fetched ${results.length} popular NASDAQ stocks from alternative source`,
+        `[OK] Fetched ${results.length} popular NASDAQ stocks from alternative source`,
       );
       return results;
     }

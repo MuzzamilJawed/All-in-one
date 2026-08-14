@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Search, Plus, FolderPlus, Lock } from "lucide-react";
+import { Check, Search, Plus, FolderPlus, Lock } from "lucide-react";
 import { priceKey, ASSET_TYPES, type AssetType, type PriceBook } from "../lib/prices";
 
 interface WatchlistAddBarProps {
@@ -164,7 +164,7 @@ export default function WatchlistAddBar({ watchlists, activeId, book, onAdd, onS
                                                     {s.name && s.name !== s.symbol && <span className="text-[10px] text-zinc-400 font-bold truncate">{s.name}</span>}
                                                 </span>
                                                 {already ? (
-                                                    <span className="text-[8px] font-black text-green-500 uppercase tracking-widest shrink-0">✓ Added</span>
+                                                    <span className="inline-flex items-center gap-1 text-[8px] font-black text-green-500 uppercase tracking-widest shrink-0"><Check className="w-3 h-3" strokeWidth={3} /> Added</span>
                                                 ) : (
                                                     <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest shrink-0 flex items-center gap-0.5"><Plus className="w-3 h-3" strokeWidth={3} />Add</span>
                                                 )}

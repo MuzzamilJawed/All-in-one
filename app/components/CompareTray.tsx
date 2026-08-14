@@ -2,7 +2,7 @@
 
 import { dayRangePosition, circuitStatus } from "../lib/stockSignals";
 import { useSidebar } from "../context/SidebarContext";
-import { Scale, Award, Lock } from "lucide-react";
+import { Scale, Award, Lock, X } from "lucide-react";
 
 interface Stock {
     symbol: string;
@@ -81,7 +81,7 @@ export default function CompareTray({ stocks, onRemove, onClear, onOpen }: Compa
                         onClick={onClear}
                         className="shrink-0 flex items-center gap-1.5 text-[9px] font-black text-zinc-400 hover:text-red-500 bg-zinc-100 dark:bg-white/5 hover:bg-red-500/10 uppercase tracking-widest transition-colors px-2.5 py-1.5 rounded-lg"
                     >
-                        Clear all <span className="text-[10px]">✕</span>
+                        Clear all <X className="w-3 h-3" strokeWidth={2.5} />
                     </button>
                 </div>
 
@@ -119,7 +119,7 @@ export default function CompareTray({ stocks, onRemove, onClear, onOpen }: Compa
                                         className="shrink-0 w-5 h-5 -mt-0.5 -mr-0.5 rounded-md flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-500/10 text-[11px] transition-colors"
                                         title="Remove"
                                     >
-                                        ✕
+                                        <X className="w-3 h-3" strokeWidth={2.5} />
                                     </button>
                                 </div>
 

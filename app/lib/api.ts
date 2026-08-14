@@ -67,7 +67,7 @@ async function scrapeSilverPriceFromWeb(): Promise<number | null> {
         const price = parseFloat(rawPrice);
         if (price > 1 && price < 200) {
           // Reasonable silver price range
-          console.log("✓ Scraped silver price from silverprice.org:", price);
+          console.log("[OK] Scraped silver price from silverprice.org:", price);
           return price;
         }
       }
@@ -118,7 +118,7 @@ async function scrapeGoldPriceFromWeb(): Promise<number | null> {
         const price = parseFloat(rawPrice);
         if (price > 1000 && price < 10000) {
           // Reasonable gold price range
-          console.log("✓ Scraped gold price from goldprice.org:", price);
+          console.log("[OK] Scraped gold price from goldprice.org:", price);
           return price;
         }
       }
@@ -196,7 +196,7 @@ export async function scrapePSXDataFromWebsite() {
       }
 
       const html = await response.text();
-      console.log(`✓ Fetched PSX page (${html.length} bytes)`);
+      console.log(`[OK] Fetched PSX page (${html.length} bytes)`);
 
       // Try to extract JSON data from script tags
       const scriptMatch = html.match(
@@ -206,10 +206,10 @@ export async function scrapePSXDataFromWebsite() {
         try {
           const cleanJson = scriptMatch[1].replace(/,(\s*[}\]])/g, "$1");
           const data = JSON.parse(cleanJson);
-          console.log("✓ Parsed PSX JSON data");
+          console.log("[OK] Parsed PSX JSON data");
           const stocks = extractPSXStocksFromJSON(data);
           if (stocks.length > 0) {
-            console.log(`✓ Extracted ${stocks.length} stocks from PSX JSON`);
+            console.log(`[OK] Extracted ${stocks.length} stocks from PSX JSON`);
             return stocks;
           }
         } catch (parseErr) {
@@ -227,7 +227,7 @@ export async function scrapePSXDataFromWebsite() {
           const stocks = extractPSXStocksFromJSON(data);
           if (stocks.length > 0) {
             console.log(
-              `✓ Extracted ${stocks.length} stocks from PSX JSON (alt)`,
+              `[OK] Extracted ${stocks.length} stocks from PSX JSON (alt)`,
             );
             return stocks;
           }
@@ -258,7 +258,7 @@ export async function scrapePSXDataFromWebsite() {
       }
 
       if (stocks.length > 0) {
-        console.log(`✓ Extracted ${stocks.length} stocks from HTML tables`);
+        console.log(`[OK] Extracted ${stocks.length} stocks from HTML tables`);
         return stocks;
       }
 
@@ -286,7 +286,7 @@ export async function scrapePSXDataFromWebsite() {
       }
 
       if (stocks.length > 0) {
-        console.log(`✓ Found ${stocks.length} stocks via pattern matching`);
+        console.log(`[OK] Found ${stocks.length} stocks via pattern matching`);
         return stocks;
       }
 
@@ -360,7 +360,7 @@ export async function getPSXStocks() {
     console.log("Fetching PSX stocks...");
     const psxStocks = await scrapePSXDataFromWebsite();
     if (psxStocks && psxStocks.length > 0) {
-      console.log(`✓ Using ${psxStocks.length} stocks from PSX website`);
+      console.log(`[OK] Using ${psxStocks.length} stocks from PSX website`);
       return psxStocks;
     }
     console.log("PSX scraping returned no data, using mock data");
@@ -398,7 +398,7 @@ export async function fetchGoldPrice() {
         if (data && data.price) {
           goldUsdPerOz = data.price;
           dataSource = "gold-api.com";
-          console.log("✓ Got gold price from Gold-API:", goldUsdPerOz);
+          console.log("[OK] Got gold price from Gold-API:", goldUsdPerOz);
         }
       }
     } catch (err) {
@@ -413,7 +413,7 @@ export async function fetchGoldPrice() {
         if (scrapedPrice) {
           goldUsdPerOz = scrapedPrice;
           dataSource = "goldprice.org (scraped)";
-          console.log("✓ Got gold price from goldprice.org:", goldUsdPerOz);
+          console.log("[OK] Got gold price from goldprice.org:", goldUsdPerOz);
         }
       } catch (err) {
         console.warn("goldprice.org scraping failed:", err);
@@ -429,7 +429,7 @@ export async function fetchGoldPrice() {
           // Use a ratio: gold is ~60x more expensive than silver
           goldUsdPerOz = scrapedSilver * 60;
           dataSource = "Calculated from Silver (scraped)";
-          console.log("✓ Calculated gold price from silver:", goldUsdPerOz);
+          console.log("[OK] Calculated gold price from silver:", goldUsdPerOz);
         }
       } catch (err) {
         console.warn("Silver calculation fallback failed:", err);
@@ -520,7 +520,7 @@ export async function fetchSilverPrice() {
         if (data && data.price) {
           silverUsdPerOz = data.price;
           dataSource = "gold-api.com";
-          console.log("✓ Got silver price from Gold-API:", silverUsdPerOz);
+          console.log("[OK] Got silver price from Gold-API:", silverUsdPerOz);
         }
       }
     } catch (err) {
@@ -536,7 +536,7 @@ export async function fetchSilverPrice() {
           silverUsdPerOz = scrapedPrice;
           dataSource = "silverprice.org (scraped)";
           console.log(
-            "✓ Got silver price from silverprice.org:",
+            "[OK] Got silver price from silverprice.org:",
             silverUsdPerOz,
           );
         }
@@ -555,7 +555,7 @@ export async function fetchSilverPrice() {
           // Calculate silver from gold (gold is ~60x more expensive)
           silverUsdPerOz = goldPrice / 60;
           dataSource = "Calculated from Gold";
-          console.log("✓ Calculated silver price from gold:", silverUsdPerOz);
+          console.log("[OK] Calculated silver price from gold:", silverUsdPerOz);
         }
       } catch (err) {
         console.warn("Gold calculation fallback failed:", err);

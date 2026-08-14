@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Search, SearchX, FolderOpen, SlidersHorizontal } from "lucide-react";
+import { Globe, Search, SearchX, FolderOpen, SlidersHorizontal, X } from "lucide-react";
 
 import PageSkeleton from "../components/PageSkeleton";
 import StockCard from "../components/StockCard";
@@ -497,7 +497,7 @@ export default function NasdaqPage() {
                                     </div>
                                     <p className="text-zinc-500 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.3em]">Master Market Benchmark • US Execution Profile</p>
                                 </div>
-                                <button onClick={() => setSelectedIndex(null)} className="absolute top-0 right-0 sm:relative text-zinc-400 hover:text-white transition-colors text-2xl sm:text-3xl">✕</button>
+                                <button onClick={() => setSelectedIndex(null)} aria-label="Close index details" className="absolute top-0 right-0 sm:relative text-zinc-400 hover:text-white transition-colors"><X className="w-5 h-5" strokeWidth={2.5} /></button>
                             </div>
 
                             <div className="h-[350px] sm:h-[600px] w-full relative z-10 overflow-hidden">

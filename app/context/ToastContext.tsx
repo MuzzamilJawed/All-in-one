@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useRef } from "react";
+import { CheckCircle2, Info, X, XCircle } from "lucide-react";
 
 type ToastType = "success" | "error" | "info" | "loading";
 
@@ -28,11 +29,11 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 const DEFAULT_DURATION = 3500;
 
-const ICONS: Record<ToastType, string> = {
-    success: "✓",
-    error: "✕",
-    info: "ℹ",
-    loading: "",
+const ICONS: Record<ToastType, React.ReactNode> = {
+    success: <CheckCircle2 className="w-4 h-4" strokeWidth={2.5} />,
+    error: <XCircle className="w-4 h-4" strokeWidth={2.5} />,
+    info: <Info className="w-4 h-4" strokeWidth={2.5} />,
+    loading: null,
 };
 
 const TONE: Record<ToastType, string> = {
@@ -125,7 +126,7 @@ function ToastViewport({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id:
                         {t.message}
                     </p>
                     <span className="shrink-0 text-zinc-300 dark:text-zinc-600 text-[10px] font-black hover:text-zinc-500 transition-colors">
-                        ✕
+                        <X className="w-3 h-3" strokeWidth={2.5} />
                     </span>
                 </div>
             ))}

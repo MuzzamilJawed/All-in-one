@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { TrendingUp, TrendingDown, Flame, Star, type LucideIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { TrendingUp, TrendingDown, Flame, Star, X, ArrowUpRight, Activity, type LucideIcon } from "lucide-react";
 
 interface Stock {
     symbol: string;
@@ -11,11 +11,14 @@ interface Stock {
     changePercent: number;
     volume: string;
     sector?: string;
+    open?: number;
+    high?: number;
+    low?: number;
 }
 
 interface MoversDigestProps {
     stocks: Stock[];
-    watchlists?: any[];
+    watchlists?: { symbols?: string[] }[];
     loading?: boolean;
     onSelect: (symbol: string) => void;
 }
@@ -33,12 +36,13 @@ const fmtVol = (n: number): string => {
     return n.toLocaleString();
 };
 
-function MoverRow({ stock, rank, meta, onSelect }: { stock: Stock; rank: number; meta?: string; onSelect: (s: string) => void }) {
+function MoverRow({ stock, rank, meta, onPreview }: { stock: Stock; rank: number; meta?: string; onPreview: (stock: Stock) => void }) {
     const isPos = (stock.changePercent || 0) >= 0;
     return (
         <button
-            onClick={() => onSelect(stock.symbol)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-all group text-left"
+            onClick={() => onPreview(stock)}
+            aria-label={`Preview ${stock.symbol}`}
+            className="w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 active:scale-[0.99] transition-all group text-left"
         >
             <span className="w-5 shrink-0 text-[10px] font-black text-zinc-300 dark:text-zinc-600 tabular-nums">{rank}</span>
             <div className="min-w-0 flex-1">
@@ -77,6 +81,17 @@ function DigestColumn({ title, icon: Icon, tone, accent, children, empty, classN
 }
 
 export default function MoversDigest({ stocks, watchlists = [], loading = false, onSelect }: MoversDigestProps) {
+    const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+
+    useEffect(() => {
+        if (!selectedStock) return;
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setSelectedStock(null);
+        };
+        document.addEventListener("keydown", closeOnEscape);
+        return () => document.removeEventListener("keydown", closeOnEscape);
+    }, [selectedStock]);
+
     const { gainers, losers, active, watchMovers } = useMemo(() => {
         const valid = (stocks || []).filter(s => s && s.symbol && typeof s.changePercent === "number");
 
@@ -95,6 +110,16 @@ export default function MoversDigest({ stocks, watchlists = [], loading = false,
     }, [stocks, watchlists]);
 
     const hasWatch = watchMovers.length > 0;
+
+    const previewRange = selectedStock?.high && selectedStock.low && selectedStock.high > selectedStock.low
+        ? Math.min(100, Math.max(0, ((selectedStock.currentPrice - selectedStock.low) / (selectedStock.high - selectedStock.low)) * 100))
+        : null;
+
+    const openDetail = () => {
+        if (!selectedStock) return;
+        setSelectedStock(null);
+        onSelect(selectedStock.symbol);
+    };
 
     if (loading) {
         return (
@@ -117,22 +142,107 @@ export default function MoversDigest({ stocks, watchlists = [], loading = false,
     return (
         <div className={`grid grid-cols-2 ${hasWatch ? "xl:grid-cols-4" : "xl:grid-cols-3"} gap-3 sm:gap-6`}>
             <DigestColumn title="Top Gainers" icon={TrendingUp} tone="text-green-500" accent="bg-green-500" empty={gainers.length === 0}>
-                {gainers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onSelect={onSelect} />)}
+                {gainers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onPreview={setSelectedStock} />)}
             </DigestColumn>
 
             <DigestColumn title="Top Losers" icon={TrendingDown} tone="text-red-500" accent="bg-red-500" empty={losers.length === 0}>
-                {losers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onSelect={onSelect} />)}
+                {losers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onPreview={setSelectedStock} />)}
             </DigestColumn>
 
             <DigestColumn title="Most Active" icon={Flame} tone="text-orange-500" accent="bg-blue-500" empty={active.length === 0} className={hasWatch ? "" : "col-span-2 xl:col-span-1"}>
-                {active.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} meta={`Vol ${fmtVol(parseVol(s.volume))}`} onSelect={onSelect} />)}
+                {active.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} meta={`Vol ${fmtVol(parseVol(s.volume))}`} onPreview={setSelectedStock} />)}
             </DigestColumn>
 
             {hasWatch && (
                 <DigestColumn title="Your Watchlist" icon={Star} tone="text-amber-500" accent="bg-amber-500">
-                    {watchMovers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onSelect={onSelect} />)}
+                    {watchMovers.map((s, i) => <MoverRow key={s.symbol} stock={s} rank={i + 1} onPreview={setSelectedStock} />)}
                 </DigestColumn>
+            )}
+
+            {selectedStock && (
+                <div
+                    className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="mover-preview-title"
+                >
+                    <button
+                        type="button"
+                        aria-label="Close stock preview"
+                        onClick={() => setSelectedStock(null)}
+                        className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-sm"
+                    />
+                    <div
+                        className="relative w-full sm:max-w-md bg-white dark:bg-zinc-900 rounded-t-[1.75rem] sm:rounded-[1.75rem] border border-zinc-200 dark:border-white/10 shadow-2xl p-5 sm:p-6 pb-[calc(1.25rem_+_env(safe-area-inset-bottom))] sm:pb-6"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <Activity className="w-4 h-4 text-blue-500 shrink-0" strokeWidth={2.5} />
+                                    <h3 id="mover-preview-title" className="text-lg font-black uppercase italic tracking-tight text-zinc-900 dark:text-white truncate">{selectedStock.symbol}</h3>
+                                </div>
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest truncate mt-1">{selectedStock.name}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedStock(null)}
+                                aria-label="Close stock preview"
+                                className="w-10 h-10 shrink-0 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors"
+                            >
+                                <X className="w-5 h-5" strokeWidth={2.5} />
+                            </button>
+                        </div>
+
+                        <div className="mt-6 flex items-end justify-between gap-4">
+                            <div>
+                                <p className="text-3xl font-black font-mono tabular-nums tracking-tighter text-zinc-900 dark:text-white">{selectedStock.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                <p className={`mt-1 text-xs font-black tabular-nums ${isPositive(selectedStock.changePercent) ? "text-green-500" : "text-red-500"}`}>
+                                    {isPositive(selectedStock.changePercent) ? "UP" : "DOWN"} {Math.abs(selectedStock.changePercent).toFixed(2)}% <span className="text-zinc-400 font-bold">today</span>
+                                </p>
+                            </div>
+                            <div className="text-right text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                <p>Volume</p>
+                                <p className="mt-1 text-sm font-mono text-zinc-900 dark:text-white">{fmtVol(parseVol(selectedStock.volume))}</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 grid grid-cols-3 gap-2 text-[10px] font-black uppercase tracking-widest">
+                            {[
+                                ["Open", selectedStock.open],
+                                ["Low", selectedStock.low],
+                                ["High", selectedStock.high],
+                            ].map(([label, value]) => (
+                                <div key={label as string} className="rounded-xl bg-zinc-100 dark:bg-white/5 p-3">
+                                    <p className="text-zinc-400">{label as string}</p>
+                                    <p className="mt-1 font-mono text-zinc-900 dark:text-white">{typeof value === "number" ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "N/A"}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {previewRange != null && (
+                            <div className="mt-5">
+                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                                    <span>Day low</span><span>Day high</span>
+                                </div>
+                                <div className="relative mt-2 h-1.5 rounded-full bg-gradient-to-r from-red-500/50 via-zinc-300 dark:via-zinc-700 to-green-500/50">
+                                    <span className="absolute top-1/2 w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white dark:border-zinc-900 bg-blue-500" style={{ left: `${previewRange}%` }} />
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={openDetail}
+                            className="mt-6 w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.99] transition-all"
+                        >
+                            Open full chart <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );
 }
+
+const isPositive = (value: number) => value >= 0;

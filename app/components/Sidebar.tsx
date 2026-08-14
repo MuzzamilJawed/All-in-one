@@ -138,7 +138,7 @@ export default function Sidebar() {
     <>
       {/* Mobile Toggle Button (top-left hamburger). Hidden once the drawer is
           open — the drawer has its own close button, and showing both put two
-          ✕ icons on screen at once. */}
+          duplicate close icons on screen at once. */}
       <button
         onClick={() => setIsOpen(true)}
         aria-label="Open menu"

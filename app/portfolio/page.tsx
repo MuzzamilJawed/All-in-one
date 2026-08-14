@@ -1216,7 +1216,7 @@ export default function PortfolioPage() {
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
                                                 <span className="font-mono text-xs font-black tabular-nums">{fmt(t.quantity * t.price, t.currency)}</span>
-                                                <button onClick={() => remove(t)} className="text-zinc-400 hover:text-red-500 text-sm px-1.5 py-1" title="Delete">✕</button>
+                                                <button onClick={() => remove(t)} className="text-zinc-400 hover:text-red-500 text-sm px-1.5 py-1" title="Delete" aria-label="Delete transaction"><X className="w-3.5 h-3.5" strokeWidth={2.5} /></button>
                                             </div>
                                         </div>
                                     ))}
@@ -1249,7 +1249,7 @@ export default function PortfolioPage() {
                                                     <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell">{fmt(t.price, t.currency)}</td>
                                                     <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums text-zinc-500 hidden lg:table-cell">{fmt(brokerageAmount(t), t.currency)}</td>
                                                     <td className="px-2 sm:px-4 py-3 text-right font-mono text-xs tabular-nums font-black">{fmt(t.quantity * t.price, t.currency)}</td>
-                                                    <td className="px-2 sm:px-6 py-3 text-right"><button onClick={() => remove(t)} className="text-zinc-400 hover:text-red-500 text-sm px-2" title="Delete">✕</button></td>
+                                                    <td className="px-2 sm:px-6 py-3 text-right"><button onClick={() => remove(t)} className="text-zinc-400 hover:text-red-500 text-sm px-2" title="Delete" aria-label="Delete transaction"><X className="w-3.5 h-3.5" strokeWidth={2.5} /></button></td>
                                                 </tr>
                                             ))}
                                         </tbody>

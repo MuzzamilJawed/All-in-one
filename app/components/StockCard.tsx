@@ -212,7 +212,7 @@ export default function StockCard({
                         className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${selected ? 'bg-blue-600 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border border-zinc-200 dark:border-zinc-700'}`}
                         title={selected ? 'Remove from compare' : 'Add to compare'}
                     >
-                        {selected ? '✓' : '+'}
+                        {selected ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <Plus className="w-3.5 h-3.5" strokeWidth={3} />}
                     </button>
                 )}
                 <div className="min-w-0 flex-1">
@@ -448,7 +448,7 @@ export default function StockCard({
                                 />
                                 <div className="flex gap-2 pt-1">
                                     <button onClick={saveMeta} className="flex-1 bg-blue-600 text-white text-[10px] font-black uppercase py-1.5 rounded-lg hover:bg-blue-700">Save</button>
-                                    <button onClick={(e) => { e.stopPropagation(); setShowMeta(false); }} className="px-3 text-zinc-400 hover:text-zinc-600 text-xs">✕</button>
+                                    <button onClick={(e) => { e.stopPropagation(); setShowMeta(false); }} aria-label="Close stock notes" className="px-3 text-zinc-400 hover:text-zinc-600 text-xs"><X className="w-3.5 h-3.5" strokeWidth={2.5} /></button>
                                 </div>
                             </div>
                         )}
@@ -479,7 +479,7 @@ export default function StockCard({
                                                 {wl.name}
                                             </span>
                                             <span className={`text-[10px] ${isInList ? 'text-blue-600' : 'text-zinc-300 group-hover/item:text-blue-400'}`}>
-                                                {isInList ? "✓" : "+"}
+                                                {isInList ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : <Plus className="w-3.5 h-3.5" strokeWidth={3} />}
                                             </span>
                                         </button>
                                     );

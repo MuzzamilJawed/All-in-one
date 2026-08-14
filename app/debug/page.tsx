@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Circle, Gem, Wrench } from "lucide-react";
 
 interface PriceData {
   gold?: number;
@@ -43,7 +44,7 @@ export default function DebugPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-black p-8">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-6">
-          🔧 API Debug Page
+          <Wrench className="inline-block mr-2 h-7 w-7" strokeWidth={2} /> API Debug Page
         </h1>
 
         <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-700 mb-6">
@@ -66,7 +67,7 @@ export default function DebugPage() {
         {goldData && (
           <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-700 mb-6">
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 mb-3">
-              💛 Gold Price Data
+              <Gem className="inline-block mr-2 h-5 w-5 text-amber-500" strokeWidth={2} /> Gold Price Data
             </h2>
             <pre className="bg-zinc-100 dark:bg-zinc-800 p-4 rounded overflow-auto text-sm text-zinc-900 dark:text-zinc-50">
               {JSON.stringify(goldData, null, 2)}
@@ -86,7 +87,7 @@ export default function DebugPage() {
         {silverData && (
           <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 border border-zinc-200 dark:border-zinc-700 mb-6">
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 mb-3">
-              🤍 Silver Price Data
+              <Circle className="inline-block mr-2 h-5 w-5 text-zinc-400" strokeWidth={2} /> Silver Price Data
             </h2>
             <pre className="bg-zinc-100 dark:bg-zinc-800 p-4 rounded overflow-auto text-sm text-zinc-900 dark:text-zinc-50">
               {JSON.stringify(silverData, null, 2)}

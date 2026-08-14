@@ -7,7 +7,7 @@ import {
     ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
     ResponsiveContainer, CartesianGrid, Cell,
 } from "recharts";
-import { BookOpen, X, Lightbulb, BarChart3, AlertTriangle, ArrowLeft, Download, TrendingDown, TrendingUp, Search } from "lucide-react";
+import { BookOpen, X, Check, Lightbulb, BarChart3, AlertTriangle, ArrowLeft, Download, TrendingDown, TrendingUp, Search } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -679,8 +679,8 @@ function ReportContent({ symbol }: { symbol: string }) {
                     </button>
                     <div className="flex items-center gap-3">
                         <div className="hidden sm:flex gap-1 items-center shrink-0">
-                            {report.dataSources.psx && <span className="text-[9px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 rounded font-bold whitespace-nowrap">PSX ✓</span>}
-                            {report.dataSources.yahoo && <span className="text-[9px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded font-bold whitespace-nowrap">Yahoo ✓</span>}
+                            {report.dataSources.psx && <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 rounded font-bold whitespace-nowrap">PSX <Check className="w-3 h-3" strokeWidth={3} /></span>}
+                            {report.dataSources.yahoo && <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded font-bold whitespace-nowrap">Yahoo <Check className="w-3 h-3" strokeWidth={3} /></span>}
                         </div>
                         <span className="text-[10px] text-zinc-400 hidden sm:block">
                             {new Date(report.generatedAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}
@@ -999,7 +999,7 @@ function ReportContent({ symbol }: { symbol: string }) {
                             <div className="space-y-2 mb-4">
                                 {moat.map((point, i) => (
                                     <div key={i} className="flex items-start gap-2 p-2 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30">
-                                        <span className="text-green-500 font-black text-base leading-none mt-0.5">✓</span>
+                                        <Check className="w-4 h-4 text-green-500 mt-0.5" strokeWidth={3} />
                                         <p className="text-[10px] font-semibold text-green-700 dark:text-green-400 leading-snug">{point}</p>
                                     </div>
                                 ))}

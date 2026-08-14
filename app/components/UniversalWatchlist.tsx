@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Globe, Plus, Search } from "lucide-react";
+import { Check, Globe, Plus, Search, X } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
 import { useCurrency } from "../context/CurrencyContext";
 import CurrencyToggle from "./CurrencyToggle";
@@ -164,7 +164,7 @@ export default function UniversalWatchlist() {
                                                     {nm && <span className="text-[10px] text-zinc-400 font-bold truncate">{nm}</span>}
                                                 </span>
                                                 {already ? (
-                                                    <span className="text-[8px] font-black text-green-500 uppercase tracking-widest shrink-0">✓ Added</span>
+                                                    <span className="inline-flex items-center gap-1 text-[8px] font-black text-green-500 uppercase tracking-widest shrink-0"><Check className="w-3 h-3" strokeWidth={3} /> Added</span>
                                                 ) : (
                                                     <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest shrink-0 flex items-center gap-0.5"><Plus className="w-3 h-3" strokeWidth={3} />Add</span>
                                                 )}
@@ -203,7 +203,7 @@ export default function UniversalWatchlist() {
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0">
                                     <span className="text-xs font-black font-mono tabular-nums">{fmt(price, code)}</span>
-                                    <button onClick={() => removeWatch(it.assetType, it.symbol)} className="text-zinc-400 hover:text-red-500 text-sm" title="Remove">✕</button>
+                                    <button onClick={() => removeWatch(it.assetType, it.symbol)} className="text-zinc-400 hover:text-red-500 text-sm" title="Remove" aria-label={`Remove ${it.symbol}`}><X className="w-4 h-4" strokeWidth={2.5} /></button>
                                 </div>
                             </div>
                         );
