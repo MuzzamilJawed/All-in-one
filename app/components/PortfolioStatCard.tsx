@@ -10,7 +10,7 @@ import { fetchAllPrices, priceKey, priceIn, type PriceBook } from "../lib/prices
 
 // Compact dashboard tile: live portfolio value + total return %. Reuses the same
 // average-cost + live-price logic as the full /portfolio screen and PortfolioSummary.
-export default function PortfolioStatCard() {
+export default function PortfolioStatCard({ compact = false }: { compact?: boolean }) {
     const { currency: displayCur, rates } = useCurrency();
 
     const [txns, setTxns] = useState<Txn[]>([]);
@@ -63,6 +63,7 @@ export default function PortfolioStatCard() {
     return (
         <a href="/portfolio" className="block">
             <StatCard
+                compact={compact}
                 label="Portfolio"
                 value={has ? fmt(totals.value) : "—"}
                 icon={<Briefcase className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />}
