@@ -125,7 +125,7 @@ export default function Home() {
   if (loading && psxStocks.length === 0 && forexData.length === 0) return <PageSkeleton variant="dashboard" />;
 
   return (
-    <div className={`bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30 ${dashTab === "overview" ? "h-dvh overflow-hidden" : "min-h-screen"} lg:min-h-screen lg:h-auto lg:overflow-visible`}>
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white selection:bg-blue-500/30">
       {/* Dynamic Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/5 dark:bg-blue-600/10 blur-[120px] rounded-full"></div>
@@ -157,7 +157,7 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className={`page-shell mx-auto p-4 sm:p-8 pb-[calc(5rem_+_var(--sa-bottom))] lg:pb-8 relative z-10 ${dashTab === "overview" ? "h-[calc(100dvh-5rem)] overflow-hidden" : ""} lg:h-auto lg:overflow-visible`}>
+      <main className="page-shell mx-auto min-h-screen p-4 sm:p-8 pb-[calc(5rem_+_var(--sa-bottom))] lg:pb-8 relative z-10">
 
         <section className={`mb-8 sm:mb-12 ${tabCls("overview")}`}>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-6 auto-rows-fr">
@@ -480,10 +480,10 @@ export default function Home() {
         </div>
       </nav>
 
-      <footer className="mt-20 border-t border-white/5 py-8 sm:py-12 px-4 sm:px-8">
-        <div className="page-shell mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest text-center md:text-left">© 2026 SoloTrackr. All Rights Reserved.</p>
-          <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+      <footer className="mt-10 sm:mt-20 border-t border-white/5 py-5 sm:py-12 pb-[calc(6.5rem_+_var(--sa-bottom))] lg:pb-12 px-4 sm:px-8">
+        <div className="page-shell mx-auto flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">
+          <p className="max-w-full break-words text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.12em] sm:tracking-widest leading-relaxed text-center md:text-left">© 2026 SoloTrackr. All Rights Reserved.</p>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 sm:gap-x-8 sm:gap-y-2 text-[8px] sm:text-[10px] font-black text-zinc-500 uppercase tracking-[0.12em] sm:tracking-widest">
             <a href="#" className="hover:text-white transition-colors">Risk Disclosure</a>
             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-white transition-colors">Data Integrity</a>

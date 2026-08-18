@@ -31,8 +31,8 @@ export default function StatCard({
         {change !== undefined && (
           <div
             className={`${compact ? "px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs" : "px-3 py-1 text-xs"} rounded-full font-black tracking-tighter ${isPositive
-                ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                : "bg-red-500/10 text-red-600 dark:text-red-400"
+              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+              : "bg-red-500/10 text-red-600 dark:text-red-400"
               }`}
           >
             {isPositive ? "↑" : "↓"} {Math.abs(change).toFixed(2)}%

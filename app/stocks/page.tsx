@@ -88,6 +88,7 @@ function StocksContent() {
     const [filteredStocks, setFilteredStocks] = useState<Stock[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIndex, setSelectedIndex] = useState<Index | null>(null);
+    const [indexMenuOpen, setIndexMenuOpen] = useState(false);
     const [indexDayRange, setIndexDayRange] = useState<{ high: number | null; low: number | null }>({ high: null, low: null });
     const [sortConfig, setSortConfig] = useState<{ key: keyof Stock; direction: 'asc' | 'desc' } | null>(null);
     const [watchlists, setWatchlists] = useState<any[]>([]);
@@ -108,6 +109,7 @@ function StocksContent() {
     const PAGE_SIZE = 24; // infinite-scroll: how many rows/cards to reveal per step
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
+    const activeIndex = selectedIndex ?? indices[0] ?? null;
 
     const { settings } = useSettings();
     const { success, error } = useToast();
@@ -282,9 +284,10 @@ function StocksContent() {
         });
     };
 
-    // Fetch the session (day) high/low for the currently selected index
+    // Fetch the session (day) high/low for the visible index, including the
+    // first index shown before the user changes the selector.
     useEffect(() => {
-        if (!selectedIndex) {
+        if (!activeIndex) {
             setIndexDayRange({ high: null, low: null });
             return;
         }
@@ -292,7 +295,7 @@ function StocksContent() {
         setIndexDayRange({ high: null, low: null });
         (async () => {
             try {
-                const res = await fetch(`/api/psx-history?symbol=${encodeURIComponent(selectedIndex.name)}&timeframe=1D`);
+                const res = await fetch(`/api/psx-history?symbol=${encodeURIComponent(activeIndex.name)}&timeframe=1D`);
                 const json = await res.json();
                 if (cancelled) return;
                 setIndexDayRange({
@@ -304,7 +307,7 @@ function StocksContent() {
             }
         })();
         return () => { cancelled = true; };
-    }, [selectedIndex?.name]);
+    }, [activeIndex?.name]);
 
     useEffect(() => {
         if (!settings.refreshInterval || settings.refreshInterval <= 0) return;
@@ -538,180 +541,146 @@ function StocksContent() {
                     </div>
                 </header>
 
-                {indices.length > 0 && (
-                    <div className="bg-white dark:bg-[#050505] border-b border-zinc-200 dark:border-white/5 py-3 w-full overflow-x-auto no-scrollbar shadow-sm">
-                        <div className="page-shell mx-auto px-4 sm:px-8 flex items-center gap-6 sm:gap-10">
-                            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 border-r border-zinc-200 dark:border-white/10 pr-4 sm:pr-10">
-                                <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
-                                <span className="text-[9px] sm:text-[11px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest italic whitespace-nowrap">Market Pulse</span>
-                            </div>
-                            {indices.map(idx => {
-                                const isPos = idx.change >= 0;
-                                const isSelected = selectedIndex?.name === idx.name;
-                                return (
-                                    <button
-                                        key={idx.name}
-                                        onClick={() => {
-                                            if (isSelected) { setSelectedIndex(null); setIndexFilter('all'); }
-                                            else { setSelectedIndex(idx); setIndexFilter(idx.name); }
-                                        }}
-                                        className={`flex items-center gap-3 flex-shrink-0 transition-all px-2 py-2 min-h-[34px] rounded-lg ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900'}`}
-                                    >
-                                        <span className={`text-[10px] font-black transition-colors ${isSelected ? 'text-blue-600' : 'text-zinc-500 dark:text-zinc-400'}`}>{idx.name}</span>
-                                        <span className="text-xs font-mono font-black text-zinc-900 dark:text-zinc-50">{idx.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                        <span className={`text-[10px] font-bold ${isPos ? 'text-green-600' : 'text-red-600'}`}>
-                                            {isPos ? '▲' : '▼'}{Math.abs(idx.changePercent).toFixed(1)}%
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {marketStats && (
-                <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 w-full">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-8">
-                        <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-100 dark:divide-zinc-800">
-                            <div className="flex-1 py-3 sm:py-4 md:pr-8 flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className={`w-2 h-2 rounded-full ${marketStats?.status?.toLowerCase().includes('open') ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exchange {marketStats?.status || '—'}</p>
+                <div className="page-shell mx-auto w-full px-4 sm:px-8 lg:px-10 2xl:px-12">
+                    <div className="relative overflow-visible rounded-2xl sm:rounded-[1.75rem] border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/70 shadow-xl shadow-black/5 dark:shadow-black/20">
+                        {indices.length > 0 && (
+                            <div className="py-2.5 sm:py-3 bg-white dark:bg-[#050505]">
+                                <div className="px-3 sm:px-5 lg:px-7 flex items-center gap-2 sm:gap-5 lg:gap-8 2xl:gap-12">
+                                    <div className="relative min-w-0 flex-1 flex items-baseline gap-2 sm:gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIndexMenuOpen(open => !open)}
+                                            aria-label="Choose market index"
+                                            aria-expanded={indexMenuOpen}
+                                            title="Choose market index"
+                                            className={`min-w-0 max-w-[55%] inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-left transition-colors ${indexMenuOpen ? "bg-blue-600/10 text-blue-600 dark:text-blue-400" : "text-zinc-900 dark:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-white/10"}`}
+                                        >
+                                            <span className="min-w-0 truncate text-[10px] sm:text-xs lg:text-sm 2xl:text-base font-black uppercase tracking-widest">{activeIndex?.name || "Index"}</span>
+                                            <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${indexMenuOpen ? "rotate-180" : ""}`} strokeWidth={2.5} />
+                                        </button>
+                                        {activeIndex && (
+                                            <span className="shrink-0 text-sm sm:text-base lg:text-lg 2xl:text-xl font-black font-mono text-zinc-900 dark:text-zinc-50">{activeIndex.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                        )}
+                                        {indexMenuOpen && (
+                                            <div className="absolute left-0 top-11 z-50 w-52 max-w-[calc(100vw-2rem)] rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 p-1.5 shadow-2xl">
+                                                {indices.map(index => (
+                                                    <button
+                                                        key={index.name}
+                                                        type="button"
+                                                        onClick={() => { setSelectedIndex(index); setIndexFilter(index.name); setIndexMenuOpen(false); }}
+                                                        className={`w-full min-h-10 flex items-center justify-between gap-2 rounded-lg px-2.5 text-left text-[9px] font-black uppercase tracking-widest transition-colors ${activeIndex?.name === index.name ? "bg-blue-600/10 text-blue-600 dark:text-blue-400" : "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10"}`}
+                                                    >
+                                                        <span className="truncate">{index.name}</span>
+                                                        <span className={`shrink-0 font-mono ${index.changePercent >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                                            {index.changePercent >= 0 ? "+" : "-"}{Math.abs(index.changePercent).toFixed(1)}%
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                    {/* Phones get abbreviated figures — 25,369,263,260 is
+                                    {activeIndex && (
+                                        <div className="flex items-baseline gap-2 sm:gap-4 shrink-0">
+                                            <span className={`text-[10px] sm:text-xs lg:text-sm 2xl:text-base font-black font-mono ${activeIndex.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {activeIndex.change >= 0 ? '+' : '-'}{Math.abs(activeIndex.change).toFixed(2)} ({activeIndex.changePercent >= 0 ? '+' : '-'}{Math.abs(activeIndex.changePercent).toFixed(2)}%)
+                                            </span>
+                                            <span className="hidden sm:inline text-[9px] sm:text-xs lg:text-sm 2xl:text-base font-black font-mono text-zinc-500 dark:text-zinc-400">
+                                                H {indexDayRange.high != null ? indexDayRange.high.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—"}
+                                                <span className="mx-1 text-zinc-300 dark:text-zinc-700">/</span>
+                                                L {indexDayRange.low != null ? indexDayRange.low.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—"}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {marketStats && (
+                            <div className="border-t border-zinc-200 dark:border-white/10 bg-zinc-50/80 dark:bg-zinc-900">
+                                <div className="px-3 sm:px-5 lg:px-7">
+                                    <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-200 dark:divide-white/10">
+                                        <div className="flex-1 py-3 sm:py-4 md:pr-8 flex items-center justify-between">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`w-2 h-2 rounded-full ${marketStats?.status?.toLowerCase().includes('open') ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+                                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exchange {marketStats?.status || '—'}</p>
+                                                </div>
+                                                {/* Phones get abbreviated figures — 25,369,263,260 is
                                         eleven digits of precision nobody reads on a list screen. */}
-                                    <div className="flex flex-wrap items-baseline gap-3 sm:gap-4">
-                                        <div>
-                                            <p className="text-[9px] font-bold text-zinc-400 uppercase">Volume</p>
-                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">
-                                                <span className="sm:hidden">{abbreviateCount(marketStats.volume)}</span>
-                                                <span className="hidden sm:inline">{marketStats.volume}</span>
-                                            </p>
+                                                <div className="flex flex-wrap items-baseline gap-3 sm:gap-4">
+                                                    <div>
+                                                        <p className="text-[9px] font-bold text-zinc-400 uppercase">Volume</p>
+                                                        <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">
+                                                            <span className="sm:hidden">{abbreviateCount(marketStats.volume)}</span>
+                                                            <span className="hidden sm:inline">{marketStats.volume}</span>
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-bold text-zinc-400 uppercase">Value (PKR)</p>
+                                                        <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">
+                                                            <span className="sm:hidden">{abbreviateCount(marketStats.value)}</span>
+                                                            <span className="hidden sm:inline">{marketStats.value}</span>
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-bold text-zinc-400 uppercase">Trades</p>
+                                                        <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">
+                                                            <span className="sm:hidden">{abbreviateCount(marketStats.trades)}</span>
+                                                            <span className="hidden sm:inline">{marketStats.trades}</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-[9px] font-bold text-zinc-400 uppercase">Value (PKR)</p>
-                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">
-                                                <span className="sm:hidden">{abbreviateCount(marketStats.value)}</span>
-                                                <span className="hidden sm:inline">{marketStats.value}</span>
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[9px] font-bold text-zinc-400 uppercase">Trades</p>
-                                            <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 font-mono tracking-tighter">
-                                                <span className="sm:hidden">{abbreviateCount(marketStats.trades)}</span>
-                                                <span className="hidden sm:inline">{marketStats.trades}</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex-1 py-3 sm:py-4 md:pl-8 flex items-center justify-between">
-                                <div className="space-y-1 w-full">
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
-                                        {/* "Breadth" was jargon; the long explainer was worse.
+                                        <div className="flex-1 py-3 sm:py-4 md:pl-8 flex items-center justify-between">
+                                            <div className="space-y-1 w-full">
+                                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
+                                                    {/* "Breadth" was jargon; the long explainer was worse.
                                             Two words, same meaning. */}
-                                        Gainers &amp; Losers
-                                    </p>
+                                                    Gainers &amp; Losers
+                                                </p>
 
-                                    {/* Phone: one advance/decline bar instead of four chips. */}
-                                    <div className="sm:hidden">
-                                        <div className="flex items-baseline justify-between text-[11px] font-black mb-1.5">
-                                            <span className="text-green-600">▲ {marketStats.advanced}</span>
-                                            <span className="text-zinc-400 text-[9px] uppercase tracking-widest">{marketStats.unchanged} unch</span>
-                                            <span className="text-red-600">{marketStats.declined} ▼</span>
-                                        </div>
-                                        <div className="flex h-1.5 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
-                                            <div className="bg-green-500" style={{ width: `${breadthSplit.adv}%` }} />
-                                            <div className="bg-zinc-400 dark:bg-zinc-600" style={{ width: `${breadthSplit.unch}%` }} />
-                                            <div className="bg-red-500" style={{ width: `${breadthSplit.dec}%` }} />
-                                        </div>
-                                    </div>
+                                                {/* Phone: one advance/decline bar instead of four chips. */}
+                                                <div className="sm:hidden">
+                                                    <div className="flex items-baseline justify-between text-[11px] font-black mb-1.5">
+                                                        <span className="text-green-600">▲ {marketStats.advanced}</span>
+                                                        <span className="text-zinc-400 text-[9px] uppercase tracking-widest">{marketStats.unchanged} unch</span>
+                                                        <span className="text-red-600">{marketStats.declined} ▼</span>
+                                                    </div>
+                                                    <div className="flex h-1.5 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
+                                                        <div className="bg-green-500" style={{ width: `${breadthSplit.adv}%` }} />
+                                                        <div className="bg-zinc-400 dark:bg-zinc-600" style={{ width: `${breadthSplit.unch}%` }} />
+                                                        <div className="bg-red-500" style={{ width: `${breadthSplit.dec}%` }} />
+                                                    </div>
+                                                </div>
 
-                                    <div className="hidden sm:grid grid-cols-4 gap-1.5 sm:gap-2">
-                                        <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-100/50 dark:border-green-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
-                                            <p className="text-[7px] sm:text-[8px] font-black text-green-600/80 uppercase mb-0.5">Adv</p>
-                                            <p className="text-xs sm:text-sm font-black text-green-600 leading-none">{marketStats.advanced}</p>
-                                        </div>
-                                        <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100/50 dark:border-red-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
-                                            <p className="text-[7px] sm:text-[8px] font-black text-red-600/80 uppercase mb-0.5">Dec</p>
-                                            <p className="text-xs sm:text-sm font-black text-red-600 leading-none">{marketStats.declined}</p>
-                                        </div>
-                                        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
-                                            <p className="text-[7px] sm:text-[8px] font-black text-blue-600/80 uppercase mb-0.5">Unch</p>
-                                            <p className="text-xs sm:text-sm font-black text-blue-600 leading-none">{marketStats.unchanged}</p>
-                                        </div>
-                                        <div className="bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-zinc-700/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
-                                            <p className="text-[7px] sm:text-[8px] font-black text-zinc-500 uppercase mb-0.5">Total</p>
-                                            <p className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-50 leading-none">{marketStats.total}</p>
+                                                <div className="hidden sm:grid grid-cols-4 gap-1.5 sm:gap-2">
+                                                    <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-100/50 dark:border-green-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
+                                                        <p className="text-[7px] sm:text-[8px] font-black text-green-600/80 uppercase mb-0.5">Adv</p>
+                                                        <p className="text-xs sm:text-sm font-black text-green-600 leading-none">{marketStats.advanced}</p>
+                                                    </div>
+                                                    <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100/50 dark:border-red-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
+                                                        <p className="text-[7px] sm:text-[8px] font-black text-red-600/80 uppercase mb-0.5">Dec</p>
+                                                        <p className="text-xs sm:text-sm font-black text-red-600 leading-none">{marketStats.declined}</p>
+                                                    </div>
+                                                    <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
+                                                        <p className="text-[7px] sm:text-[8px] font-black text-blue-600/80 uppercase mb-0.5">Unch</p>
+                                                        <p className="text-xs sm:text-sm font-black text-blue-600 leading-none">{marketStats.unchanged}</p>
+                                                    </div>
+                                                    <div className="bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-zinc-700/30 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center">
+                                                        <p className="text-[7px] sm:text-[8px] font-black text-zinc-500 uppercase mb-0.5">Total</p>
+                                                        <p className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-50 leading-none">{marketStats.total}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
-            )}
-
-            {selectedIndex && (
-                /* Sits inside the page gutter like every other card — it used to render
-                   full-bleed with square corners because it was outside this wrapper. */
-                <div className="px-4 sm:px-8 page-shell mx-auto w-full">
-                    <div className="bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-900/40 dark:to-indigo-900/40 px-4 py-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] text-white border border-blue-500/20 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-6">
-                            <div className="min-w-0 w-full md:w-auto flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2 sm:gap-3">
-                                        <h2 className="text-base sm:text-2xl font-black tracking-tight truncate">{selectedIndex.name}</h2>
-                                        <span className="bg-white/20 text-white text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md shrink-0 whitespace-nowrap">Active Index</span>
-                                    </div>
-                                    <p className="hidden sm:block text-blue-100 text-sm font-medium mt-1">Detailed performance metrics and component summary</p>
-                                </div>
-                                <button
-                                    onClick={() => { setSelectedIndex(null); setIndexFilter("all"); }}
-                                    aria-label="Clear active index"
-                                    title="Clear active index"
-                                    className="md:hidden shrink-0 -mr-1 w-8 h-8 flex items-center justify-center rounded-lg bg-white/15 hover:bg-white/25 active:scale-90 transition-all"
-                                >
-                                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
-                                </button>
-                            </div>
-
-                            {/* Phones read this as label→value rows; a 2-up grid left the
-                                columns ragged because the figures differ in width. */}
-                            <div className="w-full md:w-auto flex flex-col md:flex-row md:flex-wrap md:items-center divide-y divide-white/10 md:divide-y-0 md:gap-8">
-                                <div className="min-w-0 flex items-baseline justify-between gap-3 py-1.5 md:block md:py-0">
-                                    <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest md:mb-1 shrink-0">Index Points</p>
-                                    <FitText className="min-w-0 text-right md:text-left text-base sm:text-3xl font-black font-mono leading-none">
-                                        {selectedIndex.value.toLocaleString()}
-                                    </FitText>
-                                </div>
-                                <div className="min-w-0 flex items-baseline justify-between gap-3 py-1.5 md:block md:py-0">
-                                    <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest md:mb-1 shrink-0">Session Change</p>
-                                    <FitText className={`min-w-0 text-right md:text-left text-base sm:text-2xl font-black font-mono leading-none ${selectedIndex.change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                                        {selectedIndex.change >= 0 ? '▲' : '▼'}{Math.abs(selectedIndex.change).toFixed(2)}
-                                    </FitText>
-                                </div>
-                                {(indexDayRange.high != null || indexDayRange.low != null) && (
-                                    <div className="min-w-0 flex items-baseline justify-between gap-3 py-1.5 md:block md:py-0">
-                                        <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest md:mb-1 shrink-0">Day High / Low</p>
-                                        <FitText className="min-w-0 text-right md:text-left text-base sm:text-2xl font-black font-mono leading-none">
-                                            <span className="text-green-300">
-                                                {indexDayRange.high != null ? indexDayRange.high.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
-                                            </span>
-                                            <span className="text-blue-200/70 mx-1.5">/</span>
-                                            <span className="text-red-300">
-                                                {indexDayRange.low != null ? indexDayRange.low.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
-                                            </span>
-                                        </FitText>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            </div>
 
             <div className={`px-4 sm:px-8 py-5 sm:py-10 page-shell mx-auto w-full space-y-5 sm:space-y-10 ${compareStocks.length > 0 ? 'pb-64' : ''}`}>
                 {/* Unified Market Control Ribbon */}
